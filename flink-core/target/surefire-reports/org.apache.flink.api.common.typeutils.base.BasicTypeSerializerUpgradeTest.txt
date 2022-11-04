@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.api.common.typeutils.base.BasicTypeSerializerUpgradeTest
+-------------------------------------------------------------------------------
+Tests run: 600, Failures: 0, Errors: 0, Skipped: 300, Time elapsed: 0.705 s - in org.apache.flink.api.common.typeutils.base.BasicTypeSerializerUpgradeTest

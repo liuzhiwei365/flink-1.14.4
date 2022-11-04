@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.runtime.typeutils.ExternalSerializerTest
+-------------------------------------------------------------------------------
+Tests run: 80, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.822 s - in org.apache.flink.table.runtime.typeutils.ExternalSerializerTest

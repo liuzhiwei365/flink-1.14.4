@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.streaming.api.graph.StreamingJobGraphGeneratorTest
+-------------------------------------------------------------------------------
+Tests run: 35, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.531 s - in org.apache.flink.streaming.api.graph.StreamingJobGraphGeneratorTest

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.connector.jdbc.table.JdbcOutputFormatTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 17.036 s - in org.apache.flink.connector.jdbc.table.JdbcOutputFormatTest

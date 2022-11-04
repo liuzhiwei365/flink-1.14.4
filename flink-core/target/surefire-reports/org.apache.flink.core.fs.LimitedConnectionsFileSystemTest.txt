@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.core.fs.LimitedConnectionsFileSystemTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.621 s - in org.apache.flink.core.fs.LimitedConnectionsFileSystemTest

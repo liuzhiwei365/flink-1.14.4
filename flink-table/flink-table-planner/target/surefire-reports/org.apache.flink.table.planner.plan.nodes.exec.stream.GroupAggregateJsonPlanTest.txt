@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.nodes.exec.stream.GroupAggregateJsonPlanTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.928 s - in org.apache.flink.table.planner.plan.nodes.exec.stream.GroupAggregateJsonPlanTest

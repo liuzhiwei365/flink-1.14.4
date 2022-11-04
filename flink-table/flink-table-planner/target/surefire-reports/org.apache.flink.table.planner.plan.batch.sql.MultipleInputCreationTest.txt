@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.batch.sql.MultipleInputCreationTest
+-------------------------------------------------------------------------------
+Tests run: 34, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.313 s - in org.apache.flink.table.planner.plan.batch.sql.MultipleInputCreationTest

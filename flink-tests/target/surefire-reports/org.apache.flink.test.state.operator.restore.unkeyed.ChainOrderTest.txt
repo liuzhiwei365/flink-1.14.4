@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.test.state.operator.restore.unkeyed.ChainOrderTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 110.12 s - in org.apache.flink.test.state.operator.restore.unkeyed.ChainOrderTest

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.connector.jdbc.table.JdbcTableSourceSinkFactoryTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.288 s - in org.apache.flink.connector.jdbc.table.JdbcTableSourceSinkFactoryTest

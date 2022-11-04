@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.sql.parser.hive.FlinkHiveSqlParserImplTest
+-------------------------------------------------------------------------------
+Tests run: 54, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.462 s - in org.apache.flink.sql.parser.hive.FlinkHiveSqlParserImplTest

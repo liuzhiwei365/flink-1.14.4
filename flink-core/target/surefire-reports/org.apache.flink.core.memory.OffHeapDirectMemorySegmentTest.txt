@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.core.memory.OffHeapDirectMemorySegmentTest
+-------------------------------------------------------------------------------
+Tests run: 96, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.054 s - in org.apache.flink.core.memory.OffHeapDirectMemorySegmentTest

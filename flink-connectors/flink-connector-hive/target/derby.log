@@ -1,0 +1,14 @@
+----------------------------------------------------------------
+Fri Jun 10 20:30:16 CST 2022:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.2.0 - (1582446): instance a816c00e-0181-4d98-0234-000006780008 
+on database directory /private/var/folders/9v/knhh7l116z927rs422hz7g7r0000gn/T/junit1452483463219311732/junit3405475393660491844/metastore_db with class loader sun.misc.Launcher$AppClassLoader@42a57993 
+Loaded from file:/Users/liuzhiwei/.m2/repository/org/apache/derby/derby/10.10.2.0/derby-10.10.2.0.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.8.0_311-b11
+user.dir=/Users/liuzhiwei/ideapro/flink-1.14.4/flink-connectors/flink-connector-hive
+os.name=Mac OS X
+os.arch=x86_64
+os.version=10.16
+derby.system.home=null
+derby.stream.error.file=/Users/liuzhiwei/ideapro/flink-1.14.4/flink-connectors/flink-connector-hive/target/derby.log
+Database Class Loader started - derby.database.classpath=''

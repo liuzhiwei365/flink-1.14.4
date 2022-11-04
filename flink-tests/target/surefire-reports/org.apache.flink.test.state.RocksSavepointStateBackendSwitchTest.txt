@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.test.state.RocksSavepointStateBackendSwitchTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.556 s - in org.apache.flink.test.state.RocksSavepointStateBackendSwitchTest

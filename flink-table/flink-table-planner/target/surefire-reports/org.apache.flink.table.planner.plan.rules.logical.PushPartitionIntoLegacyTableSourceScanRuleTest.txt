@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.rules.logical.PushPartitionIntoLegacyTableSourceScanRuleTest
+-------------------------------------------------------------------------------
+Tests run: 54, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.503 s - in org.apache.flink.table.planner.plan.rules.logical.PushPartitionIntoLegacyTableSourceScanRuleTest

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.batch.sql.agg.SortAggregateTest
+-------------------------------------------------------------------------------
+Tests run: 54, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 16.24 s - in org.apache.flink.table.planner.plan.batch.sql.agg.SortAggregateTest

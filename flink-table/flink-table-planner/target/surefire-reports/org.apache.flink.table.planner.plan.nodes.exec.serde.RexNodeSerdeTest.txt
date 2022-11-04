@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.nodes.exec.serde.RexNodeSerdeTest
+-------------------------------------------------------------------------------
+Tests run: 66, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.27 s - in org.apache.flink.table.planner.plan.nodes.exec.serde.RexNodeSerdeTest

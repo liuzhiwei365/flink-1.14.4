@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.runtime.state.ttl.HeapAsyncSnapshotTtlStateTest
+-------------------------------------------------------------------------------
+Tests run: 120, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 7.219 s - in org.apache.flink.runtime.state.ttl.HeapAsyncSnapshotTtlStateTest

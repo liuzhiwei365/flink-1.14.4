@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.batch.sql.SetOperatorsTest
+-------------------------------------------------------------------------------
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.13 s - in org.apache.flink.table.planner.plan.batch.sql.SetOperatorsTest

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.runtime.taskexecutor.ThreadInfoSampleServiceTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.087 s - in org.apache.flink.runtime.taskexecutor.ThreadInfoSampleServiceTest

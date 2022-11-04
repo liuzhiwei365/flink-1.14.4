@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.connector.hbase.util.HBaseConfigLoadingTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.903 s - in org.apache.flink.connector.hbase.util.HBaseConfigLoadingTest

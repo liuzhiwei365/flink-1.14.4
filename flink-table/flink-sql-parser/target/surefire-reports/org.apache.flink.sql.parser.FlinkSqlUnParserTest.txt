@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.sql.parser.FlinkSqlUnParserTest
+-------------------------------------------------------------------------------
+Tests run: 101, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.527 s - in org.apache.flink.sql.parser.FlinkSqlUnParserTest

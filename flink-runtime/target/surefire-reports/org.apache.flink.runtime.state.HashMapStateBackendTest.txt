@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.runtime.state.HashMapStateBackendTest
+-------------------------------------------------------------------------------
+Tests run: 136, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 7.711 s - in org.apache.flink.runtime.state.HashMapStateBackendTest

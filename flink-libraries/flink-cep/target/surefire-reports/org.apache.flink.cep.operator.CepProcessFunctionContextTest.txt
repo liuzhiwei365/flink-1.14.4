@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.cep.operator.CepProcessFunctionContextTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.366 s - in org.apache.flink.cep.operator.CepProcessFunctionContextTest

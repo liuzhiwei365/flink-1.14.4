@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.operations.utils.ValuesOperationTreeBuilderTest
+-------------------------------------------------------------------------------
+Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.449 s - in org.apache.flink.table.operations.utils.ValuesOperationTreeBuilderTest

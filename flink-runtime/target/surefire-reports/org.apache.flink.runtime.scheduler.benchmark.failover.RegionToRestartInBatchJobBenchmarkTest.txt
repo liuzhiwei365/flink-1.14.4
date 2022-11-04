@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.runtime.scheduler.benchmark.failover.RegionToRestartInBatchJobBenchmarkTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.63 s - in org.apache.flink.runtime.scheduler.benchmark.failover.RegionToRestartInBatchJobBenchmarkTest

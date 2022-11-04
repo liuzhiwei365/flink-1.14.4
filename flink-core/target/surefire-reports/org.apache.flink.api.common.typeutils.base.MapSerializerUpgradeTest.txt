@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.api.common.typeutils.base.MapSerializerUpgradeTest
+-------------------------------------------------------------------------------
+Tests run: 24, Failures: 0, Errors: 0, Skipped: 12, Time elapsed: 0.049 s - in org.apache.flink.api.common.typeutils.base.MapSerializerUpgradeTest

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.14">
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/main/java/org/apache/flink/fs/azurefs/AbstractAzureFSFactory.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/main/java/org/apache/flink/fs/azurefs/AzureBlobStorageFSFactory.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/main/java/org/apache/flink/fs/azurefs/SecureAzureBlobStorageFSFactory.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/main/java/org/apache/flink/fs/azurefs/AzureDataLakeStoreGen2FSFactory.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/main/java/org/apache/flink/fs/azurefs/SecureAzureDataLakeStoreGen2FSFactory.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/main/java/org/apache/flink/fs/azurefs/EnvironmentVariableKeyProvider.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/test/java/org/apache/flink/fs/azurefs/AzureBlobStorageFSFactoryTest.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/test/java/org/apache/flink/fs/azurefs/AzureFileSystemBehaviorITCase.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/test/java/org/apache/flink/fs/azurefs/AzureDataLakeStoreGen2FSFactoryTest.java">
+</file>
+<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-filesystems/flink-azure-fs-hadoop/src/test/resources/log4j2-test.properties">
+</file>
+</checkstyle>

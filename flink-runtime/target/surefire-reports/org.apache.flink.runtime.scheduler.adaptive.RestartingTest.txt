@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.runtime.scheduler.adaptive.RestartingTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.521 s - in org.apache.flink.runtime.scheduler.adaptive.RestartingTest

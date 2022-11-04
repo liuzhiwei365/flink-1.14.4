@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" name="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="1.143" tests="231" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="gopherProxySet" value="false"/>
+    <property name="awt.toolkit" value="sun.lwawt.macosx.LWCToolkit"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="java.specification.version" value="1.8"/>
+    <property name="forkNumber" value="02"/>
+    <property name="sun.cpu.isalist" value=""/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/test-classes:/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/classes:/Users/liuzhiwei/ideapro/flink-1.14.4/flink-annotations/target/flink-annotations-1.14.4.jar:/Users/liuzhiwei/.m2/repository/com/google/guava/guava/29.0-jre/guava-29.0-jre.jar:/Users/liuzhiwei/.m2/repository/com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar:/Users/liuzhiwei/.m2/repository/com/google/guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/Users/liuzhiwei/.m2/repository/org/checkerframework/checker-qual/2.11.1/checker-qual-2.11.1.jar:/Users/liuzhiwei/.m2/repository/com/google/errorprone/error_prone_annotations/2.3.4/error_prone_annotations-2.3.4.jar:/Users/liuzhiwei/.m2/repository/com/google/j2objc/j2objc-annotations/1.3/j2objc-annotations-1.3.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/calcite-core/1.26.0/calcite-core-1.26.0.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/avatica/avatica-core/1.17.0/avatica-core-1.17.0.jar:/Users/liuzhiwei/.m2/repository/org/apiguardian/apiguardian-api/1.1.0/apiguardian-api-1.1.0.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/calcite-core/1.26.0/calcite-core-1.26.0-tests.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/calcite-linq4j/1.26.0/calcite-linq4j-1.26.0.jar:/Users/liuzhiwei/.m2/repository/com/esri/geometry/esri-geometry-api/2.2.0/esri-geometry-api-2.2.0.jar:/Users/liuzhiwei/.m2/repository/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.12.1/jackson-dataformat-yaml-2.12.1.jar:/Users/liuzhiwei/.m2/repository/org/yaml/snakeyaml/1.27/snakeyaml-1.27.jar:/Users/liuzhiwei/.m2/repository/com/jayway/jsonpath/json-path/2.4.0/json-path-2.4.0.jar:/Users/liuzhiwei/.m2/repository/net/minidev/json-smart/2.3/json-smart-2.3.jar:/Users/liuzhiwei/.m2/repository/net/minidev/accessors-smart/1.2/accessors-smart-1.2.jar:/Users/liuzhiwei/.m2/repository/org/ow2/asm/asm/5.0.4/asm-5.0.4.jar:/Users/liuzhiwei/.m2/repository/com/yahoo/datasketches/sketches-core/0.9.0/sketches-core-0.9.0.jar:/Users/liuzhiwei/.m2/repository/com/yahoo/datasketches/memory/0.9.0/memory-0.9.0.jar:/Users/liuzhiwei/.m2/repository/commons-codec/commons-codec/1.13/commons-codec-1.13.jar:/Users/liuzhiwei/.m2/repository/net/hydromatic/aggdesigner-algorithm/6.0/aggdesigner-algorithm-6.0.jar:/Users/liuzhiwei/.m2/repository/commons-lang/commons-lang/2.4/commons-lang-2.4.jar:/Users/liuzhiwei/.m2/repository/commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar:/Users/liuzhiwei/.m2/repository/org/apache/commons/commons-dbcp2/2.6.0/commons-dbcp2-2.6.0.jar:/Users/liuzhiwei/.m2/repository/org/apache/commons/commons-pool2/2.6.1/commons-pool2-2.6.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/commons/commons-lang3/3.3.2/commons-lang3-3.3.2.jar:/Users/liuzhiwei/.m2/repository/commons-io/commons-io/2.8.0/commons-io-2.8.0.jar:/Users/liuzhiwei/.m2/repository/org/codehaus/janino/commons-compiler/3.0.11/commons-compiler-3.0.11.jar:/Users/liuzhiwei/.m2/repository/org/codehaus/janino/janino/3.0.11/janino-3.0.11.jar:/Users/liuzhiwei/.m2/repository/org/apache/flink/flink-shaded-force-shading/14.0/flink-shaded-force-shading-14.0.jar:/Users/liuzhiwei/.m2/repository/org/slf4j/slf4j-api/1.7.15/slf4j-api-1.7.15.jar:/Users/liuzhiwei/.m2/repository/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter/5.7.2/junit-jupiter-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.7.2/junit-jupiter-api-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar:/Users/liuzhiwei/.m2/repository/org/junit/platform/junit-platform-commons/1.7.2/junit-platform-commons-1.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.7.2/junit-jupiter-params-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.7.2/junit-jupiter-engine-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/vintage/junit-vintage-engine/5.7.2/junit-vintage-engine-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/platform/junit-platform-engine/1.7.2/junit-platform-engine-1.7.2.jar:/Users/liuzhiwei/.m2/repository/junit/junit/4.13.2/junit-4.13.2.jar:/Users/liuzhiwei/.m2/repository/org/mockito/mockito-core/2.21.0/mockito-core-2.21.0.jar:/Users/liuzhiwei/.m2/repository/net/bytebuddy/byte-buddy/1.8.22/byte-buddy-1.8.22.jar:/Users/liuzhiwei/.m2/repository/net/bytebuddy/byte-buddy-agent/1.8.22/byte-buddy-agent-1.8.22.jar:/Users/liuzhiwei/.m2/repository/org/objenesis/objenesis/2.1/objenesis-2.1.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-module-junit4/2.0.4/powermock-module-junit4-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-module-junit4-common/2.0.4/powermock-module-junit4-common-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-reflect/2.0.4/powermock-reflect-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-core/2.0.4/powermock-core-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/javassist/javassist/3.24.0-GA/javassist-3.24.0-GA.jar:/Users/liuzhiwei/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-api-mockito2/2.0.4/powermock-api-mockito2-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-api-support/2.0.4/powermock-api-support-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/hamcrest/hamcrest-all/1.3/hamcrest-all-1.3.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.17.1/log4j-slf4j-impl-2.17.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-api/2.17.1/log4j-api-2.17.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-core/2.17.1/log4j-core-2.17.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-1.2-api/2.17.1/log4j-1.2-api-2.17.1.jar:"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="hadoop.version" value="2.4.1"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="http://java.oracle.com/"/>
+    <property name="user.timezone" value=""/>
+    <property name="os.name" value="Mac OS X"/>
+    <property name="java.vm.specification.version" value="1.8"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.boot.library.path" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib"/>
+    <property name="project.basedir" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser"/>
+    <property name="sun.java.command" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/surefire/surefirebooter8007096068694665563.jar /Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/surefire 2022-06-10T17-37-14_312-jvmRun2 surefire2144556460873018875tmp surefire_12265503116635115267934tmp"/>
+    <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="surefire.test.class.path" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/test-classes:/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/classes:/Users/liuzhiwei/ideapro/flink-1.14.4/flink-annotations/target/flink-annotations-1.14.4.jar:/Users/liuzhiwei/.m2/repository/com/google/guava/guava/29.0-jre/guava-29.0-jre.jar:/Users/liuzhiwei/.m2/repository/com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar:/Users/liuzhiwei/.m2/repository/com/google/guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/Users/liuzhiwei/.m2/repository/org/checkerframework/checker-qual/2.11.1/checker-qual-2.11.1.jar:/Users/liuzhiwei/.m2/repository/com/google/errorprone/error_prone_annotations/2.3.4/error_prone_annotations-2.3.4.jar:/Users/liuzhiwei/.m2/repository/com/google/j2objc/j2objc-annotations/1.3/j2objc-annotations-1.3.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/calcite-core/1.26.0/calcite-core-1.26.0.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/avatica/avatica-core/1.17.0/avatica-core-1.17.0.jar:/Users/liuzhiwei/.m2/repository/org/apiguardian/apiguardian-api/1.1.0/apiguardian-api-1.1.0.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/calcite-core/1.26.0/calcite-core-1.26.0-tests.jar:/Users/liuzhiwei/.m2/repository/org/apache/calcite/calcite-linq4j/1.26.0/calcite-linq4j-1.26.0.jar:/Users/liuzhiwei/.m2/repository/com/esri/geometry/esri-geometry-api/2.2.0/esri-geometry-api-2.2.0.jar:/Users/liuzhiwei/.m2/repository/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.12.1/jackson-dataformat-yaml-2.12.1.jar:/Users/liuzhiwei/.m2/repository/org/yaml/snakeyaml/1.27/snakeyaml-1.27.jar:/Users/liuzhiwei/.m2/repository/com/jayway/jsonpath/json-path/2.4.0/json-path-2.4.0.jar:/Users/liuzhiwei/.m2/repository/net/minidev/json-smart/2.3/json-smart-2.3.jar:/Users/liuzhiwei/.m2/repository/net/minidev/accessors-smart/1.2/accessors-smart-1.2.jar:/Users/liuzhiwei/.m2/repository/org/ow2/asm/asm/5.0.4/asm-5.0.4.jar:/Users/liuzhiwei/.m2/repository/com/yahoo/datasketches/sketches-core/0.9.0/sketches-core-0.9.0.jar:/Users/liuzhiwei/.m2/repository/com/yahoo/datasketches/memory/0.9.0/memory-0.9.0.jar:/Users/liuzhiwei/.m2/repository/commons-codec/commons-codec/1.13/commons-codec-1.13.jar:/Users/liuzhiwei/.m2/repository/net/hydromatic/aggdesigner-algorithm/6.0/aggdesigner-algorithm-6.0.jar:/Users/liuzhiwei/.m2/repository/commons-lang/commons-lang/2.4/commons-lang-2.4.jar:/Users/liuzhiwei/.m2/repository/commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar:/Users/liuzhiwei/.m2/repository/org/apache/commons/commons-dbcp2/2.6.0/commons-dbcp2-2.6.0.jar:/Users/liuzhiwei/.m2/repository/org/apache/commons/commons-pool2/2.6.1/commons-pool2-2.6.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/commons/commons-lang3/3.3.2/commons-lang3-3.3.2.jar:/Users/liuzhiwei/.m2/repository/commons-io/commons-io/2.8.0/commons-io-2.8.0.jar:/Users/liuzhiwei/.m2/repository/org/codehaus/janino/commons-compiler/3.0.11/commons-compiler-3.0.11.jar:/Users/liuzhiwei/.m2/repository/org/codehaus/janino/janino/3.0.11/janino-3.0.11.jar:/Users/liuzhiwei/.m2/repository/org/apache/flink/flink-shaded-force-shading/14.0/flink-shaded-force-shading-14.0.jar:/Users/liuzhiwei/.m2/repository/org/slf4j/slf4j-api/1.7.15/slf4j-api-1.7.15.jar:/Users/liuzhiwei/.m2/repository/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter/5.7.2/junit-jupiter-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.7.2/junit-jupiter-api-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar:/Users/liuzhiwei/.m2/repository/org/junit/platform/junit-platform-commons/1.7.2/junit-platform-commons-1.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.7.2/junit-jupiter-params-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.7.2/junit-jupiter-engine-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/vintage/junit-vintage-engine/5.7.2/junit-vintage-engine-5.7.2.jar:/Users/liuzhiwei/.m2/repository/org/junit/platform/junit-platform-engine/1.7.2/junit-platform-engine-1.7.2.jar:/Users/liuzhiwei/.m2/repository/junit/junit/4.13.2/junit-4.13.2.jar:/Users/liuzhiwei/.m2/repository/org/mockito/mockito-core/2.21.0/mockito-core-2.21.0.jar:/Users/liuzhiwei/.m2/repository/net/bytebuddy/byte-buddy/1.8.22/byte-buddy-1.8.22.jar:/Users/liuzhiwei/.m2/repository/net/bytebuddy/byte-buddy-agent/1.8.22/byte-buddy-agent-1.8.22.jar:/Users/liuzhiwei/.m2/repository/org/objenesis/objenesis/2.1/objenesis-2.1.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-module-junit4/2.0.4/powermock-module-junit4-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-module-junit4-common/2.0.4/powermock-module-junit4-common-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-reflect/2.0.4/powermock-reflect-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-core/2.0.4/powermock-core-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/javassist/javassist/3.24.0-GA/javassist-3.24.0-GA.jar:/Users/liuzhiwei/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-api-mockito2/2.0.4/powermock-api-mockito2-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/powermock/powermock-api-support/2.0.4/powermock-api-support-2.0.4.jar:/Users/liuzhiwei/.m2/repository/org/hamcrest/hamcrest-all/1.3/hamcrest-all-1.3.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.17.1/log4j-slf4j-impl-2.17.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-api/2.17.1/log4j-api-2.17.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-core/2.17.1/log4j-core-2.17.1.jar:/Users/liuzhiwei/.m2/repository/org/apache/logging/log4j/log4j-1.2-api/2.17.1/log4j-1.2-api-2.17.1.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/Users/liuzhiwei"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.home" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre"/>
+    <property name="basedir" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser"/>
+    <property name="file.separator" value="/"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.CGraphicsEnvironment"/>
+    <property name="test.randomization.seed" value=""/>
+    <property name="mvn.forkNumber" value="2"/>
+    <property name="surefire.real.class.path" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser/target/surefire/surefirebooter8007096068694665563.jar"/>
+    <property name="buffer-debloat.randomization" value="true"/>
+    <property name="sun.boot.class.path" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/resources.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/rt.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/sunrsasign.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/jsse.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/jce.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/charsets.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/jfr.jar:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/classes"/>
+    <property name="checkpointing.changelog" value="unset"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="java.runtime.version" value="1.8.0_311-b11"/>
+    <property name="user.name" value="liuzhiwei"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="10.16"/>
+    <property name="java.endorsed.dirs" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/endorsed"/>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="localRepository" value="/Users/liuzhiwei/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="http://bugreport.sun.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="/var/folders/9v/knhh7l116z927rs422hz7g7r0000gn/T/"/>
+    <property name="idea.version" value="2021.3.2"/>
+    <property name="java.version" value="1.8.0_311"/>
+    <property name="user.dir" value="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-sql-parser"/>
+    <property name="os.arch" value="x86_64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="java.awt.printerjob" value="sun.lwawt.macosx.CPrinterJob"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="checkpointing.randomization" value="true"/>
+    <property name="java.library.path" value="/Users/liuzhiwei/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="java.vm.version" value="25.311-b11"/>
+    <property name="java.ext.dirs" value="/Users/liuzhiwei/Library/Java/Extensions:/Library/Java/JavaVirtualMachines/jdk1.8.0_311.jdk/Contents/Home/jre/lib/ext:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="maven.repo.local" value="/Users/liuzhiwei/.m2/repository"/>
+    <property name="java.class.version" value="52.0"/>
+    <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+  </properties>
+  <testcase name="testDataTypeUnparsing[0: CHAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.291"/>
+  <testcase name="testThrowsError[0: CHAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeParsing[0: CHAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.096"/>
+  <testcase name="testDataTypeUnparsing[1: CHAR NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[1: CHAR NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[1: CHAR NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[2: CHAR   NOT 	&#10;NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[2: CHAR   NOT 	&#10;NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[2: CHAR   NOT 	&#10;NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[3: char not null]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[3: char not null]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[3: char not null]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[4: CHAR NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[4: CHAR NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testDataTypeParsing[4: CHAR NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.014"/>
+  <testcase name="testDataTypeUnparsing[5: CHAR{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.014"/>
+  <testcase name="testThrowsError[5: CHAR{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[5: CHAR{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.006"/>
+  <testcase name="testDataTypeUnparsing[6: VARCHAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.01"/>
+  <testcase name="testThrowsError[6: VARCHAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[6: VARCHAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.007"/>
+  <testcase name="testDataTypeUnparsing[7: VARCHAR{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[7: VARCHAR{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[7: VARCHAR{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[8: STRING]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testThrowsError[8: STRING]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[8: STRING]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[9: BOOLEAN]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[9: BOOLEAN]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[9: BOOLEAN]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[10: BINARY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[10: BINARY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[10: BINARY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[11: BINARY{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[11: BINARY{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[11: BINARY{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[12: VARBINARY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[12: VARBINARY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeParsing[12: VARBINARY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.008"/>
+  <testcase name="testDataTypeUnparsing[13: VARBINARY{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.006"/>
+  <testcase name="testThrowsError[13: VARBINARY{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[13: VARBINARY{33}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[14: BYTES]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[14: BYTES]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[14: BYTES]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.006"/>
+  <testcase name="testDataTypeUnparsing[15: DECIMAL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.016"/>
+  <testcase name="testThrowsError[15: DECIMAL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeParsing[15: DECIMAL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[16: DEC]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[16: DEC]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[16: DEC]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[17: NUMERIC]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[17: NUMERIC]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[17: NUMERIC]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[18: DECIMAL{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[18: DECIMAL{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[18: DECIMAL{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[19: DEC{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[19: DEC{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[19: DEC{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[20: NUMERIC{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[20: NUMERIC{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[20: NUMERIC{10}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[21: DECIMAL{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[21: DECIMAL{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[21: DECIMAL{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[22: DEC{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[22: DEC{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[22: DEC{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[23: NUMERIC{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[23: NUMERIC{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[23: NUMERIC{10, 3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[24: TINYINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[24: TINYINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[24: TINYINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[25: SMALLINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[25: SMALLINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[25: SMALLINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[26: INTEGER]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[26: INTEGER]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[26: INTEGER]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[27: INT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[27: INT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[27: INT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[28: BIGINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[28: BIGINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[28: BIGINT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[29: FLOAT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[29: FLOAT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[29: FLOAT]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.006"/>
+  <testcase name="testDataTypeUnparsing[30: DOUBLE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testThrowsError[30: DOUBLE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[30: DOUBLE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testDataTypeUnparsing[31: DOUBLE PRECISION]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testThrowsError[31: DOUBLE PRECISION]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[31: DOUBLE PRECISION]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[32: DATE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[32: DATE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[32: DATE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[33: TIME]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[33: TIME]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[33: TIME]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[34: TIME WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[34: TIME WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[34: TIME WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[35: TIME{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[35: TIME{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[35: TIME{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[36: TIME{3} WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[36: TIME{3} WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[36: TIME{3} WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[37: TIMESTAMP]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[37: TIMESTAMP]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[37: TIMESTAMP]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[38: TIMESTAMP WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[38: TIMESTAMP WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[38: TIMESTAMP WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[39: TIMESTAMP{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[39: TIMESTAMP{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[39: TIMESTAMP{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[40: TIMESTAMP{3} WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[40: TIMESTAMP{3} WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[40: TIMESTAMP{3} WITHOUT TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[41: TIMESTAMP WITH LOCAL TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.012"/>
+  <testcase name="testThrowsError[41: TIMESTAMP WITH LOCAL TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[41: TIMESTAMP WITH LOCAL TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[42: TIMESTAMP_LTZ]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testThrowsError[42: TIMESTAMP_LTZ]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[42: TIMESTAMP_LTZ]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[43: TIMESTAMP{3} WITH LOCAL TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[43: TIMESTAMP{3} WITH LOCAL TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[43: TIMESTAMP{3} WITH LOCAL TIME ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeUnparsing[44: TIMESTAMP_LTZ{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testThrowsError[44: TIMESTAMP_LTZ{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[44: TIMESTAMP_LTZ{3}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[45: ARRAY&lt;TIMESTAMP{3} WITH LOCAL TIME ZONE&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testThrowsError[45: ARRAY&lt;TIMESTAMP{3} WITH LOCAL TIME ZONE&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[45: ARRAY&lt;TIMESTAMP{3} WITH LOCAL TIME ZONE&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.01"/>
+  <testcase name="testDataTypeUnparsing[46: ARRAY&lt;TIMESTAMP_LTZ{3}&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[46: ARRAY&lt;TIMESTAMP_LTZ{3}&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[46: ARRAY&lt;TIMESTAMP_LTZ{3}&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[47: ARRAY&lt;INT NOT NULL&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.007"/>
+  <testcase name="testThrowsError[47: ARRAY&lt;INT NOT NULL&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeParsing[47: ARRAY&lt;INT NOT NULL&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[48: INT ARRAY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[48: INT ARRAY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[48: INT ARRAY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[49: INT NOT NULL ARRAY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[49: INT NOT NULL ARRAY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[49: INT NOT NULL ARRAY]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[50: INT ARRAY NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[50: INT ARRAY NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[50: INT ARRAY NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[51: MULTISET&lt;INT NOT NULL&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[51: MULTISET&lt;INT NOT NULL&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[51: MULTISET&lt;INT NOT NULL&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[52: INT MULTISET]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[52: INT MULTISET]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[52: INT MULTISET]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[53: INT NOT NULL MULTISET]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[53: INT NOT NULL MULTISET]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[53: INT NOT NULL MULTISET]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[54: INT MULTISET NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[54: INT MULTISET NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[54: INT MULTISET NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[55: MAP&lt;BIGINT, BOOLEAN&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[55: MAP&lt;BIGINT, BOOLEAN&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[55: MAP&lt;BIGINT, BOOLEAN&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[56: ROW&lt;f0 INT NOT NULL, f1 BOOLEAN&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.013"/>
+  <testcase name="testThrowsError[56: ROW&lt;f0 INT NOT NULL, f1 BOOLEAN&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[56: ROW&lt;f0 INT NOT NULL, f1 BOOLEAN&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.022"/>
+  <testcase name="testDataTypeUnparsing[57: ROW{f0 INT NOT NULL, f1 BOOLEAN}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testThrowsError[57: ROW{f0 INT NOT NULL, f1 BOOLEAN}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[57: ROW{f0 INT NOT NULL, f1 BOOLEAN}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[58: ROW&lt;`f0` INT&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[58: ROW&lt;`f0` INT&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[58: ROW&lt;`f0` INT&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[59: ROW{`f0` INT}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[59: ROW{`f0` INT}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[59: ROW{`f0` INT}]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[60: ROW&lt;&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[60: ROW&lt;&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[60: ROW&lt;&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[61: ROW]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[61: ROW]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[61: ROW]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[62: ROW&lt;f0 INT NOT NULL &apos;This is a comment.&apos;, f1 BOOLEAN &apos;This as well.&apos;&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.007"/>
+  <testcase name="testThrowsError[62: ROW&lt;f0 INT NOT NULL &apos;This is a comment.&apos;, f1 BOOLEAN &apos;This as well.&apos;&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[62: ROW&lt;f0 INT NOT NULL &apos;This is a comment.&apos;, f1 BOOLEAN &apos;This as well.&apos;&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[63: RAW{    &apos;java.lang.Integer&apos;   ,   &apos;&lt;Serializer Snapshot&gt;&apos;   }]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testThrowsError[63: RAW{    &apos;java.lang.Integer&apos;   ,   &apos;&lt;Serializer Snapshot&gt;&apos;   }]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[63: RAW{    &apos;java.lang.Integer&apos;   ,   &apos;&lt;Serializer Snapshot&gt;&apos;   }]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testDataTypeUnparsing[64: RAW{&apos;java.lang.Integer&apos;, &apos;&lt;Serializer Snapshot&gt;&apos;} NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[64: RAW{&apos;java.lang.Integer&apos;, &apos;&lt;Serializer Snapshot&gt;&apos;} NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[64: RAW{&apos;java.lang.Integer&apos;, &apos;&lt;Serializer Snapshot&gt;&apos;} NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[65: RAW{&apos;java.lang.Integer&apos;, &apos;&lt;&apos; &apos;Serializer Snapshot&gt;&apos;} NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[65: RAW{&apos;java.lang.Integer&apos;, &apos;&lt;&apos; &apos;Serializer Snapshot&gt;&apos;} NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[65: RAW{&apos;java.lang.Integer&apos;, &apos;&lt;&apos; &apos;Serializer Snapshot&gt;&apos;} NOT NULL]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.018"/>
+  <testcase name="testDataTypeUnparsing[66: TIMESTAMP WITH ^TIME^ ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[66: TIMESTAMP WITH ^TIME^ ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.062"/>
+  <testcase name="testDataTypeParsing[66: TIMESTAMP WITH ^TIME^ ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[67: TIMESTAMP{3} WITH ^TIME^ ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[67: TIMESTAMP{3} WITH ^TIME^ ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testDataTypeParsing[67: TIMESTAMP{3} WITH ^TIME^ ZONE]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[68: ^NULL^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[68: ^NULL^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.026"/>
+  <testcase name="testDataTypeParsing[68: ^NULL^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[69: cat.db.MyType]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.017"/>
+  <testcase name="testThrowsError[69: cat.db.MyType]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[69: cat.db.MyType]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[70: `db`.`MyType`]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.004"/>
+  <testcase name="testThrowsError[70: `db`.`MyType`]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[70: `db`.`MyType`]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[71: MyType]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[71: MyType]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[71: MyType]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[72: ARRAY&lt;MyType&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testThrowsError[72: ARRAY&lt;MyType&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeParsing[72: ARRAY&lt;MyType&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[73: ROW&lt;f0 MyType, f1 `c`.`d`.`t`&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.002"/>
+  <testcase name="testThrowsError[73: ROW&lt;f0 MyType, f1 `c`.`d`.`t`&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeParsing[73: ROW&lt;f0 MyType, f1 `c`.`d`.`t`&gt;]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeUnparsing[74: ^INTERVAL^ YEAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[74: ^INTERVAL^ YEAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.013"/>
+  <testcase name="testDataTypeParsing[74: ^INTERVAL^ YEAR]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testDataTypeUnparsing[75: RAW{^}^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testThrowsError[75: RAW{^}^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.005"/>
+  <testcase name="testDataTypeParsing[75: RAW{^}^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0"/>
+  <testcase name="testDataTypeUnparsing[76: RAW{&apos;java.lang.Integer&apos;, ^}^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+  <testcase name="testThrowsError[76: RAW{&apos;java.lang.Integer&apos;, ^}^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.003"/>
+  <testcase name="testDataTypeParsing[76: RAW{&apos;java.lang.Integer&apos;, ^}^]" classname="org.apache.flink.sql.parser.FlinkDDLDataTypeTest" time="0.001"/>
+</testsuite>

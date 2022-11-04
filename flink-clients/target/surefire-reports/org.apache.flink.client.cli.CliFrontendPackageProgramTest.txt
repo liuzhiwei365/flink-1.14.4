@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.client.cli.CliFrontendPackageProgramTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.302 s - in org.apache.flink.client.cli.CliFrontendPackageProgramTest

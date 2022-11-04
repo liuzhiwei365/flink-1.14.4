@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.rules.logical.FlinkAggregateExpandDistinctAggregatesRuleTest
+-------------------------------------------------------------------------------
+Tests run: 28, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.745 s - in org.apache.flink.table.planner.plan.rules.logical.FlinkAggregateExpandDistinctAggregatesRuleTest

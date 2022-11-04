@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.state.changelog.ChangelogDelegateEmbeddedRocksDBStateBackendTest
+-------------------------------------------------------------------------------
+Tests run: 150, Failures: 0, Errors: 0, Skipped: 22, Time elapsed: 48.012 s - in org.apache.flink.state.changelog.ChangelogDelegateEmbeddedRocksDBStateBackendTest

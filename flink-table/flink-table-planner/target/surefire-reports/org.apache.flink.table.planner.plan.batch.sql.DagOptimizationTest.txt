@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.apache.flink.table.planner.plan.batch.sql.DagOptimizationTest
+-------------------------------------------------------------------------------
+Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.701 s - in org.apache.flink.table.planner.plan.batch.sql.DagOptimizationTest
