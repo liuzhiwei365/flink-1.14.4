@@ -44,7 +44,7 @@ import java.util.Objects;
 public class JdbcDynamicTableSource
         implements ScanTableSource,
                 LookupTableSource,
-                SupportsProjectionPushDown,
+                SupportsProjectionPushDown,  // 支持列下推 ,  不支持行下推（where过滤条件 下推）
                 SupportsLimitPushDown {
 
     private final JdbcConnectorOptions options;
@@ -70,10 +70,12 @@ public class JdbcDynamicTableSource
     public LookupRuntimeProvider getLookupRuntimeProvider(LookupContext context) {
         // JDBC only support non-nested look up keys
         String[] keyNames = new String[context.getKeys().length];
+        //拿到所有 key 的列名
         for (int i = 0; i < keyNames.length; i++) {
             int[] innerKeyArr = context.getKeys()[i];
             Preconditions.checkArgument(
                     innerKeyArr.length == 1, "JDBC only support non-nested look up keys");
+            //填充列名
             keyNames[i] = physicalSchema.getFieldNames()[innerKeyArr[0]];
         }
         final RowType rowType = (RowType) physicalSchema.toRowDataType().getLogicalType();

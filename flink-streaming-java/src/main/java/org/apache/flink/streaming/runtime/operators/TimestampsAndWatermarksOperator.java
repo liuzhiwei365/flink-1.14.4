@@ -44,7 +44,15 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <T> The type of the input elements
  */
-// 生产watermark 的 其实是由该算子来生成
+
+// WatermarkAssignerOperator 是针对 sql 和 表 的
+// TimestampsAndWatermarksOperator  是针对  普通 flink任务
+
+// 定时器调用 onProcessingTime 方法 ，是利用 ProcessingTimeCallback 这个接口来调的
+// 它们都是 负责 watermark 的生成逻辑
+
+// 本类只负责watermark 的生成逻辑 , 不负责watermark 对齐逻辑
+// StatusWatermarkValve 负责 下游算子 的 watermark 对齐
 public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T>
         implements OneInputStreamOperator<T, T>, ProcessingTimeCallback {
 
@@ -84,40 +92,52 @@ public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T
                         ? watermarkStrategy.createWatermarkGenerator(this::getMetricGroup)
                         : new NoWatermarksGenerator<>();
 
-        wmOutput = new WatermarkEmitter(output);//WatermarkEmitter 对普通 output 做了包装
+        wmOutput = new WatermarkEmitter(output); // WatermarkEmitter 对普通 output 做了包装
 
         watermarkInterval = getExecutionConfig().getAutoWatermarkInterval();
         if (watermarkInterval > 0 && emitProgressiveWatermarks) {
+            // 获取当前系统时间
             final long now = getProcessingTimeService().getCurrentProcessingTime();
-            //注册定时器, 周期性地向下游发送watermark
+            // 注册定时器,  过了 watermarkInterval 间隔的时间后, 触发定时器异步调用 onProcessingTime 向下游发送watermark
+
+            // 该定时器是 构造 StreamTask 的时候创建的 由timeService 成员变量维护, StreamTask构造 OperatorChain 的时候 各种传递
+            // 最终传递给了 父类 AbstractStreamOperator 的 processingTimeService成员
+
+            // 这个地方的实现类是  ProcessingTimeServiceImpl  //最终 内部会用 jdk 的 ScheduledThreadPoolExecutor 对象
+            // 的 schedule 方法来定时
             getProcessingTimeService().registerTimer(now + watermarkInterval, this);
         }
     }
 
-    //算子的主逻辑,处理每条数据
+    // 算子的主逻辑,处理每条数据
     @Override
     public void processElement(final StreamRecord<T> element) throws Exception {
         final T event = element.getValue();
+        // StreamRecord 类中又一个 timestamp 成员
         final long previousTimestamp =
                 element.hasTimestamp() ? element.getTimestamp() : Long.MIN_VALUE;
+
         final long newTimestamp = timestampAssigner.extractTimestamp(event, previousTimestamp);
 
         element.setTimestamp(newTimestamp);
         output.collect(element);
-        // 用于更新 maxTimestamp
+
+        // 每来一条数据都会 更新 maxTimestamp
         watermarkGenerator.onEvent(event, newTimestamp, wmOutput);
     }
 
-    // onProcessingTime 最初始的触发是由 父类 AbstractStreamOperator的成员变量processingTimeService 定时触发调用的
+    // onProcessingTime 是定时触发调用的
     // 而第一次定时是在本类算子 的初始化 open()方法
     @Override
     public void onProcessingTime(long timestamp) throws Exception {
         //  WatermarkGenerator的子类 BoundedOutOfOrdernessWatermarks的 生成Watermark 的逻辑就是:
         //   用 maxTimestamp - outOfOrdernessMillis - 1 作为其构造参数
+
+        // 向下游发送watermark
         watermarkGenerator.onPeriodicEmit(wmOutput);
 
+        // 重新注册定时器
         final long now = getProcessingTimeService().getCurrentProcessingTime();
-        //重新注册定时器, 周期性地向下游发送watermark
         getProcessingTimeService().registerTimer(now + watermarkInterval, this);
     }
 

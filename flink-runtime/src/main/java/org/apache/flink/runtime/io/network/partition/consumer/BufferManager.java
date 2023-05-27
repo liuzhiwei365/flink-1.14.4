@@ -173,7 +173,7 @@ public class BufferManager implements BufferListener, BufferRecycler {
             }
 
             numRequiredBuffers = numRequired;
-            //根据numRequiredBuffers的值, 来申请buffer,放回时机申请成功数
+            // 根据numRequiredBuffers的值, 来申请buffer,放回时机申请成功数
             numRequestedBuffers = tryRequestBuffers();
         }
         return numRequestedBuffers;

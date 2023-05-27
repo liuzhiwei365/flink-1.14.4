@@ -46,6 +46,7 @@ public class JobDispatcherLeaderProcess extends AbstractDispatcherLeaderProcess 
     @Override
     protected void onStart() {
         final DispatcherGatewayService dispatcherService =
+                // 内部会将 dispatcher 对象 start
                 dispatcherGatewayServiceFactory.create(
                         DispatcherId.fromUuid(getLeaderSessionId()),
                         Collections.singleton(jobGraph),

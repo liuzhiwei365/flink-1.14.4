@@ -172,6 +172,9 @@ public class RpcUtils {
      *
      * @see RpcSystem#remoteServiceBuilder(Configuration, String, String)
      */
+
+    // ClusterEntrypoint 和 TaskManangerRunner 都会调用本方法来创建akka 系统
+
     public static RpcService createRemoteRpcService(
             RpcSystem rpcSystem,
             Configuration configuration,

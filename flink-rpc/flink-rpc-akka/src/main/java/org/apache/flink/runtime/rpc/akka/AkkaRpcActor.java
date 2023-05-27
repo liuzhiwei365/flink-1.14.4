@@ -80,6 +80,20 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <T> Type of the {@link RpcEndpoint}
  */
+
+// *       Akka通过Actor系统（ActorSystem）来管理所有Actor，每个JVM实例内只有一个ActorSystem
+// *       当ActorSystem启动时，默认有3个守护（guardian）Actor：
+// *
+// *       /：根守护Actor,如同文件系统中的根,最先被创建,最后被销毁；
+// *       /system：系统守护Actor,Akka本身以及基于Akka构建的某些模块会在该路径下创建子Actor；
+// *       /user：用户守护Actor,我们在使用Akka过程中创建的Actor都会位于这个路径下。当调用ActorSystem.actorOf()方法时,
+// *       会在/user下直接创建；而当调用某Actor的ActorContext.actorOf()方法时,会在该Actor下创建子Actor
+
+// *       创建或者根据路径查找Actor,返回给用户的都是ActorRef,可以视为Actor实例的不可变、可序列化的句柄（引用）,
+// *       用户通过ActorRef来操作Actor,比如向其发送消息
+// *
+// *       AbstractActor  在flink 中只有三个实现
+// *       AkkaRpcActor、 SupervisorActor、 FencedAkkaRpc
 class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -146,12 +160,16 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
         state = state.finishTermination();
     }
 
+    //      从 AbstractActor 的 receive 方法而来
+    //      AbstractActor 是由Akka 的源码包实现的, 而不是flink
     @Override
     public Receive createReceive() {
+        // 路由规则如下 :
         return ReceiveBuilder.create()
+                // 如果收到的消息是RemoteHandshakeMessage ,则调用 handleHandshakeMessage 方法来处理
                 .match(RemoteHandshakeMessage.class, this::handleHandshakeMessage)
                 .match(ControlMessages.class, this::handleControlMessage)
-                .matchAny(this::handleMessage)
+                .matchAny(this::handleMessage) // handleMessage 是处理核心 业务的方法
                 .build();
     }
 
@@ -182,7 +200,11 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
         try {
             switch (controlMessage) {
                 case START:
-                    state = state.start(this, flinkClassLoader);
+                    // 收到的消息是 ControlMessages.START ,但是现在 state 的状态是 StoppedState.STOPPED
+                    // 所以会调用  AkkaRpcActor.StoppedState.start 方法 ;调用完成后,状态会变为 StartedState.STARTED
+
+                    // 典型的状态模式
+                    state = state.start(this, flinkClassLoader); //
                     break;
                 case STOP:
                     state = state.stop();
@@ -271,6 +293,14 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
     private void handleRpcInvocation(RpcInvocation rpcInvocation) {
         Method rpcMethod = null;
 
+        //
+        //         1 根据请求端发来的 RpcInvocation 解析得到  请求端的方法 和 请求端方法的参数
+        //           据此来查找服务端的方法
+
+        //         2 而服务端的方法是由相应 的 rpcEndpoint 类 的 同名同参数 的方法 来处理
+
+        //         3 后续 再调用该 同名同参数的方法，返回其结果
+        //
         try {
             String methodName = rpcInvocation.getMethodName();
             Class<?>[] parameterTypes = rpcInvocation.getParameterTypes();
@@ -327,6 +357,7 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
 
                     final String methodName = rpcMethod.getName();
 
+                    // 要么返回其结果包装的future对象 ，要么直接返回对象
                     if (result instanceof CompletableFuture) {
                         final CompletableFuture<?> responseFuture = (CompletableFuture<?>) result;
                         sendAsyncResponse(responseFuture, methodName);
@@ -612,6 +643,7 @@ class AkkaRpcActor<T extends RpcEndpoint & RpcGateway> extends AbstractActor {
     }
 
     @SuppressWarnings("Singleton")
+    // 枚举对象
     enum StoppedState implements State {
         STOPPED;
 

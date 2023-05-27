@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 FromClauseASTParser.g 2022-06-10 20:27:39
+// $ANTLR 3.5.2 FromClauseASTParser.g 2023-03-06 17:56:59
 
 package org.apache.flink.table.planner.delegation.hive.parse;
 
@@ -3782,7 +3782,7 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: identifier, tableAlias, function
+					// elements: identifier, function, tableAlias
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -4197,16 +4197,16 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_RPAREN.add(RPAREN90);
 
 			// AST REWRITE
-			// elements: expr, numerator, denominator
-			// token labels: numerator, denominator
+			// elements: denominator, expr, numerator
+			// token labels: denominator, numerator
 			// rule labels: retval
 			// token list labels: 
 			// rule list labels: expr
 			// wildcard labels: 
 			if ( state.backtracking==0 ) {
 			retval.tree = root_0;
-			RewriteRuleTokenStream stream_numerator=new RewriteRuleTokenStream(adaptor,"token numerator",numerator);
 			RewriteRuleTokenStream stream_denominator=new RewriteRuleTokenStream(adaptor,"token denominator",denominator);
+			RewriteRuleTokenStream stream_numerator=new RewriteRuleTokenStream(adaptor,"token numerator",numerator);
 			RewriteRuleSubtreeStream stream_retval=new RewriteRuleSubtreeStream(adaptor,"rule retval",retval!=null?retval.getTree():null);
 			RewriteRuleSubtreeStream stream_expr=new RewriteRuleSubtreeStream(adaptor,"token expr",list_expr);
 			root_0 = (HiveParserASTNode)adaptor.nil();
@@ -4771,9 +4771,9 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: ts, alias, tabname, props
+			// elements: props, ts, alias, tabname
 			// token labels: 
-			// rule labels: tabname, alias, retval, ts, props
+			// rule labels: tabname, alias, retval, props, ts
 			// token list labels: 
 			// rule list labels: 
 			// wildcard labels: 
@@ -4782,8 +4782,8 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			RewriteRuleSubtreeStream stream_tabname=new RewriteRuleSubtreeStream(adaptor,"rule tabname",tabname!=null?tabname.getTree():null);
 			RewriteRuleSubtreeStream stream_alias=new RewriteRuleSubtreeStream(adaptor,"rule alias",alias!=null?alias.getTree():null);
 			RewriteRuleSubtreeStream stream_retval=new RewriteRuleSubtreeStream(adaptor,"rule retval",retval!=null?retval.getTree():null);
-			RewriteRuleSubtreeStream stream_ts=new RewriteRuleSubtreeStream(adaptor,"rule ts",ts!=null?ts.getTree():null);
 			RewriteRuleSubtreeStream stream_props=new RewriteRuleSubtreeStream(adaptor,"rule props",props!=null?props.getTree():null);
+			RewriteRuleSubtreeStream stream_ts=new RewriteRuleSubtreeStream(adaptor,"rule ts",ts!=null?ts.getTree():null);
 
 			root_0 = (HiveParserASTNode)adaptor.nil();
 			// 205:5: -> ^( TOK_TABREF $tabname ( $props)? ( $ts)? ( $alias)? )
@@ -4938,7 +4938,7 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tabname, alias, ts
+			// elements: ts, alias, tabname
 			// token labels: 
 			// rule labels: tabname, alias, retval, ts
 			// token list labels: 
@@ -5209,7 +5209,7 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_identifier.add(view.getTree());
 			// AST REWRITE
-			// elements: db, view
+			// elements: view, db
 			// token labels: 
 			// rule labels: view, db, retval
 			// token list labels: 
@@ -5585,7 +5585,7 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: distributeByClause, sortByClause
+					// elements: sortByClause, distributeByClause
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -6249,7 +6249,7 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: alias, ptfsrc, name, expression, spec
+			// elements: alias, spec, name, expression, ptfsrc
 			// token labels: name, alias
 			// rule labels: ptfsrc, spec, retval
 			// token list labels: 
@@ -6770,7 +6770,7 @@ public class HiveASTParser_FromClauseASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_tableNameColList.add(tableNameColList143.getTree());
 			// AST REWRITE
-			// elements: tableNameColList, valuesClause
+			// elements: valuesClause, tableNameColList
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 

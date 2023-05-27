@@ -71,6 +71,8 @@ public class ClusterEntryPointExceptionUtils {
      * @param root The Throwable of which the cause tree shall be traversed.
      */
     public static void tryEnrichClusterEntryPointError(@Nullable Throwable root) {
+
+        // 把ClusterEntryPoint 的报错信息搞得更丰富 ,不是啥重要的逻辑
         tryEnrichOutOfMemoryError(
                 root,
                 JM_METASPACE_OOM_ERROR_MESSAGE,

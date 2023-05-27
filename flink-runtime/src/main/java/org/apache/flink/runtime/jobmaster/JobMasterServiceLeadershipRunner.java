@@ -259,6 +259,7 @@ public class JobMasterServiceLeadershipRunner implements JobManagerRunner, Leade
                                         leaderSessionId,
                                         ThrowingRunnable.unchecked(
                                                 () ->
+                                                        //   核心
                                                         verifyJobSchedulingStatusAndCreateJobMasterServiceProcess(
                                                                 leaderSessionId)),
                                         "verify job scheduling status and create JobMasterServiceProcess"));
@@ -275,6 +276,7 @@ public class JobMasterServiceLeadershipRunner implements JobManagerRunner, Leade
         if (jobSchedulingStatus == RunningJobsRegistry.JobSchedulingStatus.DONE) {
             jobAlreadyDone();
         } else {
+            // 创建 JobMaster 进程
             createNewJobMasterServiceProcess(leaderSessionId);
         }
     }
@@ -322,6 +324,7 @@ public class JobMasterServiceLeadershipRunner implements JobManagerRunner, Leade
                     e);
         }
 
+        //  创建 DefaultJobMasterServiceProcess 对象
         jobMasterServiceProcess = jobMasterServiceProcessFactory.create(leaderSessionId);
 
         forwardIfValidLeader(

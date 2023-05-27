@@ -209,7 +209,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     private final TaskManagerMetricGroup taskManagerMetricGroup;
 
-    /** The state manager for this task, providing state managers per slot. */
+    // 此任务的状态管理器，为每个插槽提供状态管理
     private final TaskExecutorLocalStateStoresManager localStateStoresManager;
 
     /** The changelog manager for this task, providing changelog storage per job. */
@@ -284,6 +284,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             FatalErrorHandler fatalErrorHandler,
             TaskExecutorPartitionTracker partitionTracker) {
 
+        // 1 内部创建 akka 服务器 , 并启动
+        // 2 构造 MainThreadExecutor 对象, 并把akka 服务器传给它,作为其成员
         super(rpcService, RpcServiceUtils.createRandomName(TASK_MANAGER_NAME));
 
         checkArgument(
@@ -301,16 +303,25 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         this.externalResourceInfoProvider = checkNotNull(externalResourceInfoProvider);
 
         this.libraryCacheManager = taskExecutorServices.getLibraryCacheManager();
+
+        // 首先在TaskSlotTable，是TaskExecutor中非常非常重要的一个成员变量，它是真正帮助TaskExecutor完成一切和Slot有关操作的组件，
+        // 在ResourceManager中，也有一个类似的组件，就是在注册的两个定时任务中的其中一个：slot定时任务SlotManager
         this.taskSlotTable = taskExecutorServices.getTaskSlotTable();
+
         this.jobTable = taskExecutorServices.getJobTable();
         this.jobLeaderService = taskExecutorServices.getJobLeaderService();
         this.unresolvedTaskManagerLocation =
                 taskExecutorServices.getUnresolvedTaskManagerLocation();
+
         this.localStateStoresManager = taskExecutorServices.getTaskManagerStateStore();
+
         this.changelogStoragesManager = taskExecutorServices.getTaskManagerChangelogManager();
         this.shuffleEnvironment = taskExecutorServices.getShuffleEnvironment();
         this.kvStateService = taskExecutorServices.getKvStateService();
         this.ioExecutor = taskExecutorServices.getIOExecutor();
+
+        // 利用 haServices 来  构造RM的寻回器
+        // haServices 内部含有 zkclient,  先拿到 RM 的监听的节点路径,
         this.resourceManagerLeaderRetriever = haServices.getResourceManagerLeaderRetriever();
 
         this.hardwareDescription =
@@ -341,6 +352,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
     private HeartbeatManager<Void, TaskExecutorHeartbeatPayload>
             createResourceManagerHeartbeatManager(
                     HeartbeatServices heartbeatServices, ResourceID resourceId) {
+        // mainThreadExecutor 会来定时调度
         return heartbeatServices.createHeartbeatManager(
                 resourceId, new ResourceManagerHeartbeatListener(), getMainThreadExecutor(), log);
     }
@@ -352,6 +364,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 resourceId, new JobManagerHeartbeatListener(), getMainThreadExecutor(), log);
     }
 
+    // 判断一个 task manager 组件能否被释放, 就要到 shuffleEnvironment 中去看 注册的 ResultPartition集合是否为空
+    // 如果为空,说明数据还未全部 处理完毕, 此时不能释放该 task manager
     @Override
     public CompletableFuture<Boolean> canBeReleased() {
         return CompletableFuture.completedFuture(
@@ -388,9 +402,12 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
     //  Life cycle
     // ------------------------------------------------------------------------
 
+    // TaskExecutor start 后 , 由于继承了 RpcEndpoint ,会被路由到 onStart方法
     @Override
     public void onStart() throws Exception {
         try {
+            // 会启动 内部服务，包括
+            // LeaderRetrievalService  TaskSlotTable  JobLeaderService  FileCache 这四个服务
             startTaskExecutorServices();
         } catch (Throwable t) {
             final TaskManagerException exception =
@@ -405,16 +422,18 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     private void startTaskExecutorServices() throws Exception {
         try {
-            // start by connecting to the ResourceManager
+            // 用于创建与ResourceManager 的rpc 连接  将TaskMananger 的资源汇报给 ResourceManager
             resourceManagerLeaderRetriever.start(new ResourceManagerLeaderListener());
 
-            // tell the task slot table who's responsible for the task slot actions
+            // 启动taskSlotTable  管理本子节点的 slot
             taskSlotTable.start(new SlotActionsImpl(), getMainThreadExecutor());
 
-            // start the job leader service
+            // 和JobManager 进行 Rpc通信  监听 获取 活跃的 Leader节点
+            //   注意： 虽然 ResourceManager 和 JobManager 有可能在同一个节点上 ，但是它们属于主节点不同的服务
             jobLeaderService.start(
                     getAddress(), getRpcService(), haServices, new JobLeaderListenerImpl());
 
+            // 用于存储 task 运行时 从 PermanentBlobService 拉取 的文件（ io.tmp.dirs）
             fileCache =
                     new FileCache(
                             taskManagerConfiguration.getTmpDirectories(),
@@ -558,6 +577,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
     // Task lifecycle RPCs
     // ----------------------------------------------------------------------
 
+    //  该方法会被 某某GateWay 远程调用
     @Override
     public CompletableFuture<Acknowledge> submitTask(
             TaskDeploymentDescriptor tdd, JobMasterId jobMasterId, Time timeout) {
@@ -747,13 +767,13 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             boolean taskAdded;
 
             try {
-                //注册 Task
+                // 注册 Task ,
                 taskAdded = taskSlotTable.addTask(task);
             } catch (SlotNotFoundException | SlotNotActiveException e) {
                 throw new TaskSubmissionException("Could not submit task.", e);
             }
 
-            if (taskAdded) {//如果注册成功,启动Task 的线程
+            if (taskAdded) { // 如果注册成功,启动Task 的线程
                 task.startTaskThread();
                 // 预定task清理工作
                 setupResultPartitionBookkeeping(
@@ -1258,6 +1278,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     @Override
     public CompletableFuture<ThreadDumpInfo> requestThreadDump(Time timeout) {
+        // dump jvm 的 thread信息, 可以模仿
         final Collection<ThreadInfo> threadDump = JvmUtils.createThreadDump();
 
         final Collection<ThreadDumpInfo.ThreadInfo> threadInfos =
@@ -1309,6 +1330,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         }
     }
 
+    // 创建 TaskExecutorToResourceManagerConnection 对象 ,与ResourceManager 连接
     private void connectToResourceManager() {
         assert (resourceManagerAddress != null);
         assert (establishedResourceManagerConnection == null);
@@ -1337,9 +1359,12 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                         getMainThreadExecutor(),
                         new ResourceManagerRegistrationListener(),
                         taskExecutorRegistration);
+
+        // 会调用 AkkaRpcService 的 connect 方法
         resourceManagerConnection.start();
     }
 
+    // 与 ResourceManager 连接的时候 会汇报 slot 信息
     private void establishResourceManagerConnection(
             ResourceManagerGateway resourceManagerGateway,
             ResourceID resourceManagerResourceId,
@@ -1350,7 +1375,8 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 resourceManagerGateway.sendSlotReport(
                         getResourceID(),
                         taskExecutorRegistrationId,
-                        taskSlotTable.createSlotReport(getResourceID()),
+                        taskSlotTable.createSlotReport(
+                                getResourceID()), // 构建 SlotReport对象 ,将所有slot的状态 打包到SlotReport中
                         taskManagerConfiguration.getRpcTimeout());
 
         slotReportResponseFuture.whenCompleteAsync(
@@ -1375,6 +1401,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                         clusterInformation.getBlobServerHostname(),
                         clusterInformation.getBlobServerPort());
 
+        // 设置 blobServerAddress 的地址, 这样 blobCacheService才能用
         blobCacheService.setBlobServerAddress(blobServerAddress);
 
         establishedResourceManagerConnection =
@@ -1463,7 +1490,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         jobTable.getConnection(jobId).ifPresent(this::internalOfferSlotsToJobManager);
     }
 
-    //TM 端向JM 提供 物理slots
+    // TM 端向JM 提供 物理slots
     private void internalOfferSlotsToJobManager(JobTable.Connection jobManagerConnection) {
         final JobID jobId = jobManagerConnection.getJobId();
 
@@ -1682,7 +1709,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         // 3. Disassociate from the JobManager
         try {
             jobManagerHeartbeatManager.unmonitorTarget(jobManagerConnection.getResourceId());
-            disassociateFromJobManager(jobManagerConnection, cause);//内部含有清理工作
+            disassociateFromJobManager(jobManagerConnection, cause); // 内部含有清理工作
         } catch (IOException e) {
             log.warn(
                     "Could not properly disassociate from JobManager {}.",
@@ -1780,6 +1807,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             }
         }
 
+        // 关闭网络连接
         jobLeaderService.removeJob(jobId);
         jobTable.getJob(jobId)
                 .ifPresent(
@@ -1893,6 +1921,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         }
     }
 
+    // taskExecutor 释放slot 的 内部逻辑
     private void freeSlotInternal(AllocationID allocationId, Throwable cause) {
         checkNotNull(allocationId);
 
@@ -1901,12 +1930,13 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         try {
             final JobID jobId = taskSlotTable.getOwningJob(allocationId);
 
+            // 让手下 的 taskSlotTable 去释放 该 slot
             final int slotIndex = taskSlotTable.freeSlot(allocationId, cause);
 
             if (slotIndex != -1) {
 
                 if (isConnectedToResourceManager()) {
-                    // the slot was freed. Tell the RM about it
+                    // 通过resourceManagerGateway 告诉 RM ,本slot已经被释放 ,又可以用了
                     ResourceManagerGateway resourceManagerGateway =
                             establishedResourceManagerConnection.getResourceManagerGateway();
 
@@ -1917,6 +1947,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 }
 
                 if (jobId != null) {
+                    // 关闭与JobManager 的连接 ,释放资源 (有一定条件  当该jobId 所有的slot都被释放)
                     closeJobManagerConnectionIfNoAllocatedResources(jobId);
                 }
             }
@@ -1924,15 +1955,19 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             log.debug("Could not free slot for allocation id {}.", allocationId, e);
         }
 
+        // 清理指定 AllocationId 的本地状态
         localStateStoresManager.releaseLocalStateForAllocationId(allocationId);
     }
 
     private void closeJobManagerConnectionIfNoAllocatedResources(JobID jobId) {
-        // check whether we still have allocated slots for the same job
+
+        // 检查一下 指定的 jobId 是否仍然 有被分配的 slot 资源
+
+        // 如果没有 ,则走if 逻辑, 释放该 jobId 先前所占用 的所有资源
         if (taskSlotTable.getAllocationIdsPerJob(jobId).isEmpty()
                 && !partitionTracker.isTrackingPartitionsFor(jobId)) {
-            // we can remove the job from the job leader service
 
+            // we can remove the job from the job leader service
             final FlinkException cause =
                     new FlinkException(
                             "TaskExecutor "
@@ -2446,6 +2481,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                             resourceId.getStringWithMetadata());
 
             log.info(message);
+            // 处理timeout 的方法就是不断的重连
             handleResourceManagerConnectionLoss(resourceId, new TaskManagerException(message));
         }
 

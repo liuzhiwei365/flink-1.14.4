@@ -545,6 +545,7 @@ public final class InstantiationUtil {
 
     public static void writeObjectToConfig(Object o, Configuration config, String key)
             throws IOException {
+        // 利用对象流序列化
         byte[] bytes = serializeObject(o);
         config.setBytes(key, bytes);
     }
@@ -626,6 +627,7 @@ public final class InstantiationUtil {
                 new InflaterInputStream(new ByteArrayInputStream(bytes)), cl, false);
     }
 
+    // 该工具类方法可以将 对象 序列化
     public static byte[] serializeObject(Object o) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {

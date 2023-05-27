@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.runtime.state.metrics.LatencyTrackingListStateTest
--------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.665 s - in org.apache.flink.runtime.state.metrics.LatencyTrackingListStateTest

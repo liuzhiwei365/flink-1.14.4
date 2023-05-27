@@ -201,7 +201,7 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object msg) throws Exception {
-        //AddCreditMessage 是 ClientOutboundMeassage的子类
+        // AddCreditMessage 是 ClientOutboundMeassage的子类
         if (msg instanceof ClientOutboundMessage) {
             boolean triggerWrite = clientOutboundMessages.isEmpty();
 
@@ -258,7 +258,7 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
         }
     }
 
-    //将接受到的数据解码
+    // 将接受到的数据解码
     private void decodeMsg(Object msg) throws Throwable {
         final Class<?> msgClazz = msg.getClass();
 

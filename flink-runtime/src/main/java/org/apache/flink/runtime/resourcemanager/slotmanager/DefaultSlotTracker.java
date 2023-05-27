@@ -178,6 +178,8 @@ public class DefaultSlotTracker implements SlotTracker {
 
         slot.startAllocation(jobId);
         freeSlots.remove(slot.getSlotId());
+
+        // 监听器通知 从 free 状态 切换为 pending 状态
         slotStatusUpdateListeners.notifySlotStatusChange(
                 slot, SlotState.FREE, SlotState.PENDING, jobId);
     }

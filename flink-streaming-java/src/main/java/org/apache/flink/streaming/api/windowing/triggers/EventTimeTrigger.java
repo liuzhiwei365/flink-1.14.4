@@ -43,12 +43,11 @@ public class EventTimeTrigger extends Trigger<Object, TimeWindow> {
             // if the watermark is already past the window fire immediately
             return TriggerResult.FIRE;
         } else {
-            //注册事件时间定时器
+            // 注册事件时间定时器
             ctx.registerEventTimeTimer(window.maxTimestamp());
             return TriggerResult.CONTINUE;
         }
     }
-
 
     // 事件时间定时器的触发是从 AbstractStreamOperator  的 processWatermark() 开始的
     // 随着watermark 的到来, 然后触发了事件定时器 ,进而触发windowOperator 的 onEventTime方法
@@ -58,7 +57,7 @@ public class EventTimeTrigger extends Trigger<Object, TimeWindow> {
         return time == window.maxTimestamp() ? TriggerResult.FIRE : TriggerResult.CONTINUE;
     }
 
-    //处理时间定时器 触发时  调用
+    // 处理时间定时器 触发时  调用
     @Override
     public TriggerResult onProcessingTime(long time, TimeWindow window, TriggerContext ctx)
             throws Exception {

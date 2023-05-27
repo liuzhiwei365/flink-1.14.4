@@ -98,7 +98,7 @@ public class PermanentBlobCache extends AbstractBlobCache implements PermanentBl
             @Nullable final InetSocketAddress serverAddress)
             throws IOException {
 
-        this(
+        this( // 构造的时候 会有定时任务
                 blobClientConfig,
                 blobView,
                 serverAddress,
@@ -119,13 +119,17 @@ public class PermanentBlobCache extends AbstractBlobCache implements PermanentBl
                 LoggerFactory.getLogger(PermanentBlobCache.class),
                 serverAddress);
 
-        // Initializing the clean up task
+        // jdk 自带的定时器 , 内部自己就有一个线程
         this.cleanupTimer = new Timer(true);
 
+        // blob.service.cleanup.interval 默认一个小时为清理空隙
         this.cleanupInterval = blobClientConfig.getLong(BlobServerOptions.CLEANUP_INTERVAL) * 1000;
+
+        // 定时调度 ,每一个小时清理一次
         this.cleanupTimer.schedule(
                 new PermanentBlobCleanupTask(), cleanupInterval, cleanupInterval);
 
+        // 追踪 blobCache 的大小
         this.blobCacheSizeTracker = blobCacheSizeTracker;
     }
 
@@ -229,6 +233,8 @@ public class PermanentBlobCache extends AbstractBlobCache implements PermanentBl
      * @throws java.io.FileNotFoundException if the BLOB does not exist;
      * @throws IOException if any other error occurs when retrieving the file.
      */
+
+    // 将集群的资源 ,jar包等 读回本地 ,以供使用
     @Override
     public byte[] readFile(JobID jobId, PermanentBlobKey blobKey) throws IOException {
         checkNotNull(jobId);
@@ -378,18 +384,25 @@ public class PermanentBlobCache extends AbstractBlobCache implements PermanentBl
      */
     class PermanentBlobCleanupTask extends TimerTask {
         /** Cleans up BLOBs which are not referenced anymore. */
+
+        // 1  首先在方法里通过引用计数的方式,获取所有job引用的资源文件
+        // 2  遍历这些文件,并判断是否过期
+        // 3  如果过期则删除该资源文件夹
         @Override
         public void run() {
             synchronized (jobRefCounters) {
                 Iterator<Map.Entry<JobID, RefCount>> entryIter =
                         jobRefCounters.entrySet().iterator();
+
                 final long currentTimeMillis = System.currentTimeMillis();
 
+                //  遍历所有 jobId , 一个jobId 对应一个存储路径
                 while (entryIter.hasNext()) {
                     Map.Entry<JobID, RefCount> entry = entryIter.next();
                     RefCount ref = entry.getValue();
 
-                    if (ref.references <= 0
+                    //  判断是否过期
+                    if (ref.references <= 0 // 计数引用没有了   且当前系统时间戳 超过  设置的要求保留时间 的时间戳 阈值 ,则过期
                             && ref.keepUntil > 0
                             && currentTimeMillis >= ref.keepUntil) {
                         JobID jobId = entry.getKey();
@@ -408,7 +421,9 @@ public class PermanentBlobCache extends AbstractBlobCache implements PermanentBl
 
                         boolean success = false;
                         try {
+                            // 取消对该jobId 的追踪
                             blobCacheSizeTracker.untrackAll(jobId);
+                            // 删除该JobId 的 目录
                             FileUtils.deleteDirectory(localFile);
                             success = true;
                         } catch (Throwable t) {
@@ -420,10 +435,8 @@ public class PermanentBlobCache extends AbstractBlobCache implements PermanentBl
                             readWriteLock.writeLock().unlock();
                         }
 
-                        // let's only remove this directory from cleanup if the cleanup was
-                        // successful
-                        // (does not need the write lock)
                         if (success) {
+                            // 在迭代器中把  指定 jobId 删除
                             entryIter.remove();
                         }
                     }

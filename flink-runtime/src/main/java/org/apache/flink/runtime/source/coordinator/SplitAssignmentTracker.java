@@ -37,14 +37,17 @@ import java.util.TreeMap;
  * A class that is responsible for tracking the past split assignments made by {@link
  * SplitEnumerator}.
  */
+// 维护 SplitEnumerator 分片分配的状态
 @Internal
 public class SplitAssignmentTracker<SplitT extends SourceSplit> {
     // All the split assignments since the last successful checkpoint.
     // Maintaining this allow the subtasks to fail over independently.
     // The mapping is [CheckpointId -> [SubtaskId -> LinkedHashSet[SourceSplits]]].
+    // 维护历史的 分片分配
     private final SortedMap<Long, Map<Integer, LinkedHashSet<SplitT>>> assignmentsByCheckpointId;
     // The split assignments since the last checkpoint attempt.
     // The mapping is [SubtaskId -> LinkedHashSet[SourceSplits]].
+    // 维护正在进行的还未完成的 分片分配
     private Map<Integer, LinkedHashSet<SplitT>> uncheckpointedAssignments;
 
     public SplitAssignmentTracker() {
@@ -70,6 +73,7 @@ public class SplitAssignmentTracker<SplitT extends SourceSplit> {
      *
      * @param checkpointId the id of the successful checkpoint.
      */
+    // 当一个checkpoint成功后， 该方法用来清理 该checkpoint之前的历史分配
     public void onCheckpointComplete(long checkpointId) {
         assignmentsByCheckpointId.entrySet().removeIf(entry -> entry.getKey() <= checkpointId);
     }
@@ -85,15 +89,21 @@ public class SplitAssignmentTracker<SplitT extends SourceSplit> {
 
     /**
      * This method is invoked when a source reader fails over. In this case, the source reader will
-     * restore its split assignment to the last successful checkpoint. Any split assignment to that
-     * source reader after the last successful checkpoint will be lost on the source reader side as
-     * if those splits were never assigned. To handle this case, the coordinator needs to find those
-     * splits and return them back to the SplitEnumerator for re-assignment.
+     * restore its split assignment to the last successful checkpoint.
+     *
+     * Any split assignment to that source reader after the last successful checkpoint will be lost on
+     * the source reader side as if those splits were never assigned.
+     *
+     *  To handle this case, the coordinator needs to find those
+     *  splits and return them back to the SplitEnumerator for re-assignment.
      *
      * @param subtaskId the subtask id of the reader that failed over.
      * @param restoredCheckpointId the ID of the checkpoint that the reader was restored to.
      * @return A list of splits that needs to be added back to the {@link SplitEnumerator}.
      */
+    // 当一个 source reader 失败的时候，source reader 将恢复它的分片分配到 上次成功的checkopint
+    //
+    // 协调者需要发现这些分片，并且把它们放回到SplitEnumerator 中
     public List<SplitT> getAndRemoveUncheckpointedAssignment(
             int subtaskId, long restoredCheckpointId) {
         final ArrayList<SplitT> splits = new ArrayList<>();

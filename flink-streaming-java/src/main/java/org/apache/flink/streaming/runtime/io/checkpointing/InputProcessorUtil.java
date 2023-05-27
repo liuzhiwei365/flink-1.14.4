@@ -156,7 +156,7 @@ public class InputProcessorUtil {
         boolean enableCheckpointAfterTasksFinished =
                 config.getConfiguration()
                         .get(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH);
-        //execution.checkpointing.unaligned
+        // execution.checkpointing.unaligned
         if (config.isUnalignedCheckpointsEnabled()) {
             return SingleCheckpointBarrierHandler.alternating(
                     taskName,

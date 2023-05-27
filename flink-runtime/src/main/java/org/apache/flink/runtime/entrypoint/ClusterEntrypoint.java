@@ -101,6 +101,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>Specialization of this class can be used for the session mode and the per-job mode
  */
+
+/*
+    所有的运行模式 分为 3大类   7小类, 如下
+
+   SessionClusterEntrypoint
+            StandaloneSessionClusterEntrypoint
+            YarnSessionClusterEntrypoint
+            KubernetesSessionClusterEntrypoint
+   JobClusterEntrypoint
+            YarnJobClusterEntrypoint
+   ApplicationClusterEntryPoint
+            YarnApplicationClusterEntryPoint
+            StandaloneApplicationClusterEntryPoint
+            KubernetesApplicationClusterEntrypoint
+
+        到这7 小类的 main 方法中便可看到启动流程
+
+    所有的模式都会调用 ClusterEntrypoint.runClusterEntrypoint 这个模版方法
+*/
+
 public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErrorHandler {
 
     public static final ConfigOption<String> INTERNAL_CLUSTER_EXECUTION_MODE =
@@ -179,17 +199,21 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
         LOG.info("Starting {}.", getClass().getSimpleName());
 
         try {
+            // flink 内部重写安全管理器
             FlinkSecurityManager.setFromConfiguration(configuration);
+            // flink 的插件管理器
             PluginManager pluginManager =
                     PluginUtils.createPluginManagerFromRootFolder(configuration);
+            // 初始化 文件系统
             configureFileSystems(configuration, pluginManager);
-
+            // flink 安全策略
             SecurityContext securityContext = installSecurityContext(configuration);
 
             ClusterEntrypointUtils.configureUncaughtExceptionHandler(configuration);
             securityContext.runSecured(
                     (Callable<Void>)
                             () -> {
+                                // >>>>>>>>>>>>>>>>>>>>>>>>> 核心
                                 runCluster(configuration, pluginManager);
 
                                 return null;
@@ -237,9 +261,15 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
         return SecurityUtils.getInstalledContext();
     }
 
+    // 也是抽象类的模版方法
     private void runCluster(Configuration configuration, PluginManager pluginManager)
             throws Exception {
         synchronized (lock) {
+            /*
+                初始化大量的服务组件 以 RpcService 为核心;
+                这里面 初始化的服务和 后面的 dispatcher  ResourceManager webMonitorEndpoint 不同
+
+            */
             initializeServices(configuration, pluginManager);
 
             // write host information into configuration
@@ -248,6 +278,7 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
 
             final DispatcherResourceManagerComponentFactory
                     dispatcherResourceManagerComponentFactory =
+                            // 该方法针对不同的子类有不同的实现 ,
                             createDispatcherResourceManagerComponentFactory(configuration);
 
             clusterComponent =
@@ -288,14 +319,36 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
         }
     }
 
+    /*
+       1 从configuration中获取配置的RPC地址和portRange参数，根据配置地址和端口信息创建集群所需的公用commonRpcService服务。
+       更新 configuration 中的 address和port配置，用于支持集群组件高可用服务。
+
+       2 创建ioExecutor线程池，用于集群组件的I／O操作，如本地文件数据读取和输出等。
+
+       3 创建并启动haService，向集群组件提供高可用支持，集群中的组件都会通过haService创建高可用服务。
+
+       4 创建并启动blobServer，存储集群需要的Blob对象数据，blobServer中存储的数据能够被 JobManager 以及 TaskManager 访问，例如JobGraph中的JAR包等数据。
+
+       5 创建heartbeatServices，主要用于创建集群组件之间的心跳检测，例如Resource-Manager与JobManager之间的心跳服务。
+
+       6 创建 metricRegistry服务，用于注册集群监控指标收集。
+
+       7 创建 archivedExecutionGraphStore服务，用于压缩并存储集群中的ExecutionGraph，主要有FileArchivedExecutionGraphStore
+       和 MemoryArchivedExecutionGraphStore两种实现类型。
+
+    */
     protected void initializeServices(Configuration configuration, PluginManager pluginManager)
             throws Exception {
 
         LOG.info("Initializing cluster services.");
 
         synchronized (lock) {
+            // RpcSystem    有两个实现: AkkaRpcSystem  CleanupOnCloseRpcSystem
             rpcSystem = RpcSystem.load(configuration);
 
+            /* 底层会创建和启动 全局ActorSystem 服务 ，（ActorSystem会维护 全局运行时组件 的通信）
+              RpcService 内藏有 RobustActorSystem
+            */
             commonRpcService =
                     RpcUtils.createRemoteRpcService(
                             rpcSystem,
@@ -305,6 +358,8 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
                             configuration.getString(JobManagerOptions.BIND_HOST),
                             configuration.getOptional(JobManagerOptions.RPC_BIND_PORT));
 
+            // jmx service 没有以一个成员变量的形式存在 (这和其他组件不一样)
+            // JMX_SERVER_PORT 可以配置范围的列表,这从一定程度上避免端口冲突
             JMXService.startInstance(configuration.getString(JMXServerOptions.JMX_SERVER_PORT));
 
             // update the configuration used to create the high availability services
@@ -319,6 +374,7 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
             blobServer = new BlobServer(configuration, haServices.createBlobStore());
             blobServer.start();
             heartbeatServices = createHeartbeatServices(configuration);
+
             metricRegistry = createMetricRegistry(configuration, pluginManager, rpcSystem);
 
             final RpcService metricQueryServiceRpcService =

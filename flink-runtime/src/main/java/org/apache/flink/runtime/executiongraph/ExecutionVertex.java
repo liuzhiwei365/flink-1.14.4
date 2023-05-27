@@ -69,6 +69,7 @@ public class ExecutionVertex
 
     private final ExecutionJobVertex jobVertex;
 
+    // 产生的结果分区将来会发给下游
     private final Map<IntermediateResultPartitionID, IntermediateResultPartition> resultPartitions;
 
     private final int subTaskIndex;

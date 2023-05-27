@@ -47,7 +47,7 @@ public class KeyGroupRangeOffsets implements Iterable<Tuple2<Integer, Long>>, Se
 
     /** the aligned array of offsets for the key-groups */
 
-    //键组的连续的编号比如     {7,8,9,10}
+    // 键组的连续的编号比如     {7,8,9,10}
     private final long[] offsets;
 
     /**
@@ -127,7 +127,7 @@ public class KeyGroupRangeOffsets implements Iterable<Tuple2<Integer, Long>>, Se
      */
     public KeyGroupRangeOffsets getIntersection(KeyGroupRange keyGroupRange) {
         Preconditions.checkNotNull(keyGroupRange);
-        //老的keyGroupRange 与 新的keyGroupRange 取交集 (他们的交集一定也是一个连续的 Range空间)
+        // 老的keyGroupRange 与 新的keyGroupRange 取交集 (他们的交集一定也是一个连续的 Range空间)
         KeyGroupRange intersection = this.keyGroupRange.getIntersection(keyGroupRange);
 
         long[] subOffsets = new long[intersection.getNumberOfKeyGroups()];

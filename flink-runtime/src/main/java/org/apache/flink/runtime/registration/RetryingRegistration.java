@@ -83,7 +83,7 @@ public abstract class RetryingRegistration<
             Logger log,
             RpcService rpcService,
             String targetName,
-            Class<G> targetType,
+            Class<G> targetType, // 这里的 targetType 就是gateway 类型
             String targetAddress,
             F fencingToken,
             RetryingRegistrationConfiguration retryingRegistrationConfiguration) {

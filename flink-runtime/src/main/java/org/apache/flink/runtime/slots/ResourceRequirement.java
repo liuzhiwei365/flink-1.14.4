@@ -28,9 +28,9 @@ public class ResourceRequirement implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final ResourceProfile resourceProfile;
+    private final ResourceProfile resourceProfile; // 描述cpu 内存 信息
 
-    private final int numberOfRequiredSlots;
+    private final int numberOfRequiredSlots; // 槽位数
 
     private ResourceRequirement(ResourceProfile resourceProfile, int numberOfRequiredSlots) {
         Preconditions.checkNotNull(resourceProfile);

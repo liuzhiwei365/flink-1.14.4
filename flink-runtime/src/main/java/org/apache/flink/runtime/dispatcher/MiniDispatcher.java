@@ -71,6 +71,7 @@ public class MiniDispatcher extends Dispatcher {
         this.executionMode = checkNotNull(executionMode);
     }
 
+    // per job 提交作业
     @Override
     public CompletableFuture<Acknowledge> submitJob(JobGraph jobGraph, Time timeout) {
         final CompletableFuture<Acknowledge> acknowledgeCompletableFuture =

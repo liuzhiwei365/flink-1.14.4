@@ -64,6 +64,8 @@ import static org.apache.flink.util.Preconditions.checkState;
  * Internal configuration for a {@link StreamOperator}. This is created and populated by the {@link
  * StreamingJobGraphGenerator}.
  */
+
+// JobVertex 级别的配置
 @Internal
 public class StreamConfig implements Serializable {
 
@@ -302,6 +304,7 @@ public class StreamConfig implements Serializable {
         setStreamOperatorFactory(SimpleOperatorFactory.of(operator));
     }
 
+    // set 的时候是在 StreamingJobGraphGenerator 里面调用的,配置会被序列化
     public void setStreamOperatorFactory(StreamOperatorFactory<?> factory) {
         if (factory != null) {
             try {

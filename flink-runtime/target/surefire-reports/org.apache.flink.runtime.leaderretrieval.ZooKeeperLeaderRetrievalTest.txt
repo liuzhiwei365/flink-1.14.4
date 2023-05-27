@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.runtime.leaderretrieval.ZooKeeperLeaderRetrievalTest
--------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.972 s - in org.apache.flink.runtime.leaderretrieval.ZooKeeperLeaderRetrievalTest

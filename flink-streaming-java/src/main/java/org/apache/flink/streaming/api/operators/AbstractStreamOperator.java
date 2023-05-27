@@ -145,7 +145,7 @@ public abstract class AbstractStreamOperator<OUT>
 
     // ---------------- time handler ------------------
 
-    protected transient ProcessingTimeService processingTimeService;//定时器
+    protected transient ProcessingTimeService processingTimeService; // 定时器
 
     // ------------------------------------------------------------------------
     //  Life Cycle
@@ -254,9 +254,9 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     // 调用链
-    //org.apache.flink.streaming.runtime.tasks.StreamTask#restoreInternal
-    //org.apache.flink.streaming.runtime.tasks.StreamTask#restoreGates
-    //org.apache.flink.streaming.runtime.tasks.RegularOperatorChain#initializeStateAndOpenOperators
+    // org.apache.flink.streaming.runtime.tasks.StreamTask#restoreInternal
+    // org.apache.flink.streaming.runtime.tasks.StreamTask#restoreGates
+    // org.apache.flink.streaming.runtime.tasks.RegularOperatorChain#initializeStateAndOpenOperators
     @Override
     public final void initializeState(StreamTaskStateInitializer streamTaskStateManager)
             throws Exception {
@@ -268,8 +268,7 @@ public abstract class AbstractStreamOperator<OUT>
         final CloseableRegistry streamTaskCloseableRegistry =
                 Preconditions.checkNotNull(containingTask.getCancelables());
 
-
-        //StreamOperatorStateContext 中包括维护状态的各大组件(包括 OperatorStateBackend 还有 KeyedStateBackend)
+        // StreamOperatorStateContext 中包括维护状态的各大组件(包括 OperatorStateBackend 还有 KeyedStateBackend)
         final StreamOperatorStateContext context =
                 streamTaskStateManager.streamOperatorStateContext(
                         getOperatorID(),
@@ -606,7 +605,7 @@ public abstract class AbstractStreamOperator<OUT>
 
     public void processWatermark(Watermark mark) throws Exception {
         if (timeServiceManager != null) {
-            //流模式下, 实现类是 InternalTimeServiceManagerImpl
+            // 流模式下, 实现类是 InternalTimeServiceManagerImpl
             timeServiceManager.advanceWatermark(mark);
         }
         output.emitWatermark(mark);

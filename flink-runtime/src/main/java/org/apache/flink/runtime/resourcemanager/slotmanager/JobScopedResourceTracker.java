@@ -50,6 +50,7 @@ class JobScopedResourceTracker {
     private final RequirementMatcher requirementMatcher = new DefaultRequirementMatcher();
 
     private ResourceCounter resourceRequirements = ResourceCounter.empty();
+
     private ResourceCounter excessResources = ResourceCounter.empty();
 
     JobScopedResourceTracker(JobID jobId) {
@@ -61,20 +62,28 @@ class JobScopedResourceTracker {
         Preconditions.checkNotNull(newResourceRequirements);
 
         resourceRequirements = ResourceCounter.empty();
+
         for (ResourceRequirement newResourceRequirement : newResourceRequirements) {
             resourceRequirements =
                     resourceRequirements.add(
-                            newResourceRequirement.getResourceProfile(),
-                            newResourceRequirement.getNumberOfRequiredSlots());
+                            newResourceRequirement.getResourceProfile(), // 申请 的 cpu 和 各个内存 信息
+                            newResourceRequirement.getNumberOfRequiredSlots()); // 申请 的 slot信息
         }
+        // 上述逻辑 不过是对象装换而已 ,然后赋值给 本类的成员变量
+
+        // 找到 多余 的slots
         findExcessSlots();
+
+        // 分配
         tryAssigningExcessSlots();
     }
 
+    // 通知获取的资源
     public void notifyAcquiredResource(ResourceProfile resourceProfile) {
         Preconditions.checkNotNull(resourceProfile);
         final Optional<ResourceProfile> matchingRequirement =
                 findMatchingRequirement(resourceProfile);
+
         if (matchingRequirement.isPresent()) {
             resourceToRequirementMapping.incrementCount(
                     matchingRequirement.get(), resourceProfile, 1);
@@ -126,15 +135,24 @@ class JobScopedResourceTracker {
     }
 
     public Collection<ResourceRequirement> getMissingResources() {
+
+        // missingResources 维护还未分配的 资源缺口
         final Collection<ResourceRequirement> missingResources = new ArrayList<>();
+
         for (Map.Entry<ResourceProfile, Integer> requirement :
                 resourceRequirements.getResourcesWithCount()) {
+
             ResourceProfile requirementProfile = requirement.getKey();
 
             int numRequiredResources = requirement.getValue();
+
             int numAcquiredResources =
                     resourceToRequirementMapping.getNumFulfillingResources(requirementProfile);
 
+            /*
+                numRequiredResources 表示需求总量  numAcquiredResources 表示已经获得的资源量
+                两者相减 表示  还需要的槽位数
+            */
             if (numAcquiredResources < numRequiredResources) {
                 missingResources.add(
                         ResourceRequirement.create(
@@ -175,12 +193,17 @@ class JobScopedResourceTracker {
 
         for (ResourceProfile requirementProfile :
                 resourceToRequirementMapping.getAllRequirementProfiles()) {
+
+            // 需求
             int numTotalRequiredResources =
                     resourceRequirements.getResourceCount(requirementProfile);
+
+            // 供给
             int numTotalAcquiredResources =
                     resourceToRequirementMapping.getNumFulfillingResources(requirementProfile);
 
             if (numTotalAcquiredResources > numTotalRequiredResources) {
+                // 多余的 =  供给  -  需求
                 int numExcessResources = numTotalAcquiredResources - numTotalRequiredResources;
 
                 for (Map.Entry<ResourceProfile, Integer> acquiredResource :
@@ -232,16 +255,22 @@ class JobScopedResourceTracker {
                     jobId);
         }
 
+        // 维护已经被分配 的 资源
         ResourceCounter assignedResources = ResourceCounter.empty();
+
         for (Map.Entry<ResourceProfile, Integer> excessResource :
                 excessResources.getResourcesWithCount()) {
             for (int i = 0; i < excessResource.getValue(); i++) {
+
                 final ResourceProfile resourceProfile = excessResource.getKey();
+
                 final Optional<ResourceProfile> matchingRequirement =
                         findMatchingRequirement(resourceProfile);
+
                 if (matchingRequirement.isPresent()) {
                     resourceToRequirementMapping.incrementCount(
                             matchingRequirement.get(), resourceProfile, 1);
+
                     assignedResources = assignedResources.add(resourceProfile, 1);
                 } else {
                     break;

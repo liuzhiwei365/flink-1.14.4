@@ -55,6 +55,7 @@ public class DefaultOperatorCoordinatorHandler implements OperatorCoordinatorHan
             ExecutionGraph executionGraph, Consumer<Throwable> globalFailureHandler) {
         this.executionGraph = executionGraph;
 
+        // 核心逻辑
         this.coordinatorMap = createCoordinatorMap(executionGraph);
         this.globalFailureHandler = globalFailureHandler;
     }

@@ -49,6 +49,7 @@ import java.util.Set;
  *       return myMethod(((DistinctType) type).getSourceType)}
  * </ul>
  */
+//  与sql 标准对应的基础类型
 @PublicEvolving
 public enum LogicalTypeRoot {
     CHAR(LogicalTypeFamily.PREDEFINED, LogicalTypeFamily.CHARACTER_STRING),

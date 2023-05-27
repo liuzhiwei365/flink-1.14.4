@@ -244,6 +244,7 @@ public class KafkaDynamicSink implements DynamicTableSink, SupportsWritingMetada
     @Override
     public Map<String, DataType> listWritableMetadata() {
         final Map<String, DataType> metadataMap = new LinkedHashMap<>();
+        // 遍历枚举类的所有元素
         Stream.of(WritableMetadata.values())
                 .forEachOrdered(m -> metadataMap.put(m.key, m.dataType));
         return metadataMap;

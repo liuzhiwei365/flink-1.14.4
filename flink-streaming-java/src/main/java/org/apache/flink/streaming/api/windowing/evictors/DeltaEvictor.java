@@ -72,7 +72,7 @@ public class DeltaEvictor<T, W extends Window> implements Evictor<T, W> {
     }
 
     private void evict(Iterable<TimestampedValue<T>> elements, int size, EvictorContext ctx) {
-        //窗口计算时，最新element和其他element 进行delta计算,保留在threshold中的元素
+        // 窗口计算时，最新element和其他element 进行delta计算,保留在threshold中的元素
         TimestampedValue<T> lastElement = Iterables.getLast(elements);
         for (Iterator<TimestampedValue<T>> iterator = elements.iterator(); iterator.hasNext(); ) {
             TimestampedValue<T> element = iterator.next();

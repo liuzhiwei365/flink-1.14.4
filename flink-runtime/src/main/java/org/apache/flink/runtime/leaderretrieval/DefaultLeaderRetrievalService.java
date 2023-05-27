@@ -59,7 +59,7 @@ public class DefaultLeaderRetrievalService
     @GuardedBy("lock")
     private volatile boolean running;
 
-    /** Listener which will be notified about leader changes. */
+    // 当 leader 主节点 发生变化的时候 会被该监听器知道 ；
     private volatile LeaderRetrievalListener leaderListener;
 
     private LeaderRetrievalDriver leaderRetrievalDriver;
@@ -83,6 +83,8 @@ public class DefaultLeaderRetrievalService
         running = false;
     }
 
+    // LeaderRetrievalListener 在TaskExecutor启动时会被调用一次；
+    // 其他时候只有当ResourceManager（不是yarn）的leader 发生变化时 才会被调用
     @Override
     public void start(LeaderRetrievalListener listener) throws Exception {
         checkNotNull(listener, "Listener must not be null.");
@@ -93,6 +95,7 @@ public class DefaultLeaderRetrievalService
         synchronized (lock) {
             leaderListener = listener;
             leaderRetrievalDriver =
+                    // 主节点寻回驱动  目前有k8s 和zk 两种实现
                     leaderRetrievalDriverFactory.createLeaderRetrievalDriver(
                             this, new LeaderRetrievalFatalErrorHandler());
             LOG.info("Starting DefaultLeaderRetrievalService with {}.", leaderRetrievalDriver);
@@ -121,6 +124,7 @@ public class DefaultLeaderRetrievalService
      * @param leaderInformation new notified leader information address. The exception will be
      *     handled by leader listener.
      */
+    // 该方法 属于 LeaderRetrievalEventHandler 接口
     @Override
     @GuardedBy("lock")
     public void notifyLeaderAddress(LeaderInformation leaderInformation) {
@@ -130,6 +134,7 @@ public class DefaultLeaderRetrievalService
             if (running) {
                 if (!Objects.equals(newLeaderAddress, lastLeaderAddress)
                         || !Objects.equals(newLeaderSessionID, lastLeaderSessionID)) {
+
                     if (LOG.isDebugEnabled()) {
                         if (newLeaderAddress == null && newLeaderSessionID == null) {
                             LOG.debug(
@@ -145,7 +150,7 @@ public class DefaultLeaderRetrievalService
                     lastLeaderAddress = newLeaderAddress;
                     lastLeaderSessionID = newLeaderSessionID;
 
-                    // Notify the listener only when the leader is truly changed.
+                    // leader的地址 或者 leader的session 改变了,leaderListener 会去通知新的 leader
                     leaderListener.notifyLeaderAddress(newLeaderAddress, newLeaderSessionID);
                 }
             } else {

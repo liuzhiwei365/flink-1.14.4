@@ -43,13 +43,17 @@ public final class LogicalPipelinedRegionComputeUtil {
 
         // Since LogicalTopology is a DAG, there is no need to do cycle detection nor to merge
         // regions on cycles.
+        // 用 set 去重
         return uniqueRegions(vertexToRegion);
     }
 
+    // 从输入侧拿到 非可重连接的 ConsumedResults
+    // 就目前而言 ,只有 PIPELINED_BOUNDED 和 PIPELINED 的数据传输方式,是不可重连接的
     private static Iterable<LogicalResult> getNonReconnectableConsumedResults(
             LogicalVertex vertex) {
         List<LogicalResult> nonReconnectableConsumedResults = new ArrayList<>();
-        for (LogicalResult consumedResult : vertex.getConsumedResults()) {
+
+        for (LogicalResult consumedResult : vertex.getConsumedResults()) { // 从输入侧去拿
             if (!consumedResult.getResultType().isReconnectable()) {
                 nonReconnectableConsumedResults.add(consumedResult);
             }

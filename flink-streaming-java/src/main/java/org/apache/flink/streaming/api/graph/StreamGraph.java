@@ -111,11 +111,16 @@ public class StreamGraph implements Pipeline {
     /** Flag to indicate whether to put all vertices into the same slot sharing group by default. */
     private boolean allVerticesInSameSlotSharingGroupByDefault = true;
 
+    // 维护所有 的 顶点id 与 stream对象的映射
     private Map<Integer, StreamNode> streamNodes;
 
     private Set<Integer> sources;
     private Set<Integer> sinks;
+
+    //   virtualId  ->  Tuple2(originalId, outputTag)
     private Map<Integer, Tuple2<Integer, OutputTag>> virtualSideOutputNodes;
+
+    //   virtualId  ->  Tuple3(originalId, partitioner, exchangeMode)
     private Map<Integer, Tuple3<Integer, StreamPartitioner<?>, StreamExchangeMode>>
             virtualPartitionNodes;
 
@@ -375,15 +380,17 @@ public class StreamGraph implements Pipeline {
                 operatorFactory.isStreamSource()
                         ? SourceStreamTask.class
                         : OneInputStreamTask.class;
+
+        // 会构建 streamNode对象 ，然后放到 Map<Integer, StreamNode> 里面
         addOperator(
                 vertexID,
                 slotSharingGroup,
                 coLocationGroup,
-                operatorFactory,
+                operatorFactory, // 用于将来创建operator
                 inTypeInfo,
                 outTypeInfo,
                 operatorName,
-                invokableClass);
+                invokableClass); // 将来启动的task类型
     }
 
     private <IN, OUT> void addOperator(
@@ -403,13 +410,14 @@ public class StreamGraph implements Pipeline {
                 invokableClass,
                 operatorFactory,
                 operatorName);
+        // 将序列化器 设置给相应 的 streamNode
         setSerializers(vertexID, createSerializer(inTypeInfo), null, createSerializer(outTypeInfo));
 
         if (operatorFactory.isOutputTypeConfigurable() && outTypeInfo != null) {
             // sets the output type which must be know at StreamGraph creation time
             operatorFactory.setOutputType(outTypeInfo, executionConfig);
         }
-
+        // 其实最终 operatorFactory 会是 streamNode 的成员变量,这些东西也相当与设置给了 streamNode
         if (operatorFactory.isInputTypeConfigurable()) {
             operatorFactory.setInputType(inTypeInfo, executionConfig);
         }
@@ -522,6 +530,8 @@ public class StreamGraph implements Pipeline {
      * @param virtualId ID of the virtual node.
      * @param outputTag The selected side-output {@code OutputTag}.
      */
+
+    // 这个方法仅仅是将虚拟节点id，原始Transformation节点id 和 outputTag三者的对应关系保存了起来
     public void addVirtualSideOutputNode(
             Integer originalId, Integer virtualId, OutputTag outputTag) {
 
@@ -549,6 +559,7 @@ public class StreamGraph implements Pipeline {
             }
         }
 
+        // 加入虚拟node 到virtualSideOutputNodes集合
         virtualSideOutputNodes.put(virtualId, new Tuple2<>(originalId, outputTag));
     }
 
@@ -617,6 +628,7 @@ public class StreamGraph implements Pipeline {
             if (outputTag == null) {
                 outputTag = virtualSideOutputNodes.get(virtualId).f1;
             }
+            // 要注意 upStreamVertexID 已经被重置过了
             addEdgeInternal(
                     upStreamVertexID,
                     downStreamVertexID,
@@ -632,6 +644,7 @@ public class StreamGraph implements Pipeline {
                 partitioner = virtualPartitionNodes.get(virtualId).f1;
             }
             exchangeMode = virtualPartitionNodes.get(virtualId).f2;
+            //  一样要注意 upStreamVertexID 已经被重置过了
             addEdgeInternal(
                     upStreamVertexID,
                     downStreamVertexID,
@@ -658,11 +671,12 @@ public class StreamGraph implements Pipeline {
             StreamPartitioner<?> partitioner,
             OutputTag outputTag,
             StreamExchangeMode exchangeMode) {
+        // 拿到上游顶点和 本顶点 的streamNode
         StreamNode upstreamNode = getStreamNode(upStreamVertexID);
         StreamNode downstreamNode = getStreamNode(downStreamVertexID);
 
-        // If no partitioner was specified and the parallelism of upstream and downstream
-        // operator matches use forward partitioning, use rebalance otherwise.
+        // 当用户没有 特别指定分区器的时候
+        // 如果上下游 并行度一样,使用 ForwardPartitioner ; 否则使用RebalancePartitioner
         if (partitioner == null
                 && upstreamNode.getParallelism() == downstreamNode.getParallelism()) {
             partitioner = new ForwardPartitioner<Object>();
@@ -696,6 +710,7 @@ public class StreamGraph implements Pipeline {
          * difficult on the {@link StreamTask} to assign {@link RecordWriter}s to correct {@link
          * StreamEdge}.
          */
+        // 根据 上下游 的 streamNode 的id  来生成一个全局唯一 的    StreamEdge 边的 id
         int uniqueId = getStreamEdges(upstreamNode.getId(), downstreamNode.getId()).size();
 
         StreamEdge edge =
@@ -708,6 +723,7 @@ public class StreamGraph implements Pipeline {
                         exchangeMode,
                         uniqueId);
 
+        // 把我们构建后的边 , 分别赋值给 上下游 streamNode 的相关成员变量
         getStreamNode(edge.getSourceId()).addOutEdge(edge);
         getStreamNode(edge.getTargetId()).addInEdge(edge);
     }

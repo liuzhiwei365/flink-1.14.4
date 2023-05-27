@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.sql.join.SingleRowJoinTest
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.959 s - in org.apache.flink.table.planner.plan.batch.sql.join.SingleRowJoinTest

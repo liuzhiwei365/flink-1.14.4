@@ -110,7 +110,9 @@ public class TableSchema {
     }
 
     /** Returns all field data types as an array. */
+    //以数组的形式返回所有的字段的类型
     public DataType[] getFieldDataTypes() {
+        // 将List 转变为 数组的简洁写法
         return columns.stream().map(TableColumn::getType).toArray(DataType[]::new);
     }
 

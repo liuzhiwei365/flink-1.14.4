@@ -34,7 +34,7 @@ public class OperatorStreamStateHandle implements OperatorStateHandle {
     private static final long serialVersionUID = 35876522969227335L;
 
     /** unique state name -> offsets for available partitions in the handle stream */
-    //容量为 unionState.size(), broadcastState.size() 或者 nameToDistributeState.size()
+    // 容量为 unionState.size(), broadcastState.size() 或者 nameToDistributeState.size()
     private final Map<String, StateMetaInfo> stateNameToPartitionOffsets;
 
     private final StreamStateHandle delegateStateHandle;

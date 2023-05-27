@@ -145,8 +145,10 @@ public class QueryOperationConverter extends QueryOperationDefaultVisitor<RelNod
         this.expressionConverter = new ExpressionConverter(relBuilder);
     }
 
+    // 父类的相关逻辑,会被委派下来到这里
     @Override
     public RelNode defaultMethod(QueryOperation other) {
+        // 如果有子查询操作 的话 , 现将子查询操作推入 stack 中 , stack 是 RelBuilder 的成员
         other.getChildren().forEach(child -> relBuilder.push(child.accept(this)));
         return other.accept(singleRelVisitor);
     }
@@ -155,6 +157,7 @@ public class QueryOperationConverter extends QueryOperationDefaultVisitor<RelNod
 
         @Override
         public RelNode visit(ProjectQueryOperation projection) {
+            // ProjectQueryOperation 代表了从已有的 输入关系代数 计算和投影 一个新的关系代数的操作
             List<RexNode> rexNodes = convertToRexNodes(projection.getProjectList());
 
             return relBuilder
@@ -164,11 +167,13 @@ public class QueryOperationConverter extends QueryOperationDefaultVisitor<RelNod
 
         @Override
         public RelNode visit(AggregateQueryOperation aggregate) {
+            // AggregateQueryOperation 代表了
             List<AggCall> aggregations =
                     aggregate.getAggregateExpressions().stream()
                             .map(this::getAggCall)
                             .collect(toList());
 
+            // 将分组表达式列表 转换成 RexNode 列表
             List<RexNode> groupings = convertToRexNodes(aggregate.getGroupingExpressions());
             GroupKey groupKey = relBuilder.groupKey(groupings);
             return relBuilder.aggregate(groupKey, aggregations).build();
@@ -427,13 +432,19 @@ public class QueryOperationConverter extends QueryOperationDefaultVisitor<RelNod
                             });
         }
 
+        // 本类最核心的方法
         @Override
         public RelNode visit(QueryOperation other) {
             if (other instanceof PlannerQueryOperation) {
+                // PlannerQueryOperation 描述了 由计划生成的 关系代数 （为了编程的整齐划一,强行包装）
                 return ((PlannerQueryOperation) other).getCalciteTree();
             } else if (other instanceof DataStreamQueryOperation) {
+                // DataStreamQueryOperation 描述了 从data stream 读的关系代数 （目前只用于测试,真正使用的是下面四个）
                 return convertToDataStreamScan((DataStreamQueryOperation<?>) other);
             } else if (other instanceof JavaExternalQueryOperation) {
+                // JavaExternalQueryOperation 和 ScalaExternalQueryOperation 比
+                // JavaDataStreamQueryOperation 和 ScalaDataStreamQueryOperation 的强大,支持change log
+                // 这4 者都是 描述了 从data stream 读的关系代数
                 final JavaExternalQueryOperation<?> externalQueryOperation =
                         (JavaExternalQueryOperation<?>) other;
                 return convertToExternalScan(
@@ -478,6 +489,7 @@ public class QueryOperationConverter extends QueryOperationDefaultVisitor<RelNod
 
         @Override
         public <U> RelNode visit(TableSourceQueryOperation<U> tableSourceOperation) {
+            //用户调用 TableEnvironment#fromTableSource(TableSource) 才会生成 TableSourceQueryOperation
             TableSource<?> tableSource = tableSourceOperation.getTableSource();
             boolean isBatch;
             if (tableSource instanceof LookupableTableSource) {

@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.api.java.typeutils.runtime.CopyableSerializerUpgradeTest
--------------------------------------------------------------------------------
-Tests run: 28, Failures: 0, Errors: 0, Skipped: 12, Time elapsed: 0.077 s - in org.apache.flink.api.java.typeutils.runtime.CopyableSerializerUpgradeTest

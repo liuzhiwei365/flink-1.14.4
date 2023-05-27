@@ -176,11 +176,14 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
     private final CatalogManager catalogManager;
     private final ModuleManager moduleManager;
     private final OperationTreeBuilder operationTreeBuilder;
+    // 维护修改操作
     private final List<ModifyOperation> bufferedModifyOperations = new ArrayList<>();
 
     protected final TableConfig tableConfig;
     protected final Executor execEnv;
+
     protected final FunctionCatalog functionCatalog;
+
     protected final Planner planner;
     private final boolean isStreamingMode;
     private final ClassLoader userClassLoader;
@@ -558,9 +561,11 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
         insertIntoInternal(unresolvedIdentifier, table);
     }
 
+    // 所有insert into 的公共部分，都会转接到这里
     private void insertIntoInternal(UnresolvedIdentifier unresolvedIdentifier, Table table) {
         ObjectIdentifier objectIdentifier = catalogManager.qualifyIdentifier(unresolvedIdentifier);
 
+        // sql 的insert into 操作  在 flink 内部由 CatalogSinkModifyOperation 代表
         List<ModifyOperation> modifyOperations =
                 Collections.singletonList(
                         new CatalogSinkModifyOperation(
@@ -571,7 +576,7 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
 
     private Optional<CatalogQueryOperation> scanInternal(UnresolvedIdentifier identifier) {
         ObjectIdentifier tableIdentifier = catalogManager.qualifyIdentifier(identifier);
-
+        // sql 的所有 from 或者 join 表扫描的操作 在flink 内部由 CatalogQueryOperation 代表
         return catalogManager
                 .getTable(tableIdentifier)
                 .map(t -> new CatalogQueryOperation(tableIdentifier, t.getResolvedSchema()));
@@ -751,10 +756,16 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
     // 构建流图的时候 是用 transformation 构建的
     @Override
     public TableResult executeInternal(List<ModifyOperation> operations) {
+
+        // 会利用Planner 来 将不同的Operation 的List 转化为 Transformation (执行计划)
         List<Transformation<?>> transformations = translate(operations);
+
+        // 抽取sink 标识
         List<String> sinkIdentifierNames = extractSinkIdentifierNames(operations);
 
+        // 根据transformations 创建 streamGraph ,然后提交flink 作业 (这样就和原生的flink api 适配了)
         TableResult result = executeInternal(transformations, sinkIdentifierNames);
+        // 如果 table.dml-sync 为true ,会阻塞等待
         if (tableConfig.getConfiguration().get(TABLE_DML_SYNC)) {
             try {
                 result.await();
@@ -1665,6 +1676,8 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
     }
     // 会利用Planner 来 将不同的Operation 的List 转化为 Transformation
     protected List<Transformation<?>> translate(List<ModifyOperation> modifyOperations) {
+
+        //PlannerBase
         return planner.translate(modifyOperations);
     }
 

@@ -65,6 +65,7 @@
         <module name="flink-end-to-end-tests-pulsar" />
         <module name="flink-rpc-core" />
         <module name="flink-queryable-state-client-java" />
+        <module name="lzw-test" />
         <module name="flink-stream-state-ttl-test" />
         <module name="flink-rpc-akka-loader" />
         <module name="flink-sql-connector-hbase-1.4_2.11" />
@@ -74,8 +75,6 @@
         <module name="flink-metrics-reporter-prometheus-test" />
         <module name="flink-walkthrough-datastream-scala" />
         <module name="flink-examples-streaming-state-machine_2.11" />
-        <module name="flink-connector-testing_2.11" />
-        <module name="flink-test-utils_2.11" />
         <module name="flink-table-api-java" />
         <module name="flink-netty-shuffle-memory-control-test" />
         <module name="flink-scala_2.11" />
@@ -186,6 +185,10 @@
         <module name="flink-metrics-slf4j" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="flink-connector-testing_2.11" target="1.8" />
+      <module name="flink-test-utils_2.11" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
@@ -360,6 +363,7 @@
       <module name="flink-yarn-tests" options="-Xpkginfo:always" />
       <module name="flink-yarn_2.11" options="-Xpkginfo:always" />
       <module name="java-ci-tools" options="-Xpkginfo:always" />
+      <module name="lzw-test" options="-Xpkginfo:always" />
     </option>
   </component>
 </project>

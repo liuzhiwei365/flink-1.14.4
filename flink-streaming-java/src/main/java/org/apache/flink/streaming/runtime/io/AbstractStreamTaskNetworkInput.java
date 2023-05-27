@@ -54,15 +54,17 @@ public abstract class AbstractStreamTaskNetworkInput<
     protected final DeserializationDelegate<StreamElement> deserializationDelegate;
     protected final TypeSerializer<T> inputSerializer;
     protected final Map<InputChannelInfo, R> recordDeserializers;
+
+    // 维护每个输入channel 的编号
     protected final Map<InputChannelInfo, Integer> flattenedChannelIndices = new HashMap<>();
     /** Valve that controls how watermarks and watermark statuses are forwarded. */
-    //StatusWatermarkValve 对象维护各个channel的水位线，并在读取数据后向下游发送新的水位线
+    // StatusWatermarkValve 对象维护各个channel的水位线，并在读取数据后向下游发送新的水位线
     protected final StatusWatermarkValve statusWatermarkValve;
 
     protected final int inputIndex;
     private InputChannelInfo lastChannel = null;
-    //AdaptiveSpanningRecordDeserializer：适用于数据大小适中且跨段的记录的反序列化
-    //SpillingAdaptiveSpanningRecordDeserializer：适用于数据大小相对较大且跨段的记录的反序列化，它支持将溢出的数据写入临时文件
+    // AdaptiveSpanningRecordDeserializer：适用于数据大小适中且跨段的记录的反序列化
+    // SpillingAdaptiveSpanningRecordDeserializer：适用于数据大小相对较大且跨段的记录的反序列化，它支持将溢出的数据写入临时文件
     private R currentRecordDeserializer = null;
 
     public AbstractStreamTaskNetworkInput(
@@ -105,19 +107,20 @@ public abstract class AbstractStreamTaskNetworkInput<
                 }
 
                 if (result.isFullRecord()) {
-                    //数据读取完整之后，发送给DataOutput，
-                    //并生产新的水位线（内部有channels数组，保存所有channel的水位线，并将最小的水位线发生到下游）
-                    //真正处理数据
+                    // 数据读取完整之后，发送给DataOutput
+                    // 并生产新的水位线（内部有channels数组，保存所有channel的水位线，并将最小的水位线发生到下游）
+                    // 真正处理数据
                     processElement(deserializationDelegate.getInstance(), output);
                     return DataInputStatus.MORE_AVAILABLE;
                 }
             }
-            //从checkpointedInputGate中读取数据，同时会处理barrier对齐，并  checkpoint操作
-            //这里只拉取数据,真正的处理在 processElement 中
+            // 从checkpointedInputGate中读取数据，同时会处理barrier对齐，并  checkpoint操作
+            // 这里只拉取数据,真正的处理在 processElement 中
             Optional<BufferOrEvent> bufferOrEvent = checkpointedInputGate.pollNext();
             if (bufferOrEvent.isPresent()) {
                 // return to the mailbox after receiving a checkpoint barrier to avoid processing of
-                // data after the barrier before checkpoint is performed for unaligned checkpoint mode
+                // data after the barrier before checkpoint is performed for unaligned checkpoint
+                // mode
 
                 if (bufferOrEvent.get().isBuffer()) {
                     // 如果是普通buffer(一个buffer中可能含有多条数据),buffer 会赋值给currentRecordDeserializer
@@ -140,10 +143,13 @@ public abstract class AbstractStreamTaskNetworkInput<
 
     private void processElement(StreamElement recordOrMark, DataOutput<T> output) throws Exception {
         if (recordOrMark.isRecord()) {
-            //DataOutput  最终将数据记录交给用户算子
+            // DataOutput  最终将数据记录交给用户算子
             output.emitRecord(recordOrMark.asRecord());
         } else if (recordOrMark.isWatermark()) {
-            //非record类型 最终也会交给DataOutput
+            // 处理 的StreamElement 如果是一个WaterMark, 会更新指定的channel上 去 更新 WaterMark;
+            // 然后做watermark 的对齐
+            // 把各个channel中 最小的watermark 让output 发给下游
+            // 处理watermark推进的类
             statusWatermarkValve.inputWatermark(
                     recordOrMark.asWatermark(), flattenedChannelIndices.get(lastChannel), output);
         } else if (recordOrMark.isLatencyMarker()) {

@@ -79,6 +79,8 @@ import static org.apache.flink.table.types.logical.utils.LogicalTypeCasts.suppor
 import static org.apache.flink.table.types.logical.utils.LogicalTypeCasts.supportsImplicitCast;
 
 /** Utilities for dealing with {@link DynamicTableSink}. */
+
+// 还有一个与之相对的 source 的 DynamicSourceUtils
 @Internal
 public final class DynamicSinkUtils {
 
@@ -186,6 +188,7 @@ public final class DynamicSinkUtils {
             boolean isOverwrite,
             DynamicTableSink sink,
             ResolvedCatalogTable table) {
+
         final DataTypeFactory dataTypeFactory =
                 unwrapContext(relBuilder).getCatalogManager().getDataTypeFactory();
         final FlinkTypeFactory typeFactory = unwrapTypeFactory(relBuilder);
@@ -193,18 +196,21 @@ public final class DynamicSinkUtils {
 
         List<SinkAbilitySpec> sinkAbilitySpecs = new ArrayList<>();
 
-        // 1. prepare table sink
+        //  校验, 把元数据信息, 覆盖信息保存到 sinkAbilitySpecs
         prepareDynamicSink(
                 sinkIdentifier, staticPartitions, isOverwrite, sink, table, sinkAbilitySpecs);
+
+        //  配置 sink ,把分区, 覆盖 和元数据信息 保存到 sink 的成员变量上
         sinkAbilitySpecs.forEach(spec -> spec.apply(sink));
 
-        // 2. validate the query schema to the sink's table schema and apply cast if possible
+        //  校验 查询的schema和 sink端的schema  ,并进行隐式类型转换
         final RelNode query =
                 validateSchemaAndApplyImplicitCast(
                         input, schema, sinkIdentifier, dataTypeFactory, typeFactory);
         relBuilder.push(query);
 
         // 3. convert the sink's table schema to the consumed data type of the sink
+        // 抽取  元数据非虚拟列 , 非虚拟列才能被持久化
         final List<Integer> metadataColumns = extractPersistedMetadataColumns(schema);
         if (!metadataColumns.isEmpty()) {
             pushMetadataProjection(relBuilder, typeFactory, schema, sink);
@@ -216,6 +222,7 @@ public final class DynamicSinkUtils {
         }
         final RelNode finalQuery = relBuilder.build();
 
+        /*  LogicalLegacySink <- LegacySink <-SingleRel <- AbstractRelNode <- RelNode  */
         return LogicalSink.create(
                 finalQuery,
                 hints,
@@ -233,19 +240,31 @@ public final class DynamicSinkUtils {
      * If types are not compatible, but can be implicitly cast, a cast projection will be applied.
      * Otherwise, an exception will be thrown.
      */
+    /*
+     1 RelNode 关系表达式， 主要有TableScan, Project, Sort, Join等。如果SQL为查询的话，所有关系达式都可以在SqlSelect中找到,
+     如 where和having 对应的Filter, selectList对应Project, orderBy、offset、fetch 对应着Sort, From 对应着TableScan/Join等等,
+     示便Sql最后会生成如下RelNode树 LogicalProject LogicalFilter LogicalTableScan
+
+     2 RexNode 行表达式， 如RexLiteral(常量), RexCall(函数)， RexInputRef(输入引用)等， 还是这一句SQL
+     select id, cast(score as int), 'hello' from T where id < ?, 其中id 为RexInputRef, cast为RexCall, 'hello' 为RexLiteral等
+     */
+    // 校验schema ,并进行隐式转换
     public static RelNode validateSchemaAndApplyImplicitCast(
             RelNode query,
             ResolvedSchema sinkSchema,
             @Nullable ObjectIdentifier sinkIdentifier,
             DataTypeFactory dataTypeFactory,
             FlinkTypeFactory typeFactory) {
+
+        // 利用工具类, 将 query 的逻辑类型 (RowType 是 LogicalType 的子类)
         final RowType queryType = FlinkTypeFactory.toLogicalRowType(query.getRowType());
+        // 拿到 query 的所有逻辑字段
         final List<RowField> queryFields = queryType.getFields();
 
-        final RowType sinkType =
-                (RowType)
-                        fixSinkDataType(dataTypeFactory, sinkSchema.toSinkRowDataType())
-                                .getLogicalType();
+        // 拿到sink的逻辑类型
+        final RowType sinkType = (RowType)fixSinkDataType(dataTypeFactory, sinkSchema.toSinkRowDataType())
+                .getLogicalType();
+        // 拿到sink的逻辑字段
         final List<RowField> sinkFields = sinkType.getFields();
 
         if (queryFields.size() != sinkFields.size()) {
@@ -254,10 +273,13 @@ public final class DynamicSinkUtils {
         }
 
         boolean requiresCasting = false;
+        //以sink 为基准判断是否需要强转
         for (int i = 0; i < sinkFields.size(); i++) {
             final LogicalType queryColumnType = queryFields.get(i).getType();
             final LogicalType sinkColumnType = sinkFields.get(i).getType();
+            // 如果 source字段 与其对应的 sink字段,不支持隐式转换,抛异常
             if (!supportsImplicitCast(queryColumnType, sinkColumnType)) {
+                // 自己在手动抛出异常的时候,该异常一定得继承 RuntimeException
                 throw createSchemaMismatchException(
                         String.format(
                                 "Incompatible types for sink column '%s' at position %s.",
@@ -266,13 +288,17 @@ public final class DynamicSinkUtils {
                         queryFields,
                         sinkFields);
             }
+            // 如果 不支持避免 强制 , 也就是必须强制
             if (!supportsAvoidingCast(queryColumnType, sinkColumnType)) {
                 requiresCasting = true;
             }
         }
 
+        // 核心逻辑, 如果需要强转, 则在 关系数据类型 层面强转, 否则直接返回 query 所指代的 RelNode
         if (requiresCasting) {
+            // 用 sink 的 逻辑类型 创建 关系数据类型
             final RelDataType castRelDataType = typeFactory.buildRelNodeRowType(sinkType);
+            // 用 query 适配 sink 的类型 ,返回一个新的RelNode
             return RelOptUtil.createCastRel(query, castRelDataType, true);
         }
         return query;
@@ -286,6 +312,7 @@ public final class DynamicSinkUtils {
      *
      * @see SupportsWritingMetadata
      */
+    // 根据 消费的数据类型 重新排序 物理列 和 元数据列, 且它将元数据列强制转换为所需的数据类型
     private static void pushMetadataProjection(
             FlinkRelBuilder relBuilder,
             FlinkTypeFactory typeFactory,
@@ -294,8 +321,10 @@ public final class DynamicSinkUtils {
         final RexBuilder rexBuilder = relBuilder.getRexBuilder();
         final List<Column> columns = schema.getColumns();
 
+        // 抽取 schema中 物理列的 序号
         final List<Integer> physicalColumns = extractPhysicalColumns(schema);
 
+        // 获取 schema中 可持久化(非虚拟)元数据列的 名字 和 序号
         final Map<String, Integer> keyToMetadataColumn =
                 extractPersistedMetadataColumns(schema).stream()
                         .collect(
@@ -309,11 +338,13 @@ public final class DynamicSinkUtils {
                                         },
                                         Function.identity()));
 
+        // 获取 schema 中 最终需要持久化的（与sink比对） 元数据列序号
         final List<Integer> metadataColumns =
                 createRequiredMetadataKeys(schema, sink).stream()
                         .map(keyToMetadataColumn::get)
                         .collect(Collectors.toList());
 
+        // 计算出最终需要持久化的列名 （物理列 + 需要持久化的元数据列）
         final List<String> fieldNames =
                 Stream.concat(
                                 physicalColumns.stream().map(columns::get).map(Column::getName),
@@ -325,6 +356,7 @@ public final class DynamicSinkUtils {
 
         final Map<String, DataType> metadataMap = extractMetadataMap(sink);
 
+        // 与 fieldNames 对应的 fieldNodes
         final List<RexNode> fieldNodes =
                 Stream.concat(
                                 physicalColumns.stream()
@@ -350,6 +382,7 @@ public final class DynamicSinkUtils {
                                                             metadataMap
                                                                     .get(metadataKey)
                                                                     .getLogicalType();
+
                                                     final RelDataType expectedRelDataType =
                                                             typeFactory
                                                                     .createFieldTypeFromLogicalType(
@@ -357,6 +390,7 @@ public final class DynamicSinkUtils {
 
                                                     final int posAdjusted =
                                                             adjustByVirtualColumns(columns, pos);
+
                                                     return rexBuilder.makeAbstractCast(
                                                             expectedRelDataType,
                                                             relBuilder.field(posAdjusted));
@@ -377,10 +411,14 @@ public final class DynamicSinkUtils {
             DynamicTableSink sink,
             ResolvedCatalogTable table,
             List<SinkAbilitySpec> sinkAbilitySpecs) {
+
+        // 校验分区信息
         validatePartitioning(sinkIdentifier, staticPartitions, sink, table.getPartitionKeys());
 
+        // 校验 并把相关 覆盖 信息保存到 sinkAbilitySpecs
         validateAndApplyOverwrite(sinkIdentifier, isOverwrite, sink, sinkAbilitySpecs);
 
+        // 校验 并把相关元数据列 信息保存到 sinkAbilitySpecs
         validateAndApplyMetadata(sinkIdentifier, sink, table.getResolvedSchema(), sinkAbilitySpecs);
     }
 
@@ -394,17 +432,21 @@ public final class DynamicSinkUtils {
     private static List<String> createRequiredMetadataKeys(
             ResolvedSchema schema, DynamicTableSink sink) {
         final List<Column> tableColumns = schema.getColumns();
+        // 抽取 可以持久化到磁盘的虚拟列的序号
         final List<Integer> metadataColumns = extractPersistedMetadataColumns(schema);
 
+        //拿到 可以持久化到磁盘的虚拟列的 列名
         final Set<String> requiredMetadataKeys =
                 metadataColumns.stream()
                         .map(tableColumns::get)
-                        .map(MetadataColumn.class::cast)
+                        .map(MetadataColumn.class::cast) //强转每个元素
                         .map(c -> c.getMetadataKey().orElse(c.getName()))
                         .collect(Collectors.toSet());
 
+
         final Map<String, DataType> metadataMap = extractMetadataMap(sink);
 
+        // sink 和 requiredMetadataKeys 取交集
         return metadataMap.keySet().stream()
                 .filter(requiredMetadataKeys::contains)
                 .collect(Collectors.toList());
@@ -510,30 +552,47 @@ public final class DynamicSinkUtils {
     private static List<Integer> extractPhysicalColumns(ResolvedSchema schema) {
         final List<Column> columns = schema.getColumns();
         return IntStream.range(0, schema.getColumnCount())
-                .filter(pos -> columns.get(pos).isPhysical())
+                .filter(pos -> columns.get(pos).isPhysical()) // 物理列
                 .boxed()
                 .collect(Collectors.toList());
     }
 
+    // 抽取 可以持久化到磁盘的  元数据非虚拟列
     private static List<Integer> extractPersistedMetadataColumns(ResolvedSchema schema) {
         final List<Column> columns = schema.getColumns();
+
         return IntStream.range(0, schema.getColumnCount())
                 .filter(
                         pos -> {
                             final Column column = columns.get(pos);
-                            return column instanceof MetadataColumn && column.isPersisted();
+                            return column instanceof MetadataColumn && column.isPersisted(); // 非虚拟列才能被持久化
                         })
                 .boxed()
                 .collect(Collectors.toList());
     }
 
+    /*
+                        adjust                              调整的方式就是虚拟列去掉, 其他列依次上移（并返回上移后的序号）
+       0  c1   wc1     pos = 0   range[0]     0 - 0 = 0
+       1  c2   xc1
+       2  c3   wc2     pos = 2   range[0,2)   2 - 1 = 1
+       3  c4   wc3     pos = 3   range[0,3)   3 - 1 = 2
+       4  c5   wc4     pos = 4   range[0,4)   4 - 1 = 3
+       5  c6   xc2
+       6  c7   wc5     pos = 6   range[0,6)   6 - 2 = 4
+
+
+     */
     private static int adjustByVirtualColumns(List<Column> columns, int pos) {
+        // pos - 虚拟列总数
         return pos
                 - (int) IntStream.range(0, pos).filter(i -> !columns.get(i).isPersisted()).count();
     }
 
     private static Map<String, DataType> extractMetadataMap(DynamicTableSink sink) {
         if (sink instanceof SupportsWritingMetadata) {
+            // 如果是 ExternalDynamicSink实现类:    只有 rowtime 一个字段元素
+            // 如果是 KafkaDynamicSink实现类： 有 headers 和 timestamp 字段元素
             return ((SupportsWritingMetadata) sink).listWritableMetadata();
         }
         return Collections.emptyMap();
@@ -545,6 +604,7 @@ public final class DynamicSinkUtils {
             ResolvedSchema schema,
             List<SinkAbilitySpec> sinkAbilitySpecs) {
         final List<Column> columns = schema.getColumns();
+        // 抽出可以持久化的列的 序号
         final List<Integer> metadataColumns = extractPersistedMetadataColumns(schema);
 
         if (metadataColumns.isEmpty()) {
@@ -623,14 +683,18 @@ public final class DynamicSinkUtils {
      *
      * <p>The format looks as follows: {@code PHYSICAL COLUMNS + PERSISTED METADATA COLUMNS}
      */
+
+    // 返回 物理列 和 被持久化的元数据列
     private static RowType createConsumedType(ResolvedSchema schema, DynamicTableSink sink) {
         final Map<String, DataType> metadataMap = extractMetadataMap(sink);
 
+        // 拿到所有的物理列
         final Stream<RowField> physicalFields =
                 schema.getColumns().stream()
                         .filter(Column::isPhysical)
                         .map(c -> new RowField(c.getName(), c.getDataType().getLogicalType()));
 
+        // 拿到应该被持久化的元数据列
         final Stream<RowField> metadataFields =
                 createRequiredMetadataKeys(schema, sink).stream()
                         .map(k -> new RowField(k, metadataMap.get(k).getLogicalType()));

@@ -74,11 +74,12 @@ import java.util.Collection;
  * keyed-/operator state backends concurrently.
  */
 
-
 //  Statebackend 内部提供了创建 OperatorStateBackend 和 KeyedStateBackend 的方法
 //    注意:   Statebackend 是StreamTask  级别 , OperatorStateBackend 和 KeyedStateBackend 是算子级别
-//           Statebackend的创建是跟随了StreamTask 的初始化 ,  而OperatorStateBackend 和 KeyedStateBackend 的创建是跟随着算子的初始化
-//    在AbstractStreamOperator的实现中,会在initilizeState() 方法中完成对OperatorStateBackend 和 KeyedStateBackend 的创建和初始化
+//           Statebackend的创建是跟随了StreamTask 的初始化 ,  而OperatorStateBackend 和 KeyedStateBackend
+// 的创建是跟随着算子的初始化
+//    在AbstractStreamOperator的实现中,会在initilizeState() 方法中完成对OperatorStateBackend 和 KeyedStateBackend
+// 的创建和初始化
 
 // Statebackend 的创建时机:
 //      1 JobMaster 创建ExecutionGraph的时候会创建

@@ -259,9 +259,12 @@ public class SourceStreamTask<
             CheckpointMetaData checkpointMetaData, CheckpointOptions checkpointOptions) {
         if (!externallyInducedCheckpoints) {
             if (checkpointOptions.getCheckpointType().shouldDrain()) {
+                // 这种情况是属于savepoint的情况, 因为savepoint 要把数据排干,任务马上要停止结束了
+                // 最终也会调用父类的 triggerCheckpointAsync ,只不过多了一个排水的动作
                 return triggerStopWithSavepointWithDrainAsync(
                         checkpointMetaData, checkpointOptions);
             } else {
+                // 这种情况是属于checkpoint的情况, 因为checkpoint 之后,任务不会结束,checkpoint 会被挂起
                 return super.triggerCheckpointAsync(checkpointMetaData, checkpointOptions);
             }
         } else {

@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 org/apache/flink/table/planner/delegation/hive/parse/HiveASTLexer.g 2022-06-10 20:27:36
+// $ANTLR 3.5.2 org/apache/flink/table/planner/delegation/hive/parse/HiveASTLexer.g 2023-03-06 17:56:56
 
 package org.apache.flink.table.planner.delegation.hive.parse;
 

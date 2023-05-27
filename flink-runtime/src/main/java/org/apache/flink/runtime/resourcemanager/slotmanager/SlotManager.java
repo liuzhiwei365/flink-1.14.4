@@ -46,26 +46,29 @@ import java.util.concurrent.Executor;
  * failure, respectively.
  */
 
-/**
- *
- *
- SlotManager 位于ResourceManager中.
+// SlotManager 位于ResourceManager中.
 
- SlotManager 负责维护所有已注册的任务管理器slot、它们的分配和所有挂起的slot请求的视图。
- 无论何时注册新slot或释放分配的slot,它都会尝试执行另一个挂起的slot请求。 每当没有足够的可用slot时,slot管理器将通过
- {@link ResourceActions#allocateResource（WorkerResourceSpec）} 通知资源管理器。
- 为了释放资源并避免资源泄漏,空闲任务管理器（其slot当前未使用的任务管理器）和挂起的slot请求分别超时,从而触发其释放和失败
- *
- */
+// SlotManager 负责维护所有已注册的任务管理器slot、它们的分配和所有挂起的slot请求的视图
+
+// 无论何时注册新slot或释放分配的slot,它都会尝试执行另一个挂起的slot请求。 每当没有足够的可用slot时,slot管理器将通过
+
+// {@link ResourceActions#allocateResource（WorkerResourceSpec）} 通知资源管理器。
+
+// 为了释放资源并避免资源泄漏,空闲任务管理器（其slot当前未使用的任务管理器）和挂起的slot请求分别超时,从而触发其释放和失败
+
+//  在resource manager收到 leadership 后启动
 public interface SlotManager extends AutoCloseable {
 
-    //获取注册slot数量
+    // 获取注册slot数量
     int getNumberRegisteredSlots();
-    //根据InstanceID获取slot数量
+
+    // 根据InstanceID获取slot数量
     int getNumberRegisteredSlotsOf(InstanceID instanceId);
-    //获取空闲slot数量
+
+    // 获取空闲slot数量
     int getNumberFreeSlots();
-    //根据InstanceID获取空闲slot数量
+
+    // 根据InstanceID获取空闲slot数量
     int getNumberFreeSlotsOf(InstanceID instanceId);
 
     /**

@@ -143,29 +143,35 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         return edgeManager;
     }
 
+    // ExecutionTopology 与 ExecutionGraph 相比要增加 PipelinedRegion 的逻辑
     public static DefaultExecutionTopology fromExecutionGraph(
             DefaultExecutionGraph executionGraph) {
         checkNotNull(executionGraph, "execution graph can not be null");
 
         EdgeManager edgeManager = executionGraph.getEdgeManager();
 
+        // 利用 verticesInCreationOrder 构造迭代器 Iterable<ExecutionJobVertex>
+        // 排好序的
         List<JobVertex> topologicallySortedJobVertices =
                 IterableUtils.toStream(executionGraph.getVerticesTopologically())
                         .map(ExecutionJobVertex::getJobVertex)
                         .collect(Collectors.toList());
 
+        // PipelineRegion 划分算法 ,一个DefaultLogicalPipelinedRegion 内部包含多个JobVerx
         Iterable<DefaultLogicalPipelinedRegion> logicalPipelinedRegions =
                 DefaultLogicalTopology.fromTopologicallySortedJobVertices(
                                 topologicallySortedJobVertices)
                         .getAllPipelinedRegions();
 
+        // 创建内部的各类用于 检索的数据结构
         ExecutionGraphIndex executionGraphIndex =
                 computeExecutionGraphIndex(
-                        executionGraph.getAllExecutionVertices(),
+                        executionGraph.getAllExecutionVertices(), // 排好顺序的,且被 flat map 过后的
                         executionGraph.getTotalNumberOfVertices(),
                         logicalPipelinedRegions,
                         edgeManager);
 
+        // 根据 ExecutionVertexID 检索相关的 DefaultSchedulingPipelinedRegion (也就是PipelinedRegion)
         IndexedPipelinedRegions indexedPipelinedRegions =
                 computePipelinedRegions(
                         logicalPipelinedRegions,
@@ -173,6 +179,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                         executionGraphIndex.executionVerticesById::get,
                         executionGraphIndex.resultPartitionsById::get);
 
+        // 把具有相同 CoLocated 信息的 Vertex 封装到相同的 Region 中
         ensureCoLocatedVerticesInSameRegion(
                 indexedPipelinedRegions.pipelinedRegions, executionGraph);
 
@@ -191,14 +198,18 @@ public class DefaultExecutionTopology implements SchedulingTopology {
             Iterable<DefaultLogicalPipelinedRegion> logicalPipelinedRegions,
             EdgeManager edgeManager) {
         Map<ExecutionVertexID, DefaultExecutionVertex> executionVerticesById = new HashMap<>();
+
         List<DefaultExecutionVertex> executionVerticesList = new ArrayList<>(vertexNumber);
+
         Map<IntermediateResultPartitionID, DefaultResultPartition> resultPartitionsById =
                 new HashMap<>();
+
         Map<DefaultLogicalPipelinedRegion, List<DefaultExecutionVertex>>
                 sortedExecutionVerticesInPipelinedRegion = new IdentityHashMap<>();
 
         Map<JobVertexID, DefaultLogicalPipelinedRegion> logicalPipelinedRegionByJobVertexId =
                 new HashMap<>();
+
         for (DefaultLogicalPipelinedRegion logicalPipelinedRegion : logicalPipelinedRegions) {
             for (LogicalVertex vertex : logicalPipelinedRegion.getVertices()) {
                 logicalPipelinedRegionByJobVertexId.put(vertex.getId(), logicalPipelinedRegion);
@@ -208,7 +219,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         for (ExecutionVertex vertex : executionVertices) {
             List<DefaultResultPartition> producedPartitions =
                     generateProducedSchedulingResultPartition(
-                            vertex.getProducedPartitions(),
+                            vertex.getProducedPartitions(), // 下游 IntermediateResultPartition 的集合
                             edgeManager::getConsumerVertexGroupsForPartition,
                             executionVerticesById::get);
 
@@ -221,7 +232,9 @@ public class DefaultExecutionTopology implements SchedulingTopology {
                             producedPartitions,
                             edgeManager.getConsumedPartitionGroupsForVertex(vertex.getID()),
                             resultPartitionsById::get);
+
             executionVerticesById.put(schedulingVertex.getId(), schedulingVertex);
+
             sortedExecutionVerticesInPipelinedRegion
                     .computeIfAbsent(
                             logicalPipelinedRegionByJobVertexId.get(
@@ -247,6 +260,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         List<DefaultResultPartition> producedSchedulingPartitions =
                 new ArrayList<>(producedIntermediatePartitions.size());
 
+        // 把producedIntermediatePartitions 中的元素封装后放入到 producedSchedulingPartitions 中去,最后返回
         producedIntermediatePartitions
                 .values()
                 .forEach(
@@ -270,8 +284,8 @@ public class DefaultExecutionTopology implements SchedulingTopology {
 
     private static DefaultExecutionVertex generateSchedulingExecutionVertex(
             ExecutionVertex vertex,
-            List<DefaultResultPartition> producedPartitions,
-            List<ConsumedPartitionGroup> consumedPartitionGroups,
+            List<DefaultResultPartition> producedPartitions, // 下游
+            List<ConsumedPartitionGroup> consumedPartitionGroups, // 上游
             Function<IntermediateResultPartitionID, DefaultResultPartition>
                     resultPartitionRetriever) {
 
@@ -301,10 +315,11 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         Set<Set<SchedulingExecutionVertex>> rawPipelinedRegions =
                 Collections.newSetFromMap(new IdentityHashMap<>());
 
-        // A SchedulingPipelinedRegion can be derived from just one LogicalPipelinedRegion.
-        // Thus, we can traverse all LogicalPipelinedRegions and convert them into
-        // SchedulingPipelinedRegions one by one. The LogicalPipelinedRegions and
-        // SchedulingPipelinedRegions are both connected with inter-region blocking edges.
+        // traverse all LogicalPipelinedRegions and convert them into SchedulingPipelinedRegions one
+        // by one.
+        // The LogicalPipelinedRegions and SchedulingPipelinedRegions are both connected with
+        // inter-region blocking edges.
+
         for (DefaultLogicalPipelinedRegion logicalPipelinedRegion : logicalPipelinedRegions) {
 
             List<DefaultExecutionVertex> schedulingExecutionVertices =
@@ -397,6 +412,8 @@ public class DefaultExecutionTopology implements SchedulingTopology {
         for (DefaultSchedulingPipelinedRegion region : pipelinedRegions) {
             for (DefaultExecutionVertex vertex : region.getVertices()) {
                 final CoLocationConstraint constraint =
+                        // 核心方法 , 拿到 ExecutionVertex 的 CoLocation 信息, CoLocation 信息是和JobVerx一个级别的
+                        // ,最终来源于用户代码或者默认值
                         getCoLocationConstraint(vertex.getId(), executionGraph);
                 if (constraint != null) {
                     final DefaultSchedulingPipelinedRegion regionOfConstraint =
@@ -445,6 +462,7 @@ public class DefaultExecutionTopology implements SchedulingTopology {
     }
 
     private static class IndexedPipelinedRegions {
+
         private final Map<ExecutionVertexID, DefaultSchedulingPipelinedRegion>
                 pipelinedRegionsByVertex;
         private final List<DefaultSchedulingPipelinedRegion> pipelinedRegions;

@@ -179,9 +179,12 @@ abstract class PlannerBase(
       return List.empty[Transformation[_]]
     }
 
-    val relNodes = modifyOperations.map(translateToRel) //将flink的operations 转化为关系代数
-    val optimizedRelNodes = optimize(relNodes)
+    val relNodes = modifyOperations.map(translateToRel) //将flink的operations 转化为 RelNode
+
+    val optimizedRelNodes = optimize(relNodes)  //优化 RelNode
+
     val execGraph = translateToExecNodeGraph(optimizedRelNodes)
+
     val transformations = translateToPlan(execGraph) // 这里execGraph 是sql 层面的执行计划
     cleanupInternalConfigurations()
     transformations
@@ -190,20 +193,28 @@ abstract class PlannerBase(
   /**
     * Converts a relational tree of [[ModifyOperation]] into a Calcite relational expression.
     */
+
+    // 将当个的 ModifyOperation 翻译为 RelNode
   @VisibleForTesting
   private[flink] def translateToRel(modifyOperation: ModifyOperation): RelNode = {
     val dataTypeFactory = catalogManager.getDataTypeFactory
+    /*
+      modifyOperation 会根据不同的细分类型分别处理
+    */
     modifyOperation match {
+
       case s: UnregisteredSinkModifyOperation[_] =>
         val input = getRelBuilder.queryOperation(s.getChild).build()
         val sinkSchema = s.getSink.getTableSchema
-        // validate query schema and sink schema, and apply cast if possible
+
+        // 检验 查询语句的 schema 和 sink 的schema , 如果需要的话,做类型转换
         val query = validateSchemaAndApplyImplicitCast(
           input,
           catalogManager.getSchemaResolver.resolve(sinkSchema.toSchema),
           null,
           dataTypeFactory,
           getTypeFactory)
+
         LogicalLegacySink.create(
           query,
           s.getSink,
@@ -221,21 +232,25 @@ abstract class PlannerBase(
         val identifier = catalogSink.getTableIdentifier
         // dynamicOptions 承载了 sql hints的内容
         val dynamicOptions = catalogSink.getDynamicOptions
+
+        /* getTableSink 返回 (ResolvedCatalogTable, Any) */
         getTableSink(identifier, dynamicOptions).map {
+          // 这里的sink 要么是 TableSink,要么是 DynamicTableSink (TableSink是老api,推荐走DynamicTableSink的逻辑)
           case (table, sink: TableSink[_]) =>
-            // check the logical field type and physical field type are compatible
+            // 检查逻辑字段类型 和物理字段类型 是否兼容
             val queryLogicalType = FlinkTypeFactory.toLogicalRowType(input.getRowType)
-            // validate logical schema and physical schema are compatible
+            // 校验 逻辑schema 和 物理 schema 是否兼容
             validateLogicalPhysicalTypesCompatible(table, sink, queryLogicalType)
-            // validate TableSink
+            // 校验TableSink
             validateTableSink(catalogSink, identifier, sink, table.getPartitionKeys)
-            // validate query schema and sink schema, and apply cast if possible
+            // 校验 查询的 schema 和 sink 的schema , 如果可能做类型装换
             val query = validateSchemaAndApplyImplicitCast(
               input,
               table.getResolvedSchema,
               catalogSink.getTableIdentifier,
               dataTypeFactory,
               getTypeFactory)
+            // 处理sql暗示
             val hints = new util.ArrayList[RelHint]
             if (!dynamicOptions.isEmpty) {
               hints.add(RelHint.builder("OPTIONS").hintOptions(dynamicOptions).build)
@@ -249,6 +264,7 @@ abstract class PlannerBase(
               catalogSink.getStaticPartitions.toMap)
 
           case (table, sink: DynamicTableSink) =>
+            // 新版本走的阳光道
             DynamicSinkUtils.convertSinkToRel(getRelBuilder, input, catalogSink, sink, table)
         } match {
           case Some(sinkRel) => sinkRel
@@ -263,6 +279,7 @@ abstract class PlannerBase(
       // legacy
       case outputConversion: OutputConversionModifyOperation =>
         val input = getRelBuilder.queryOperation(outputConversion.getChild).build()
+        // 处理 flinksql 的 cdc
         val (needUpdateBefore, withChangeFlag) = outputConversion.getUpdateMode match {
           case UpdateMode.RETRACT => (true, true)
           case UpdateMode.APPEND => (false, false)
@@ -371,13 +388,16 @@ abstract class PlannerBase(
       case regularTable: CatalogTable =>
         val resolvedTable = lookupResult.getResolvedTable.asInstanceOf[ResolvedCatalogTable]
         val tableToFind = if (dynamicOptions.nonEmpty) {
+          // 将sql暗示 与 动态配置项 合并
           resolvedTable.copy(FlinkHints.mergeTableOptions(dynamicOptions, resolvedTable.getOptions))
         } else {
           resolvedTable
         }
         val catalog = catalogManager.getCatalog(objectIdentifier.getCatalogName)
         val isTemporary = lookupResult.isTemporary
+        // connector.type
         if (isLegacyConnectorOptions(objectIdentifier, resolvedTable.getOrigin, isTemporary)) {
+          // 返回 TableSink ,老api, DynamicTableSink 是它的替代者
           val tableSink = TableFactoryUtil.findAndCreateTableSink(
             catalog.orElse(null),
             objectIdentifier,
@@ -387,6 +407,7 @@ abstract class PlannerBase(
             isTemporary)
           Option(resolvedTable, tableSink)
         } else {
+          // 返回 DynamicTableSink
           val tableSink = FactoryUtil.createTableSink(
             catalog.orElse(null),
             objectIdentifier,

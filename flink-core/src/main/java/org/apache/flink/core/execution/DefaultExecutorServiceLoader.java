@@ -62,6 +62,7 @@ public class DefaultExecutorServiceLoader implements PipelineExecutorServiceLoad
         while (factories.hasNext()) {
             try {
                 final PipelineExecutorFactory factory = factories.next();
+                // 最大的玄机 在于 isCompatibleWith 方法
                 if (factory != null && factory.isCompatibleWith(configuration)) {
                     compatibleFactories.add(factory);
                 }
@@ -74,6 +75,7 @@ public class DefaultExecutorServiceLoader implements PipelineExecutorServiceLoad
             }
         }
 
+        // 只有一个相容 的 工厂,否则直接报错
         if (compatibleFactories.size() > 1) {
             final String configStr =
                     configuration.toMap().entrySet().stream()

@@ -32,7 +32,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * <p>Intermediate data sets may be read by other operators, materialized, or discarded.
  */
 
-//JobGraph中的概念
+// JobGraph中的概念
 public class IntermediateDataSet implements java.io.Serializable {
 
     private static final long serialVersionUID = 1L;

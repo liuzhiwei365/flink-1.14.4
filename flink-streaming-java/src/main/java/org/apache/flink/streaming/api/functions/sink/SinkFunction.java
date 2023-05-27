@@ -46,6 +46,9 @@ public interface SinkFunction<IN> extends Function, Serializable {
      * @throws Exception This method may throw exceptions. Throwing an exception will cause the
      *     operation to fail and may trigger recovery.
      */
+    // StreamSink 和 SinkOperator 都会调用invoke方法 , 两者都继承 AbstractUdfStreamOperator 和 实现
+    // OneInputStreamOperator接口,
+    // 唯一不同的是接口的范型不一样父类 AbstractUdfStreamOperator最终会持有 userFunction 成员 (用户编写的 SinkFunction等)
     default void invoke(IN value, Context context) throws Exception {
         invoke(value);
     }

@@ -67,10 +67,11 @@ public class PlanGenerator {
 
     public Plan generate() {
         final Plan plan = createPlan();
+
         registerGenericTypeInfoIfConfigured(plan);
         registerCachedFiles(plan);
 
-        logTypeRegistrationDetails();
+        logTypeRegistrationDetails(); // 只有日志功能
         return plan;
     }
 
@@ -80,6 +81,7 @@ public class PlanGenerator {
      * @return the generated plan.
      */
     private Plan createPlan() {
+        // 利用算子翻译器,将 sinks 翻译成plan  (任务批作业都是sinks)
         final OperatorTranslation translator = new OperatorTranslation();
         final Plan plan = translator.translateToPlan(sinks, jobName);
 

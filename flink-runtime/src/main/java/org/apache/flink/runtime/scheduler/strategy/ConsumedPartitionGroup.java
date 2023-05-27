@@ -35,13 +35,13 @@ public class ConsumedPartitionGroup implements Iterable<IntermediateResultPartit
     // IntermediateResult 是ExecutionGraph(不是物理执行图)的概念
     // ExecutionJobVertex 是 抽象的概念, IntermediateResult 也是抽象的概念
     // 可以 认为IntermediateResult 是 ExecutionJobVertex 的抽象结果集;
-    // ExecutionJobVertex 是有可能产生多个IntermediateResult的 ( 这里的多个与并行度无关,这点很重要 )
+    // ExecutionJobVertex 是有可能产生多个IntermediateResult的 ( 这里的多个与并行度无关,这点很重要 ,因为有可能有多个异构的下游)
     // 而 IntermediateResult 中包含的多个 IntermediateResultPartition 则与并行度有关
     private final List<IntermediateResultPartitionID> resultPartitions;
 
     private final AtomicInteger unfinishedPartitions;
 
-    //IntermediateDataSet是 JobGraph 中的概念 , 但是ConsumedPartitionGroup 是ExecutionGraph 的概念
+    // IntermediateDataSet是 JobGraph 中的概念 , 但是ConsumedPartitionGroup 是ExecutionGraph 的概念
     private final IntermediateDataSetID intermediateDataSetID;
 
     private ConsumedPartitionGroup(List<IntermediateResultPartitionID> resultPartitions) {

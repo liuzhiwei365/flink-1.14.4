@@ -103,10 +103,12 @@ public class ZooKeeperUtils {
     private static final String REST_SERVER_LEADER = "/rest_server";
 
     public static String getLeaderPathForResourceManager() {
+        // 返回的结果是 "/leader/resource_manager"
         return getLeaderPath(RESOURCE_MANAGER_LEADER);
     }
 
     public static String getLeaderPathForDispatcher() {
+        // 返回的是  "/leader/dispathcer"
         return getLeaderPath(DISPATCHER_LEADER);
     }
 
@@ -156,6 +158,9 @@ public class ZooKeeperUtils {
      *     errors of {@link CuratorFramework}
      * @return {@link CuratorFrameworkWithUnhandledErrorListener} instance
      */
+
+    // 通过配置 创建 并运行 CuratorFramework （zk的客户端) 并连接到zk集群
+    // CuratorFramework 对象调用 start 方法后就可以对zk 上面相关的目录进行监听了
     public static CuratorFrameworkWithUnhandledErrorListener startCuratorFramework(
             Configuration configuration, FatalErrorHandler fatalErrorHandler) {
         checkNotNull(configuration, "configuration");
@@ -215,6 +220,7 @@ public class ZooKeeperUtils {
 
         LOG.info("Using '{}' as Zookeeper namespace.", rootWithNamespace);
 
+        //  CuratorFrameworkFactory.Builder 对象 调用build 方法 可以构建出 client 客户端
         final CuratorFrameworkFactory.Builder curatorFrameworkBuilder =
                 CuratorFrameworkFactory.builder()
                         .connectString(zkQuorum)
@@ -230,6 +236,7 @@ public class ZooKeeperUtils {
             curatorFrameworkBuilder.connectionStateErrorPolicy(
                     new SessionConnectionStateErrorPolicy());
         }
+        // 内部会构建出CuratorFramework client对象,然后启动
         return startCuratorFramework(curatorFrameworkBuilder, fatalErrorHandler);
     }
 
@@ -610,12 +617,17 @@ public class ZooKeeperUtils {
             final CuratorFramework client,
             final String pathToNode,
             final RunnableWithException nodeChangeCallback) {
+        /* ZooKeeper提供了三种Watcher：
+        1.NodeCache：只是监听某一个特定ZNode
+        2.PathChildrenCache：监控一个ZNode的子节点
+        3.TreeCache：可以监控整个树上的所有节点，类似于NodeCache和PathChildrenCache的组合     */
         final TreeCache cache =
                 TreeCache.newBuilder(client, pathToNode)
                         .setCacheData(true)
                         .setCreateParentNodes(false)
                         .setSelector(ZooKeeperUtils.treeCacheSelectorForPath(pathToNode))
-                        .setExecutor(Executors.newDirectExecutorService())
+                        .setExecutor(
+                                Executors.newDirectExecutorService()) // java 的 ExecutorService 子类
                         .build();
 
         cache.getListenable().addListener(createTreeCacheListener(nodeChangeCallback));

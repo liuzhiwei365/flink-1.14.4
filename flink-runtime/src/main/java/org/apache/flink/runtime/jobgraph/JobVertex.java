@@ -76,7 +76,7 @@ public class JobVertex implements java.io.Serializable {
     private final ArrayList<IntermediateDataSet> results = new ArrayList<>();
 
     /** List of edges with incoming data. One per Reader. */
-    //多个输入源
+    // 多个输入源
     private final ArrayList<JobEdge> inputs = new ArrayList<>();
 
     /** The list of factories for operator coordinators. */
@@ -503,6 +503,7 @@ public class JobVertex implements java.io.Serializable {
     // --------------------------------------------------------------------------------------------
 
     public boolean isInputVertex() {
+        // 如果自己是 数据源头的JobVerx,则自己是没有输入的
         return this.inputs.isEmpty();
     }
 

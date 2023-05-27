@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.runtime.blob.BlobClientSslTest
--------------------------------------------------------------------------------
-Tests run: 18, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 29.658 s - in org.apache.flink.runtime.blob.BlobClientSslTest

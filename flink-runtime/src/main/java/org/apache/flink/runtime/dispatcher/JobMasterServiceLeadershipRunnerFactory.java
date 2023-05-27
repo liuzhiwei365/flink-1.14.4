@@ -89,6 +89,8 @@ public enum JobMasterServiceLeadershipRunnerFactory implements JobManagerRunnerF
         final ClassLoader userCodeClassLoader =
                 classLoaderLease
                         .getOrResolveClassLoader(
+                                // 这里的 classpath  来源于 启动作业时候的 -C
+                                //
                                 jobGraph.getUserJarBlobKeys(), jobGraph.getClasspaths())
                         .asClassLoader();
 

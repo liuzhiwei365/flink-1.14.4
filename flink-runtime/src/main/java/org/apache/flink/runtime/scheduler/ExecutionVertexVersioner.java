@@ -63,6 +63,7 @@ public class ExecutionVertexVersioner {
     public boolean isModified(final ExecutionVertexVersion executionVertexVersion) {
         final Long currentVersion =
                 getCurrentVersion(executionVertexVersion.getExecutionVertexId());
+        // 与当前版本对比，判断是否发生修改
         return currentVersion != executionVertexVersion.getVersion();
     }
 
@@ -75,6 +76,7 @@ public class ExecutionVertexVersioner {
         return currentVersion;
     }
 
+    //得到没有发生版本修改的 ExecutionVertexId
     public Set<ExecutionVertexID> getUnmodifiedExecutionVertices(
             final Set<ExecutionVertexVersion> executionVertexVersions) {
         return executionVertexVersions.stream()

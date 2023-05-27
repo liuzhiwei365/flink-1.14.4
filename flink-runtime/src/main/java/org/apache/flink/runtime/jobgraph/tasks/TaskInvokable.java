@@ -56,6 +56,8 @@ public interface TaskInvokable {
      * <p>All resources should be cleaned up by calling {@link #cleanUp(Throwable)} ()} after the
      * method returns.
      */
+    // 目前只有 BatchTask DataSinkTask DataSourceTask IterationSynchronizationSinkTask(用于迭代计算) 这四个
+    // 和 StreamTask  具体实现了该方法 ,上面的4个都是批处理的
     void invoke() throws Exception;
 
     /**

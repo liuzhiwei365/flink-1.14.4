@@ -56,8 +56,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * @param <T> The type of the value of the state object described by this state descriptor.
  */
 
-
-//实现了Serializable接口，另外还通过writeObject及readObject自定义序列化过程
+// 实现了Serializable接口，另外还通过writeObject及readObject自定义序列化过程
 @PublicEvolving
 public abstract class StateDescriptor<S extends State, T> implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(StateDescriptor.class);

@@ -44,6 +44,7 @@ public class PipelineExecutorUtils {
      *     used to bootstrap its state.
      * @return the corresponding {@link JobGraph}.
      */
+    // 把 streamGraph 变为 jobGraph
     public static JobGraph getJobGraph(
             @Nonnull final Pipeline pipeline, @Nonnull final Configuration configuration)
             throws MalformedURLException {

@@ -120,22 +120,25 @@ public final class DynamicSourceUtils {
             List<RelHint> hints,
             DynamicTableSource tableSource) {
 
-        // 1. prepare table source
+        // 1. 内部校验
         prepareDynamicSource(identifier, catalogTable, tableSource, isBatchMode, config);
 
-        // 2. push table scan
+        // 2. 推动表扫描
         pushTableScan(
                 isBatchMode, relBuilder, identifier, catalogTable, statistic, hints, tableSource);
 
-        // 3. push project for non-physical columns
+        // 3. 推动各类列的处理
         final ResolvedSchema schema = catalogTable.getResolvedSchema();
         if (!schema.getColumns().stream().allMatch(Column::isPhysical)) {
+            //推动元数据列 (推动的意思这里是推到 relBuilder 的栈中）
             pushMetadataProjection(relBuilder, schema);
+            //推动计算列 (计算列都是虚拟列)
             pushGeneratedProjection(relBuilder, schema);
         }
 
         // 4. push watermark assigner
         if (!isBatchMode && !schema.getWatermarkSpecs().isEmpty()) {
+            //推动watermark 的分配
             pushWatermarkAssigner(relBuilder, schema);
         }
 
@@ -336,9 +339,12 @@ public final class DynamicSourceUtils {
             DynamicTableSource tableSource) {
         final RowType producedType =
                 createProducedType(catalogTable.getResolvedSchema(), tableSource);
+
+        // 关系代数级别的 数据类型
         final RelDataType producedRelDataType =
                 relBuilder.getTypeFactory().buildRelNodeRowType(producedType);
 
+        // 类似于一个描述 表来源 的 java bean
         final TableSourceTable tableSourceTable =
                 new TableSourceTable(
                         relBuilder.getRelOptSchema(),
@@ -351,6 +357,7 @@ public final class DynamicSourceUtils {
                         new String[0],
                         new SourceAbilitySpec[0]);
 
+        // 构建 扫表的逻辑计划节点
         final LogicalTableScan scan =
                 LogicalTableScan.create(relBuilder.getCluster(), tableSourceTable, hints);
         relBuilder.push(scan);

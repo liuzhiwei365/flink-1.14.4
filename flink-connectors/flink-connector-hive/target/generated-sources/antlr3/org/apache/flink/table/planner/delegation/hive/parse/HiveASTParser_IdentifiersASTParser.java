@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 IdentifiersASTParser.g 2022-06-10 20:27:39
+// $ANTLR 3.5.2 IdentifiersASTParser.g 2023-03-06 17:56:59
 
 package org.apache.flink.table.planner.delegation.hive.parse;
 
@@ -3546,7 +3546,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: functionName, ws, selectExpression, ws, ws, functionName, functionName, selectExpression
+			// elements: functionName, selectExpression, ws, functionName, functionName, selectExpression, ws, ws
 			// token labels: 
 			// rule labels: ws, retval
 			// token list labels: 
@@ -3834,7 +3834,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_RPAREN.add(RPAREN81);
 
 			// AST REWRITE
-			// elements: primitiveType, expression
+			// elements: expression, primitiveType
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -4004,7 +4004,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_KW_END.add(KW_END90);
 
 			// AST REWRITE
-			// elements: KW_CASE, expression
+			// elements: expression, KW_CASE
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -4173,7 +4173,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_KW_END.add(KW_END98);
 
 			// AST REWRITE
-			// elements: expression, KW_WHEN
+			// elements: KW_WHEN, expression
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -4784,7 +4784,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_RPAREN.add(RPAREN116);
 
 			// AST REWRITE
-			// elements: expression, timeUnit
+			// elements: timeUnit, expression
 			// token labels: 
 			// rule labels: retval, timeUnit
 			// token list labels: 
@@ -5597,7 +5597,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_CharSetLiteral.add(csLiteral);
 
 			// AST REWRITE
-			// elements: csLiteral, csName
+			// elements: csName, csLiteral
 			// token labels: csName, csLiteral
 			// rule labels: retval
 			// token list labels: 
@@ -7394,7 +7394,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: precedenceUnaryPrefixExpression, precedenceUnaryPrefixExpression, nullCondition
+			// elements: nullCondition, precedenceUnaryPrefixExpression, precedenceUnaryPrefixExpression
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -8939,7 +8939,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: equalExpr, precedenceSimilarOperator
+					// elements: precedenceSimilarOperator, equalExpr
 					// token labels: 
 					// rule labels: retval, equalExpr
 					// token list labels: 
@@ -10746,7 +10746,7 @@ public class HiveASTParser_IdentifiersASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_constant.add(constant274.getTree());
 			// AST REWRITE
-			// elements: constant, identifier, dropPartitionOperator
+			// elements: identifier, constant, dropPartitionOperator
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 

@@ -70,6 +70,7 @@ public class SourceTransformationTranslator<OUT, SplitT extends SourceSplit, Enu
         final int transformationId = transformation.getId();
         final ExecutionConfig executionConfig = streamGraph.getExecutionConfig();
 
+        // 算子工厂
         SourceOperatorFactory<OUT> operatorFactory =
                 new SourceOperatorFactory<>(
                         transformation.getSource(),

@@ -181,6 +181,15 @@ class FlinkRelBuilder(
   }
 
   def queryOperation(queryOperation: QueryOperation): RelBuilder = {
+    /* 利用 QueryOperationConverter 把 QueryOperation 转换为RelNode
+       QueryOperationConverter 的父类 QueryOperationDefaultVisitor 实现了 QueryOperationVisitor 接口
+
+       方法调用链如下:
+       QueryOperation.accept
+       QueryOperationDefaultVisitor.visit
+       QueryOperationDefaultVisitor.defaultMethod
+       QueryOperationConverter.defaultMethod
+    */
     val relNode = queryOperation.accept(toRelNodeConverter)
     push(relNode)
     this

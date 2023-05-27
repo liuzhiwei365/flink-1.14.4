@@ -26,6 +26,8 @@ import java.util.Optional;
 
 /** Maintains the configured parallelisms for vertices, which should be defined by a scheduler. */
 public class DefaultVertexParallelismStore implements MutableVertexParallelismStore {
+
+    // vertexToParallelismInfo 维护了每个 JobVerx 的并行度 信息, 并行度信息中主要包括 并行度,最大并行度,能否扩容等等
     private final Map<JobVertexID, VertexParallelismInformation> vertexToParallelismInfo =
             new HashMap<>();
 

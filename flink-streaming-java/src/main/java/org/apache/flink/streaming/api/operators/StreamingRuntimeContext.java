@@ -196,7 +196,6 @@ public class StreamingRuntimeContext extends AbstractRuntimeUDFContext {
     //  key/value state
     // ------------------------------------------------------------------------
 
-
     //  下面是用户操作状态的api 入口
     @Override
     public <T> ValueState<T> getState(ValueStateDescriptor<T> stateProperties) {

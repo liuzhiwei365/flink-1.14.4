@@ -224,6 +224,7 @@ public abstract class CommonExecLookupJoin extends ExecNodeBase<RowData>
         boolean isAsyncEnabled = false;
         UserDefinedFunction userDefinedFunction =
                 LookupJoinUtil.getLookupFunction(temporalTable, lookupKeys.keySet());
+
         UserDefinedFunctionHelper.prepareInstance(
                 planner.getTableConfig().getConfiguration(), userDefinedFunction);
 

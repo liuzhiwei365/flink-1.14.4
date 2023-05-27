@@ -106,6 +106,7 @@ public class FlinkSecurityManager extends SecurityManager {
     public static void setFromConfiguration(Configuration configuration) {
         final FlinkSecurityManager flinkSecurityManager =
                 FlinkSecurityManager.fromConfiguration(configuration);
+
         if (flinkSecurityManager != null) {
             try {
                 System.setSecurityManager(flinkSecurityManager);

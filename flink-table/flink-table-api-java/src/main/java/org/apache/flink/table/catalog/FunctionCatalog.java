@@ -66,7 +66,10 @@ public final class FunctionCatalog {
     private final CatalogManager catalogManager;
     private final ModuleManager moduleManager;
 
+    // 临时的系统 级别的函数
     private final Map<String, CatalogFunction> tempSystemFunctions = new LinkedHashMap<>();
+
+    // 临时的catalog 级别的函数
     private final Map<ObjectIdentifier, CatalogFunction> tempCatalogFunctions =
             new LinkedHashMap<>();
 
@@ -74,6 +77,7 @@ public final class FunctionCatalog {
      * Temporary utility until the new type inference is fully functional. It needs to be set by the
      * planner.
      */
+    // PlannerTypeInferenceUtilImpl 实现类
     private PlannerTypeInferenceUtil plannerTypeInferenceUtil;
 
     public FunctionCatalog(
@@ -100,6 +104,8 @@ public final class FunctionCatalog {
     }
 
     /** Registers a uninstantiated temporary system function. */
+    // CatalogFunctionImpl 内部持有的成员是一个 未实例化的全类名字符串
+    // 而 InlineCatalogFunction 内部持有的是 已经实例化的 FunctionDefinition 对象 ,这是两者最大的区别
     public void registerTemporarySystemFunction(
             String name,
             String fullyQualifiedName,

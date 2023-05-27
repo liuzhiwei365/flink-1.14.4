@@ -258,6 +258,9 @@ public class BlobLibraryCacheManager implements LibraryCacheManager {
                     ++count;
                 }
 
+                // 核心逻辑,创建flink 内部的 类加载器  , 主要分为 CHILD_FIRST 和 PARENT_FIRST 两类 ,都是java
+                // URLClassLoader 的子类
+                // 支持 http 协议
                 return classLoaderFactory.createClassLoader(libraryURLs);
             } catch (Exception e) {
                 // rethrow or wrap

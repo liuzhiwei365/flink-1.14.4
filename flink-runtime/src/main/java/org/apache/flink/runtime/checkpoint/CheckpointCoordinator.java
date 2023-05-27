@@ -97,11 +97,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 
 /**
- *  triggerCheckpoint              JM -> TM
- *  declineCheckpoint              JM <- TM
- *  AcknowledgeCheckpoint          JM <- TM
- *  notifyCheckpointComplete       JM -> TM
- *
+ * triggerCheckpoint JM -> TM declineCheckpoint JM <- TM AcknowledgeCheckpoint JM <- TM
+ * notifyCheckpointComplete JM -> TM
  */
 public class CheckpointCoordinator {
 
@@ -173,7 +170,7 @@ public class CheckpointCoordinator {
      * The timer that handles the checkpoint timeouts and triggers periodic checkpoints. It must be
      * single-threaded. Eventually it will be replaced by main thread executor.
      */
-    private final ScheduledExecutor timer;
+    private final ScheduledExecutor timer; //构造函数中赋值
 
     /** The master checkpoint hooks executed by this checkpoint coordinator. */
     private final HashMap<String, MasterTriggerRestoreHook<?>> masterHooks;
@@ -466,6 +463,7 @@ public class CheckpointCoordinator {
      * @throws IllegalStateException If no savepoint directory has been specified and no default
      *     savepoint directory has been configured
      */
+    // 触发同步的savepoint ,且savepoint 只能同步
     public CompletableFuture<CompletedCheckpoint> triggerSynchronousSavepoint(
             final boolean terminate, @Nullable final String targetLocation) {
 
@@ -486,7 +484,7 @@ public class CheckpointCoordinator {
         final CompletableFuture<CompletedCheckpoint> resultFuture = new CompletableFuture<>();
         timer.execute(
                 () ->
-                        triggerCheckpoint(checkpointProperties, targetLocation, false)
+                        triggerCheckpoint(checkpointProperties, targetLocation, false) //核心
                                 .whenComplete(
                                         (completedCheckpoint, throwable) -> {
                                             if (throwable == null) {
@@ -517,7 +515,7 @@ public class CheckpointCoordinator {
             @Nullable String externalSavepointLocation,
             boolean isPeriodic) {
 
-        // savepoint 场景
+        // savepoint 场景 ,报错,因为savepoint 没法周期性
         if (props.getCheckpointType().getPostCheckpointAction() == PostCheckpointAction.TERMINATE
                 && !(props.isSynchronous() && props.isSavepoint())) {
             return FutureUtils.completedExceptionally(
@@ -525,9 +523,10 @@ public class CheckpointCoordinator {
                             "Only synchronous savepoints are allowed to advance the watermark to MAX."));
         }
 
-        //
+        // 选择一个  CheckpointTriggerRequest 来 开始
         CheckpointTriggerRequest request =
                 new CheckpointTriggerRequest(props, externalSavepointLocation, isPeriodic);
+
         chooseRequestToExecute(request).ifPresent(this::startTriggeringCheckpoint);
         return request.onCompletionPromise;
     }
@@ -544,6 +543,7 @@ public class CheckpointCoordinator {
 
             final long timestamp = System.currentTimeMillis();
 
+            // 计算和构建一个 checkpoint 计划
             CompletableFuture<CheckpointPlan> checkpointPlanFuture =
                     checkpointPlanCalculator.calculateCheckpointPlan();
 
@@ -554,6 +554,7 @@ public class CheckpointCoordinator {
                                         try {
                                             CheckpointIdAndStorageLocation
                                                     checkpointIdAndStorageLocation =
+                                                    //初始化checkpoint
                                                             initializeCheckpoint(
                                                                     request.props,
                                                                     request.externalSavepointLocation);
@@ -566,10 +567,11 @@ public class CheckpointCoordinator {
                                     executor)
                             .thenApplyAsync(
                                     (checkpointInfo) ->
+                                            //创建即将执行的checkpoint
                                             createPendingCheckpoint(
                                                     timestamp,
                                                     request.props,
-                                                    checkpointInfo.f0,//CheckpointPlan对象
+                                                    checkpointInfo.f0, // CheckpointPlan对象
                                                     request.isPeriodic,
                                                     checkpointInfo.f1.checkpointId,
                                                     checkpointInfo.f1.checkpointStorageLocation,
@@ -590,17 +592,20 @@ public class CheckpointCoordinator {
             // We have to take the snapshot of the master hooks after the coordinator checkpoints
             // has completed.
 
-            //这是为了确保在使用ExternallyInducedSource的情况下,确保任务被checkpoint
+            // 这是为了确保在使用ExternallyInducedSource的情况下,确保任务被checkpoint
             final CompletableFuture<?> masterStatesComplete =
                     coordinatorCheckpointsComplete.thenComposeAsync(
                             ignored -> {
-                                // If the code reaches here, the pending checkpoint is guaranteed to be not null.
+                                // If the code reaches here, the pending checkpoint is guaranteed to
+                                // be not null.
                                 // We use FutureUtils.getWithoutException() to make compiler happy
                                 // with checked exceptions in the signature.
                                 PendingCheckpoint checkpoint =
                                         FutureUtils.getWithoutException(
                                                 pendingCheckpointCompletableFuture);
-
+                                // 触发 master 端 的 checkpoint hooks
+                                // 且 这些hooks 最终在 StreamingJobGraphGenerator 的 configureCheckpointing方法中添加进来
+                                // 相关的用户函数必须得实现 WithMasterCheckpointHook   接口
                                 return snapshotMasterState(checkpoint);
                             },
                             timer);
@@ -625,6 +630,7 @@ public class CheckpointCoordinator {
                                                 onTriggerFailure(checkpoint, throwable);
                                             }
                                         } else {
+                                            // 触发 各个子任务的 checkpoint
                                             triggerCheckpointRequest(
                                                     request, timestamp, checkpoint);
                                         }
@@ -710,7 +716,7 @@ public class CheckpointCoordinator {
                         unalignedCheckpointsEnabled,
                         alignedCheckpointTimeout);
 
-        // send messages to the tasks to trigger their checkpoints
+        // 向 所有的task 发送消息以触发它们的checkpoint
         List<CompletableFuture<Acknowledge>> acks = new ArrayList<>();
         for (Execution execution : checkpoint.getCheckpointPlan().getTasksToTrigger()) {
             if (request.props.isSynchronous()) {
@@ -718,9 +724,11 @@ public class CheckpointCoordinator {
                         execution.triggerSynchronousSavepoint(
                                 checkpointId, timestamp, checkpointOptions));
             } else {
+                // triggerSynchronousSavepoint 和 triggerCheckpoint 都会调用  triggerCheckpointHelper方法
                 acks.add(execution.triggerCheckpoint(checkpointId, timestamp, checkpointOptions));
             }
         }
+        // 等待所有的 future 执行完
         return FutureUtils.waitForAll(acks);
     }
 
@@ -949,6 +957,7 @@ public class CheckpointCoordinator {
     private Optional<CheckpointTriggerRequest> chooseRequestToExecute(
             CheckpointTriggerRequest request) {
         synchronized (lock) {
+            // 从队列中取
             return requestDecider.chooseRequestToExecute(
                     request, isTriggering, lastCheckpointCompletionRelativeTime);
         }
@@ -1499,6 +1508,7 @@ public class CheckpointCoordinator {
      * <p>This method returns the restored checkpoint ID (as an optional) or an empty optional, if
      * no checkpoint was restored.
      */
+    // 恢复最新的快照状态
     private OptionalLong restoreLatestCheckpointedStateInternal(
             final Set<ExecutionJobVertex> tasks,
             final OperatorCoordinatorRestoreBehavior operatorCoordinatorRestoreBehavior,
@@ -1523,7 +1533,7 @@ public class CheckpointCoordinator {
             // registry
             for (CompletedCheckpoint completedCheckpoint :
                     completedCheckpointStore.getAllCheckpoints()) {
-                //将completedCheckpoint中的成员变量 operatorStates 全部注册到新的sharedStateRegistry中
+                // 将completedCheckpoint中的成员变量 operatorStates 全部注册到新的sharedStateRegistry中
                 completedCheckpoint.registerSharedStatesAfterRestored(sharedStateRegistry);
             }
 
@@ -1563,25 +1573,26 @@ public class CheckpointCoordinator {
             // 从最近的一次 CompletedCheckpoint中提取状态
             final Map<OperatorID, OperatorState> operatorStates = extractOperatorStates(latest);
 
-            //校验
+            // 校验
             if (checkForPartiallyFinishedOperators) {
                 VertexFinishedStateChecker vertexFinishedStateChecker =
                         new VertexFinishedStateChecker(tasks, operatorStates);
                 vertexFinishedStateChecker.validateOperatorsFinishedState();
             }
 
-            //状态重新分配
+            //  构造 StateAssignmentOperation对象
             StateAssignmentOperation stateAssignmentOperation =
                     new StateAssignmentOperation(
                             latest.getCheckpointID(), tasks, operatorStates, allowNonRestoredState);
 
+            // 状态重新分配
             stateAssignmentOperation.assignStates();
 
             // call master hooks for restore. we currently call them also on "regional restore"
-            // because
-            // there is no other failure notification mechanism in the master hooks
+            // because there is no other failure notification mechanism in the master hooks
             // ultimately these should get removed anyways in favor of the operator coordinators
 
+            // master hooks  恢复
             MasterHooks.restoreMasterHooks(
                     masterHooks,
                     latest.getMasterHookStates(),
@@ -1621,7 +1632,8 @@ public class CheckpointCoordinator {
 
         HashMap<OperatorID, OperatorState> newStates = new HashMap<>();
         // Create the new operator states without in-flight data.
-        // OperatorSubtaskState 中 内部总共有8种状态 ,我们把其中的  ResultSubpartitionState 和 InputChannelState 设置为空
+        // OperatorSubtaskState 中 内部总共有8种状态 ,我们把其中的  ResultSubpartitionState 和 InputChannelState
+        // 设置为空
         for (OperatorState originalOperatorState : originalOperatorStates.values()) {
             newStates.put(
                     originalOperatorState.getOperatorID(),
@@ -1675,6 +1687,7 @@ public class CheckpointCoordinator {
         LOG.info("Reset the checkpoint ID of job {} to {}.", job, nextCheckpointId);
 
         final OptionalLong restoredCheckpointId =
+                // 重新恢复状态
                 restoreLatestCheckpointedStateInternal(
                         new HashSet<>(tasks.values()),
                         OperatorCoordinatorRestoreBehavior.RESTORE_IF_CHECKPOINT_PRESENT,
@@ -1755,7 +1768,18 @@ public class CheckpointCoordinator {
     // --------------------------------------------------------------------------------------------
     //  Periodic scheduling of checkpoints
     // --------------------------------------------------------------------------------------------
-
+    /*
+       触发流程:
+               DefaultScheduler.startSchedulingInternal
+               transitionToRunning的调用逻辑如下
+               transitionToRunning
+               transitionState(JobStatus.CREATED, JobStatus.RUNNING)
+               transitionState(current, newState, null)
+               notifyJobStatusChange(newState, error)
+                   回调所有 jobStatusListeners 的jobStatusChanges方法
+                        其中有 CheckpointCoordinatorDeActivator 会调用 CheckpointCoordinator的
+                               startCheckpointScheduler 来开启checkpoint的调度
+    */
     public void startCheckpointScheduler() {
         synchronized (lock) {
             if (shutdown) {
@@ -1766,10 +1790,11 @@ public class CheckpointCoordinator {
                     "Can not start checkpoint scheduler, if no periodic checkpointing is configured");
 
             // make sure all prior timers are cancelled
-            //先停再启动
+            // 先停再启动
             stopCheckpointScheduler();
 
             periodicScheduling = true;
+            // 开始周期性checkpoint 调度
             currentPeriodicTrigger = scheduleTriggerWithDelay(getRandomInitDelay());
         }
     }
@@ -1837,6 +1862,7 @@ public class CheckpointCoordinator {
     }
 
     private ScheduledFuture<?> scheduleTriggerWithDelay(long initDelay) {
+        // 主逻辑由 ScheduledTrigger 的run方法维护
         return timer.scheduleAtFixedRate(
                 new ScheduledTrigger(), initDelay, baseInterval, TimeUnit.MILLISECONDS);
     }

@@ -126,6 +126,7 @@ public class ConfigurationParserUtils {
      */
     public static Configuration loadCommonConfiguration(String[] args, String cmdLineSyntax)
             throws FlinkParseException {
+
         final CommandLineParser<ClusterConfiguration> commandLineParser =
                 new CommandLineParser<>(new ClusterConfigurationParserFactory());
 
@@ -135,12 +136,16 @@ public class ConfigurationParserUtils {
             clusterConfiguration = commandLineParser.parse(args);
         } catch (FlinkParseException e) {
             LOG.error("Could not parse the command line options.", e);
+            // 如果args 解析出错 则打印 帮助信息
             commandLineParser.printHelp(cmdLineSyntax);
             throw e;
         }
 
+        // 由 args 传入
         final Configuration dynamicProperties =
                 ConfigurationUtils.createConfiguration(clusterConfiguration.getDynamicProperties());
+
+        // 解析  flink-conf.yaml 配置文件,  合并到最终返回的 Configuration 对象中
         return GlobalConfiguration.loadConfiguration(
                 clusterConfiguration.getConfigDir(), dynamicProperties);
     }

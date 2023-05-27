@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.api.java.typeutils.runtime.RowSerializerUpgradeTest
--------------------------------------------------------------------------------
-Tests run: 30, Failures: 0, Errors: 0, Skipped: 15, Time elapsed: 0.284 s - in org.apache.flink.api.java.typeutils.runtime.RowSerializerUpgradeTest

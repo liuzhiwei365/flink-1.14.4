@@ -49,8 +49,14 @@ public final class PipelinedRegionComputeUtil {
             // PIPELINED_APPROXIMATE is also considered as a single region. This attribute is
             // called "reconnectable". Reconnectable will be removed after FLINK-19895, see also
             // {@link ResultPartitionType#isReconnectable}
+            /*
+              从输入侧拿到 不可重连接的 ConsumedResults
+              目前不可重连的类型只有 PIPELINE   PIPELINED_BOUNDED
+            */
             for (R consumedResult : getNonReconnectableConsumedResults.apply(vertex)) {
                 final V producerVertex = consumedResult.getProducer();
+                // 在处理本vertex 的时候,它的前置 vertex 一定已经在vertexToRegion
+                // 维护了,因为topologicallySortedVertices是有顺序的
                 final Set<V> producerRegion = vertexToRegion.get(producerVertex);
 
                 if (producerRegion == null) {
@@ -63,10 +69,11 @@ public final class PipelinedRegionComputeUtil {
                                     + ". This should be a failover region building bug.");
                 }
 
-                // check if it is the same as the producer region, if so skip the merge
-                // this check can significantly reduce compute complexity in All-to-All
-                // PIPELINED edge case
                 if (currentRegion != producerRegion) {
+                    // 合并 region ,一般来说 currentRegion 要比 producerRegion 的容量小
+                    // 从前面 往后面合并 .    这和spark 相反
+
+                    // 把当前region 和前面的region 合并起来
                     currentRegion = mergeRegions(currentRegion, producerRegion, vertexToRegion);
                 }
             }
@@ -89,6 +96,7 @@ public final class PipelinedRegionComputeUtil {
             largerSet = region1;
         }
         for (V v : smallerSet) {
+            // 之所以不添加 largerSet ,是因为 largerSet 大概率已经在vertexToRegion 里面
             vertexToRegion.put(v, largerSet);
         }
         largerSet.addAll(smallerSet);
@@ -97,6 +105,7 @@ public final class PipelinedRegionComputeUtil {
 
     static <V extends Vertex<?, ?, V, ?>> Set<Set<V>> uniqueRegions(
             final Map<V, Set<V>> vertexToRegion) {
+        // IdentityHashMap 与普通的HashMap 的区别在于: 前者key 的判断用 == 来判断(比较地址) , 后者用 equals来判断(比较值)
         final Set<Set<V>> distinctRegions = Collections.newSetFromMap(new IdentityHashMap<>());
         distinctRegions.addAll(vertexToRegion.values());
         return distinctRegions;

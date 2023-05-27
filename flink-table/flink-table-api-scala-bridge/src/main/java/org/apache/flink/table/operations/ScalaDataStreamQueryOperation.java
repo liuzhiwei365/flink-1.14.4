@@ -40,6 +40,9 @@ import java.util.Optional;
  * {@link ScalaDataStreamQueryOperation#getFieldIndices()} describes the mapping between fields of
  * the {@link TableSchema} to the {@link org.apache.flink.api.common.typeutils.CompositeType}.
  */
+// scala 的api 将 DataStream 转换成一个 Table 的过程中,需要构造此类。
+// 一个表table 的底层 对应的是一个 QueryOperation操作
+// 在这里就是 ScalaDataStreamQueryOperation (或者 JavaDataStreamQueryOperation，对应 Java API)
 @Internal
 public class ScalaDataStreamQueryOperation<E> implements QueryOperation {
 

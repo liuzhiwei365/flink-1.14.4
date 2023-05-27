@@ -120,7 +120,7 @@ public final class GlobalConfiguration {
                             + ") does not describe an existing directory.");
         }
 
-        // get Flink yaml configuration file
+        // get Flink yaml configuration file  flink-conf.yaml
         final File yamlConfigFile = new File(confDirFile, FLINK_CONF_FILENAME);
 
         if (!yamlConfigFile.exists()) {

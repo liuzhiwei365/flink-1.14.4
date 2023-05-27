@@ -193,9 +193,12 @@ public class ExpressionResolver {
      * @return resolved list of expression
      */
     public List<ResolvedExpression> resolve(List<Expression> expressions) {
+        // 将所有的 ResolverRule 规则, 连接成一个函数 链条
         final Function<List<Expression>, List<Expression>> resolveFunction =
                 concatenateRules(getAllResolverRules());
+        // 调用合并好的函数链条, 得到新的解析好的 表达式列表
         final List<Expression> resolvedExpressions = resolveFunction.apply(expressions);
+
         return resolvedExpressions.stream()
                 .map(e -> e.accept(VERIFY_RESOLUTION_VISITOR))
                 .collect(Collectors.toList());
@@ -224,6 +227,7 @@ public class ExpressionResolver {
         return postResolverFactory;
     }
 
+    // 将所有的 ResolverRule 规则, 连接成一个函数 链条
     private Function<List<Expression>, List<Expression>> concatenateRules(
             List<ResolverRule> rules) {
         return rules.stream()

@@ -55,6 +55,8 @@ public final class UnresolvedIdentifier {
      * @param path array of identifier segments
      * @return an identifier that must be resolved before accessing an object from a catalog manager
      */
+
+    //
     public static UnresolvedIdentifier of(String... path) {
         if (path == null) {
             throw new ValidationException("Object identifier can not be null!");

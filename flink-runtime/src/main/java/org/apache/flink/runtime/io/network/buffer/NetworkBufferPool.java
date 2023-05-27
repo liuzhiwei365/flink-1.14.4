@@ -75,7 +75,7 @@ public class NetworkBufferPool
 
     private final Object factoryLock = new Object();
 
-    private final Set<LocalBufferPool> allBufferPools = new HashSet<>(); //维护LocalBufferPool的集合
+    private final Set<LocalBufferPool> allBufferPools = new HashSet<>(); // 维护LocalBufferPool的集合
 
     private int numTotalRequiredBuffers;
 
@@ -261,7 +261,7 @@ public class NetworkBufferPool
         return segments;
     }
 
-    //内部LocalBufferPool 申请MemorySegment的通道
+    // 内部LocalBufferPool 申请MemorySegment的通道
     @Nullable
     private MemorySegment internalRequestMemorySegment() {
         assert Thread.holdsLock(availableMemorySegments);
@@ -293,7 +293,7 @@ public class NetworkBufferPool
         }
     }
 
-    //回收MemorySegment、 这样就能够继续提供给其他的LocalBufferPool 使用了
+    // 回收MemorySegment、 这样就能够继续提供给其他的LocalBufferPool 使用了
     private void internalRecycleMemorySegments(Collection<MemorySegment> segments) {
         CompletableFuture<?> toNotify = null;
         synchronized (availableMemorySegments) {

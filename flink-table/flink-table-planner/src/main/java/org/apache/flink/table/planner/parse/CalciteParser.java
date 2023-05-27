@@ -50,7 +50,18 @@ public class CalciteParser {
      */
     public SqlNode parse(String sql) {
         try {
+            // 这里调用 calcite 的 SqlParser的
             SqlParser parser = SqlParser.create(sql, config);
+            /*
+              最终会调用 FlinkSqlParserImpl.SqlStmt() 方法来将 sql语句解析成为 sqlNode
+
+              而FlinkSqlParserImpl类 是由freemarker模版 和 javacc 生成的 ,所以我们分析逻辑的时候去看
+              calcite中原生的模版文件Parser.jj 文件 和 codegen/includes/parserImpl.ftl 扩展的模版文件即可
+
+              ****或者说,如果你不修改源码 , 你直接看 target/generated-sources/javacc/Parser.jj  更好, 该文件是由
+              原生Parser.jj 文件 和 扩展模版逻辑 经过 freemarker合成的, 之后在经过javacc自动生成FlinkSqlParserImpl
+              等解析器的java代码.
+             */
             return parser.parseStmt();
         } catch (SqlParseException e) {
             throw new SqlParserException("SQL parse failed. " + e.getMessage(), e);

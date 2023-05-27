@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.contrib.streaming.state.benchmark.StateBackendBenchmarkUtilsTest
--------------------------------------------------------------------------------
-Tests run: 18, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 1.762 s - in org.apache.flink.contrib.streaming.state.benchmark.StateBackendBenchmarkUtilsTest

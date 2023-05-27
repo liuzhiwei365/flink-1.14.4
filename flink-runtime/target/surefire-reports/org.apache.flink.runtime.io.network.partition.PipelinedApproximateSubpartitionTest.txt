@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.runtime.io.network.partition.PipelinedApproximateSubpartitionTest
--------------------------------------------------------------------------------
-Tests run: 28, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 10.23 s - in org.apache.flink.runtime.io.network.partition.PipelinedApproximateSubpartitionTest

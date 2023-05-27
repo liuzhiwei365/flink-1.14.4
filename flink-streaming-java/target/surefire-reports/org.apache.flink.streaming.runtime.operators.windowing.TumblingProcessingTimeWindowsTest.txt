@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.streaming.runtime.operators.windowing.TumblingProcessingTimeWindowsTest
--------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.281 s - in org.apache.flink.streaming.runtime.operators.windowing.TumblingProcessingTimeWindowsTest

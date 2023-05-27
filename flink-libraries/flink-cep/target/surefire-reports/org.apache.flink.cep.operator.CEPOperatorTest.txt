@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.cep.operator.CEPOperatorTest
--------------------------------------------------------------------------------
-Tests run: 17, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.625 s - in org.apache.flink.cep.operator.CEPOperatorTest

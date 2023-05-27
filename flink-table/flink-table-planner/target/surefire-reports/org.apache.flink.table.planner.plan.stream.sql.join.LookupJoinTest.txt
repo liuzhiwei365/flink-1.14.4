@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.stream.sql.join.LookupJoinTest
--------------------------------------------------------------------------------
-Tests run: 44, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 22.365 s - in org.apache.flink.table.planner.plan.stream.sql.join.LookupJoinTest

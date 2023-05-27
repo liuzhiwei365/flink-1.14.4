@@ -95,8 +95,10 @@ public class FineGrainedTaskManagerTracker implements TaskManagerTracker {
         final FineGrainedTaskManagerRegistration taskManagerRegistration =
                 new FineGrainedTaskManagerRegistration(
                         taskExecutorConnection, totalResourceProfile, defaultSlotResourceProfile);
+
         taskManagerRegistrations.put(
                 taskExecutorConnection.getInstanceID(), taskManagerRegistration);
+
         totalRegisteredResource = totalRegisteredResource.merge(totalResourceProfile);
     }
 

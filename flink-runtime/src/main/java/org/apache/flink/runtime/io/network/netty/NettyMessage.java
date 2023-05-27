@@ -191,7 +191,7 @@ public abstract class NettyMessage {
      * </pre>
      */
 
-    ////LengthFieldBasedFrameDecoder 用于 netty 的自定义协议
+    //// LengthFieldBasedFrameDecoder 用于 netty 的自定义协议
     static class NettyMessageDecoder extends LengthFieldBasedFrameDecoder {
         /** Creates a new message decoded with the required frame properties. */
         NettyMessageDecoder() {

@@ -214,6 +214,8 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
             throw exception;
         }
 
+        // Dispatcher 起来后 ,会在指定的目录下恢复 job
+        // 不过 per job 模式走这里的时候  恢复的job 只有一个 ,实际上就是提交job
         startRecoveredJobs();
         this.dispatcherBootstrap =
                 this.dispatcherBootstrapFactory.create(
@@ -295,6 +297,7 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     // RPCs
     // ------------------------------------------------------
 
+    // Dispatcher  处理 JobGraph 的入口
     @Override
     public CompletableFuture<Acknowledge> submitJob(JobGraph jobGraph, Time timeout) {
         log.info(
@@ -407,6 +410,8 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     private void runJob(JobGraph jobGraph, ExecutionType executionType) throws Exception {
         Preconditions.checkState(!runningJobs.containsKey(jobGraph.getJobID()));
         long initializationTimestamp = System.currentTimeMillis();
+
+        // 创建 JobManagerRunner 并启动 JobMananger
         JobManagerRunner jobManagerRunner =
                 createJobManagerRunner(jobGraph, initializationTimestamp);
 

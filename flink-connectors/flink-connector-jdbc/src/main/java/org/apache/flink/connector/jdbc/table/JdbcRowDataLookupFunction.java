@@ -131,7 +131,9 @@ public class JdbcRowDataLookupFunction extends TableFunction<RowData> {
                     cacheMaxSize == -1 || cacheExpireMs == -1
                             ? null
                             : CacheBuilder.newBuilder()
+                                    // 对应建表语句中的  lookup.cache.max-rows 参数
                                     .expireAfterWrite(cacheExpireMs, TimeUnit.MILLISECONDS)
+                                    // 对应建表语句中的 lookup.cache.ttl  过期时间
                                     .maximumSize(cacheMaxSize)
                                     .build();
         } catch (SQLException sqe) {
@@ -150,21 +152,27 @@ public class JdbcRowDataLookupFunction extends TableFunction<RowData> {
         RowData keyRow = GenericRowData.of(keys);
         if (cache != null) {
             List<RowData> cachedRows = cache.getIfPresent(keyRow);
+            // 对于传入的keys ,先从缓存中获取要查询的数据
             if (cachedRows != null) {
                 for (RowData cachedRow : cachedRows) {
+                    // 如果缓存中拿到了数据,就直接输出
                     collect(cachedRow);
                 }
                 return;
             }
         }
 
+        //否则,jdbc  查询语句 去查询
         for (int retry = 0; retry <= maxRetryTimes; retry++) {
             try {
                 statement.clearParameters();
                 statement = lookupKeyRowConverter.toExternal(keyRow, statement);
+                // 执行查询语句，并获取resultSet
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (cache == null) {
+                        // 迭代resultSet
                         while (resultSet.next()) {
+                            // 转成内部数据类型 RowData , 并且输出
                             collect(jdbcRowConverter.toInternal(resultSet));
                         }
                     } else {

@@ -107,6 +107,10 @@ public class JobGraph implements Serializable {
     private final List<Path> userJars = new ArrayList<Path>();
 
     /** Set of custom files required to run this job. */
+    /* DistributedCacheEntry 内部也包含 Blob Key
+     *  userArtifacts 和 userJarBlobKeys 成员变量都是为了保存 用户相关的上传信息
+     *
+     * */
     private final Map<String, DistributedCache.DistributedCacheEntry> userArtifacts =
             new HashMap<>();
 
@@ -405,8 +409,9 @@ public class JobGraph implements Serializable {
 
     // --------------------------------------------------------------------------------------------
     //  Topological Graph Access
+    //  该算法, 将 taskVertices 中维护的所有 JobVerx 以某种规则来排序, 下图展示了排序规则
     // --------------------------------------------------------------------------------------------
-
+    /** 1----> 2 ---> 3-----\ ↓ 6 -----> 7 ↑ 4 -----> 5 -----| */
     public List<JobVertex> getVerticesSortedTopologicallyFromSources()
             throws InvalidProgramException {
         // early out on empty lists
@@ -414,42 +419,42 @@ public class JobGraph implements Serializable {
             return Collections.emptyList();
         }
 
-        //从source开始的,排好序的JobVertex列表
+        // 从source开始的,排好序的JobVertex列表
         List<JobVertex> sorted = new ArrayList<JobVertex>(this.taskVertices.size());
-        //还没有进入sorted集合,等待排序的JobVertex集合,初始值就是JobGraph中所有JobVertex的集合
+
+        // 还没有进入sorted集合,等待排序的JobVertex集合,初始值就是JobGraph中所有JobVertex的集合
         Set<JobVertex> remaining = new LinkedHashSet<JobVertex>(this.taskVertices.values());
 
         // start by finding the vertices with no input edges
         // and the ones with disconnected inputs (that refer to some standalone data set)
-
-        //找出数据源节点,也就是那些没有输入的JobVertex,以及指向独立数据集的JobVertex
+        // 找出数据源节点,也就是那些没有输入的JobVertex,以及指向独立数据集的JobVertex
         {
             Iterator<JobVertex> iter = remaining.iterator();
             while (iter.hasNext()) {
                 JobVertex vertex = iter.next();
-                //如果该节点没有任何输入,则表示该节点是数据源,添加到sorted集合,同时从remaining集合中移除
+                // 如果该节点没有任何输入,则表示该节点是数据源,添加到sorted集合,同时从remaining集合中移除
                 if (vertex.hasNoConnectedInputs()) {
                     sorted.add(vertex);
                     iter.remove();
                 }
             }
         }
-        //sorted集合中开始遍历的起始位置，也就是从第一个元素开始遍历,目前sorted中只有数据源节点
+        // sorted集合中开始遍历的起始位置，也就是从第一个元素开始遍历,目前sorted中只有数据源节点
         int startNodePos = 0;
 
         // traverse from the nodes that were added until we found all elements
 
-        // 目前为止, remaining 中只含有 非数据源节点
+        // 目前为止, sorted只含有数据源节点 , remaining 中只含有 非数据源节点
         while (!remaining.isEmpty()) {
 
             // first check if we have more candidates to start traversing from. if not, then the
             // graph is cyclic, which is not permitted
-            if (startNodePos >= sorted.size()) {
+            if (startNodePos >= sorted.size()) { // 说明没有数据源 job node
                 throw new InvalidProgramException("The job graph is cyclic.");
             }
 
             JobVertex current = sorted.get(startNodePos++);
-            //遍历当前JobVertex的下游节点(递归)
+            // 遍历当前JobVertex的下游节点(递归)
             addNodesThatHaveNoNewPredecessors(current, sorted, remaining);
         }
 
@@ -461,24 +466,25 @@ public class JobGraph implements Serializable {
 
         // forward traverse over all produced data sets and all their consumers
         for (IntermediateDataSet dataSet : start.getProducedDataSets()) {
-            //对于每个中间数据集合，遍历其所有的输出JobEdge
+            // 对于每个中间数据集合，遍历其所有的输出JobEdge
             for (JobEdge edge : dataSet.getConsumers()) {
 
-                //如果一个节点的所有输入节点都不在"remaining"集合中，则将这个节点添加到target集合中
+                // 如果一个节点的所有输入节点都不在"remaining"集合中，则将这个节点添加到target集合中
 
-                //v 代表 start的其中一个下游JobVertex
-                //如果目标节点已经不在remaining集合中,则continue
+                // v 代表 start的其中一个下游JobVertex
+                // 如果目标节点已经不在remaining集合中,则continue
                 JobVertex v = edge.getTarget();
-                if (!remaining.contains(v)) {//已经到了sink端
+                if (!remaining.contains(v)) { // 已经到了sink端
                     continue;
                 }
 
-                //一个JobVertex是否还有输入节点在remaining集合中的标识
+                // 一个JobVertex是否还有输入节点在remaining集合中的标识
                 boolean hasNewPredecessors = false;
 
                 for (JobEdge e : v.getInputs()) {
-                    // 跳过 edge : 因为edge.getSource().getProducer() 的值 一定就是参数 start
+                    // 跳过 edge : 因为edge.getSource().getProducer() 的值 一定存在参数 start
                     // 本场景就是要判断 start的其中一个下游JobVertex是否有除了start之外的其他的 还在remaining中 上游节点
+                    // 如果存在,把 hasNewPredecessors 设置为true  ( 多个数据源合流,会产生这种情况 )
                     if (e == edge) {
                         continue;
                     }
@@ -490,12 +496,14 @@ public class JobGraph implements Serializable {
                     }
                 }
 
-                 // 如果节点v已经没有输入节点还在remaining集合中,则将节点v添加到sorted列表中
-                 // 同时从remaining集合中删除,然后开始递归遍历节点v的下游节点
+                // 如果节点v已经没有输入节点还在remaining集合中,则将节点v添加到sorted列表中
+                // 同时从remaining集合中删除,然后开始递归遍历节点v的下游节点
+
+                // 为了避免某个 下游的JobVerx 先于自己依赖的某个 数据源JobVerx 加入到target 中 ,
                 if (!hasNewPredecessors) {
                     target.add(v);
                     remaining.remove(v);
-                    //递归
+                    // 递归
                     addNodesThatHaveNoNewPredecessors(v, target, remaining);
                 }
             }

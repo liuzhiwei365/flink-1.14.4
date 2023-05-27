@@ -35,6 +35,15 @@ public class TaskExecutorToServiceAdapter implements TaskManagerRunner.TaskExecu
     @Override
     public void start() {
         taskExecutor.start();
+        // 会回调 TaskExecutor 的 onStart 方法
+
+        // RpcServer.start()
+        // ActorRef.tell(ControlMessages.START, ActorRef.noSender())   消息类型为 ControlMessages.START
+        // AkkaRpcActor.handleControlMessage
+        // AkkaRpcActor.StoppedState.start
+        // AkkaRpcActor.rpcEndpoint.internalCallOnStart()
+        // RpcEndpoint.onStart()
+        // TaskExecutor.onStart()
     }
 
     @Override

@@ -63,7 +63,7 @@ public class CountEvictor<W extends Window> implements Evictor<Object, W> {
     }
 
     private void evict(Iterable<TimestampedValue<Object>> elements, int size, EvictorContext ctx) {
-        //窗口计算时，只保留最近 n条元素 ,size是elements 的容量
+        // 窗口计算时，只保留最近 n条元素 ,size是elements 的容量
         if (size <= maxCount) {
             return;
         } else {

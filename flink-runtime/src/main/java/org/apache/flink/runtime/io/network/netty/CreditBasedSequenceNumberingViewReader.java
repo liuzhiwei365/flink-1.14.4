@@ -66,7 +66,7 @@ class CreditBasedSequenceNumberingViewReader
     private boolean isRegisteredAsAvailable = false;
 
     /** The number of available buffers for holding data on the consumer side. */
-    private int numCreditsAvailable; //维护下游inputChannel对应的总的credit指标,包含initialCredit
+    private int numCreditsAvailable; // 维护下游inputChannel对应的总的credit指标,包含initialCredit
 
     CreditBasedSequenceNumberingViewReader(
             InputChannelID receiverId, int initialCredit, PartitionRequestQueue requestQueue) {
@@ -193,7 +193,7 @@ class CreditBasedSequenceNumberingViewReader
     public BufferAndAvailability getNextBuffer() throws IOException {
         BufferAndBacklog next = subpartitionView.getNextBuffer();
         if (next != null) {
-            //每消耗一条buffer(), 就会减少下游的信用值, 这样就能控制 被压
+            // 每消耗一条buffer(), 就会减少下游的信用值, 这样就能控制 被压
             if (next.buffer().isBuffer() && --numCreditsAvailable < 0) {
                 throw new IllegalStateException("no credit available");
             }

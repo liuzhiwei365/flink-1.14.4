@@ -177,7 +177,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         return new SingleCheckpointBarrierHandler(
                 taskName,
                 toNotifyOnCheckpoint,
-                checkpointCoordinator,// 非对齐的checkpoint 得多传一个 SubtaskCheckpointCoordinator
+                checkpointCoordinator, // 非对齐的checkpoint 得多传一个 SubtaskCheckpointCoordinator
                 clock,
                 numOpenChannels,
                 new AlternatingWaitingForFirstBarrier(new ChannelState(inputs)),
@@ -217,14 +217,15 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         long barrierId = barrier.getId();
         LOG.debug("{}: Received barrier from channel {} @ {}.", taskName, channelInfo, barrierId);
 
-        //如果barrierId > currentCheckpointId: 当前checkpoint还未完成,下一个checkpoint就开始了,放弃当前ck
-        //如果currentCheckpointId > barrierId: 当前的barrier是 属于之前的checkpoint的 barrier
-        //如果currentCheckpointId = barrierId: 当前的barrier是 属于当前的checkpoint的 barrier
+        // 如果barrierId > currentCheckpointId: 当前checkpoint还未完成,下一个checkpoint就开始了,放弃当前ck
+        // 如果currentCheckpointId > barrierId: 当前的barrier是 属于之前的checkpoint的 barrier
+        // 如果currentCheckpointId = barrierId: 当前的barrier是 属于当前的checkpoint的 barrier
         if (currentCheckpointId > barrierId
                 || (currentCheckpointId == barrierId && !isCheckpointPending())) {
             if (!barrier.getCheckpointOptions().isUnalignedCheckpoint()) {
 
-                //在对齐checkpoint模式下, 让指定的 channel 恢复消费. (因为有可能上次checkpoint 对齐barriar的时候,将channel 阻塞了.)
+                // 在对齐checkpoint模式下, 让指定的 channel 恢复消费. (因为有可能上次checkpoint 对齐barriar的时候,将channel
+                // 阻塞了.)
                 inputs[channelInfo.getGateIdx()].resumeConsumption(channelInfo);
             }
             return;
@@ -249,10 +250,10 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         alignedChannels.add(alignedChannel);
         if (alignedChannels.size() == 1) {
             if (targetChannelCount == 1) {
-                //开始并且结束对齐
+                // 开始并且结束对齐
                 markAlignmentStartAndEnd(barrier.getId(), barrier.getTimestamp());
             } else {
-                //开始对齐
+                // 开始对齐
                 markAlignmentStart(barrier.getId(), barrier.getTimestamp());
             }
         }
@@ -261,13 +262,13 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         // trigger a checkpoint with unfinished future for alignment duration
         if (alignedChannels.size() == targetChannelCount) {
             if (targetChannelCount > 1) {
-                //结束对齐
+                // 结束对齐
                 markAlignmentEnd();
             }
         }
 
         try {
-            //如果 每个channel 的barrier 到到齐了,触发该task 的 checkpoint
+            // 如果 每个channel 的barrier 到到齐了,触发该task 的 checkpoint
             currentState = stateTransformer.apply(currentState);
         } catch (CheckpointException e) {
             abortInternal(currentCheckpointId, e);

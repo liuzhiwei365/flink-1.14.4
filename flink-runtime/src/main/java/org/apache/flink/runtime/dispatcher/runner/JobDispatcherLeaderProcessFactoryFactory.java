@@ -51,6 +51,7 @@ public class JobDispatcherLeaderProcessFactoryFactory
         final JobGraph jobGraph;
 
         try {
+            // 把job graph 从文件系统中读回来
             jobGraph =
                     jobGraphRetriever.retrieveJobGraph(
                             partialDispatcherServices.getConfiguration());

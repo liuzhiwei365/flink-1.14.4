@@ -48,7 +48,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * <p>To avoid confusion: On the read side, all subpartitions return buffers (and backlog) to be
  * transported through the network.
  */
-//最常用的ResultPartition的实现
+// 最常用的ResultPartition的实现
 public abstract class BufferWritingResultPartition extends ResultPartition {
 
     /** The subpartitions of this partition. At least one. */
@@ -88,7 +88,8 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
                 bufferPoolFactory);
 
         this.subpartitions = checkNotNull(subpartitions);
-        this.unicastBufferBuilders = new BufferBuilder[subpartitions.length];//有下游并行度 个 bufferBuilder
+        this.unicastBufferBuilders =
+                new BufferBuilder[subpartitions.length]; // 有下游并行度 个 bufferBuilder
     }
 
     @Override
@@ -101,7 +102,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
                         + " this result partition.");
     }
 
-    //得到所有缓冲区的大小
+    // 得到所有缓冲区的大小
     @Override
     public int getNumberOfQueuedBuffers() {
         int totalBuffers = 0;
@@ -112,7 +113,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
 
         return totalBuffers;
     }
-    //得到指定编号的缓冲区的大小
+    // 得到指定编号的缓冲区的大小
     @Override
     public int getNumberOfQueuedBuffers(int targetSubpartition) {
         checkArgument(targetSubpartition >= 0 && targetSubpartition < numSubpartitions);

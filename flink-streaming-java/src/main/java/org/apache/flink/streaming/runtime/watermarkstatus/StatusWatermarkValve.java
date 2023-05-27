@@ -34,7 +34,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * DataOutput}, which is called by the valve only when it determines a new watermark or watermark
  * status can be propagated.
  */
-//下游处理watermark推进的类
+// 下游处理watermark推进的类
 @Internal
 public class StatusWatermarkValve {
 
@@ -88,22 +88,22 @@ public class StatusWatermarkValve {
         // overall the valve is idle).
         if (lastOutputWatermarkStatus.isActive()
                 && channelStatuses[channelIndex].watermarkStatus.isActive()) {
+            // 拿到本watermark的时间戳
             long watermarkMillis = watermark.getTimestamp();
 
-            // if the input watermark's value is less than the last received watermark for its input channel, ignore it also.
             // 判断指定编号的channel的水位线是否需要更新
             if (watermarkMillis > channelStatuses[channelIndex].watermark) {
                 channelStatuses[channelIndex].watermark = watermarkMillis;
 
-                // previously unaligned input channels are now aligned if its watermark has caught up
-                // 把先前没有对齐的 input channels,现在对齐
+                // 把先前没有对齐的 input channels,现在对齐,把状态设置为对齐
                 if (!channelStatuses[channelIndex].isWatermarkAligned
-                        && watermarkMillis >= lastOutputWatermark) {
+                        && watermarkMillis
+                                >= lastOutputWatermark) { // 如果该watermark 大于等于 上一次对齐的watermark
+
                     channelStatuses[channelIndex].isWatermarkAligned = true;
                 }
 
-                // now, attempt to find a new min watermark across all aligned channels
-                // 从所有channels选择最小的水位线发送到下游
+                // 从所有对齐的 channels选择最小的水位线发送到下游, 发送的动作是 交给 output来发送
                 findAndOutputNewMinWatermarkAcrossAlignedChannels(output);
             }
         }

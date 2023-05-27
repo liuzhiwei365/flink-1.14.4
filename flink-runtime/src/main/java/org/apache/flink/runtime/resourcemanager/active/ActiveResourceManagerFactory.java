@@ -63,6 +63,7 @@ public abstract class ActiveResourceManagerFactory<WorkerType extends ResourceID
     protected Configuration getEffectiveConfigurationForResourceManager(
             Configuration configuration) {
         if (ClusterOptions.isFineGrainedResourceManagementEnabled(configuration)) {
+            // 如果开启了细粒度的资源调度, 则忽略掉 taskmanager.memory.process.size 和 taskmanager.memory.flink.size
             final Configuration copiedConfig = new Configuration(configuration);
 
             if (copiedConfig.removeConfig(TaskManagerOptions.TOTAL_PROCESS_MEMORY)) {

@@ -490,16 +490,19 @@ public final class LogicalTypeChecks {
         @Override
         public List<String> visit(StructuredType structuredType) {
             final List<String> fieldNames = new ArrayList<>();
+
             // add super fields first
             structuredType
                     .getSuperType()
                     .map(superType -> superType.accept(this))
                     .ifPresent(fieldNames::addAll);
+
             // then specific fields
             structuredType.getAttributes().stream()
                     .map(StructuredAttribute::getName)
                     .forEach(fieldNames::add);
             return fieldNames;
+
         }
 
         @Override

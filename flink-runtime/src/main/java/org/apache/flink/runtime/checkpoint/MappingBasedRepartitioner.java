@@ -59,7 +59,7 @@ public class MappingBasedRepartitioner<T> implements OperatorStateRepartitioner<
     @Override
     public List<List<T>> repartitionState(
             List<List<T>> previousParallelSubtaskStates, int oldParallelism, int newParallelism) {
-        //用来存储结果
+        // 用来存储结果
         List<List<T>> repartitioned = new ArrayList<>();
 
         for (int newIndex = 0; newIndex < newParallelism; newIndex++) {

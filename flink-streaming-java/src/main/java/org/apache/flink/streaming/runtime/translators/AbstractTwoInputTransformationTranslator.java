@@ -65,6 +65,7 @@ public abstract class AbstractTwoInputTransformationTranslator<
         final int transformationId = transformation.getId();
         final ExecutionConfig executionConfig = streamGraph.getExecutionConfig();
 
+        // 添加streamNode
         streamGraph.addCoOperator(
                 transformationId,
                 slotSharingGroup,
@@ -92,6 +93,10 @@ public abstract class AbstractTwoInputTransformationTranslator<
         streamGraph.setParallelism(transformationId, parallelism);
         streamGraph.setMaxParallelism(transformationId, transformation.getMaxParallelism());
 
+        // 注意 不是所有的 transformation 都只有一个 input transformation
+        // AbstractBroadcastStateTransformation 就有 两个 input transformation
+
+        // 两个 input transformation 都可以来自 多个 父StreamNode
         for (Integer inputId : context.getStreamNodeIds(firstInputTransformation)) {
             streamGraph.addEdge(inputId, transformationId, 1);
         }

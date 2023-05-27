@@ -40,8 +40,10 @@ public final class StronglyConnectedComponentsComputeUtils {
 
     private StronglyConnectedComponentsComputeUtils() {}
 
+    // 计算 region 的强联通分量 , 而
     static Set<Set<Integer>> computeStronglyConnectedComponents(
             final int numVertex, final List<List<Integer>> outEdges) {
+
         final Set<Set<Integer>> stronglyConnectedComponents = new HashSet<>();
 
         // a vertex will be added into this stack when it is visited for the first time
@@ -51,6 +53,7 @@ public final class StronglyConnectedComponentsComputeUtils {
         // stores the order that a vertex is visited for the first time, -1 indicates it is not
         // visited yet
         final int[] vertexIndices = new int[numVertex];
+        // 先填充默认值,相当于初始化
         Arrays.fill(vertexIndices, -1);
 
         final AtomicInteger indexCounter = new AtomicInteger(0);
@@ -62,8 +65,8 @@ public final class StronglyConnectedComponentsComputeUtils {
                 dfs(
                         vertex,
                         outEdges,
-                        vertexIndices,
-                        vertexLowLinks,
+                        vertexIndices, // 记录每个节点的访问顺序
+                        vertexLowLinks, // 记录最短路径的值
                         visitingStack,
                         onVisitingStack,
                         indexCounter,
@@ -81,8 +84,8 @@ public final class StronglyConnectedComponentsComputeUtils {
     private static void dfs(
             final int rootVertex,
             final List<List<Integer>> outEdges,
-            final int[] vertexIndices,
-            final int[] vertexLowLinks,
+            final int[] vertexIndices, // 保存后续访问节点的访问的顺序
+            final int[] vertexLowLinks, // 保存最小链路的长度
             final Deque<Integer> visitingStack,
             final boolean[] onVisitingStack,
             final AtomicInteger indexCounter,
@@ -120,6 +123,7 @@ public final class StronglyConnectedComponentsComputeUtils {
                 continue;
             }
 
+            // 如果出现环形才会走到这里 ,合并连通分量 (一般来说 最短路径应该和访问顺序一直)
             if (vertexLowLinks[currentVertex] == vertexIndices[currentVertex]) {
                 stronglyConnectedComponents.add(
                         createConnectedComponent(currentVertex, visitingStack, onVisitingStack));
@@ -161,7 +165,9 @@ public final class StronglyConnectedComponentsComputeUtils {
             final boolean[] onVisitingStack,
             final Deque<Tuple2<Integer, Integer>> dfsLoopStack) {
 
+        // 遍历 currentVertex 的所有 下游节点 , vertexOutEdgeIndex最开始也是0   (深度优先)
         for (int i = vertexOutEdgeIndex; i < outEdges.get(currentVertex).size(); i++) {
+
             final int successorVertex = outEdges.get(currentVertex).get(i);
             if (!isVisited(successorVertex, vertexIndices)) {
                 dfsLoopStack.add(new Tuple2<>(currentVertex, i + 1));
@@ -176,6 +182,7 @@ public final class StronglyConnectedComponentsComputeUtils {
         return false;
     }
 
+    // 合并 创建强联通分量
     private static Set<Integer> createConnectedComponent(
             final int currentVertex,
             final Deque<Integer> visitingStack,

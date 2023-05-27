@@ -81,6 +81,25 @@ import java.util.stream.Collectors;
  * exclusively based on what a given job currently requires. It may repeatedly reserve/free slots
  * without any modifications to the requirements.
  */
+/*
+    声明式的资源管理插件，这个是Adaptive的基础，跟原来的设计最大的差别在于：
+         1、JobMaster不再去逐个请求Slot，而是声明它需要的资源的情况；
+         2、对资源的要求是个弹性的范围，而不是固定的
+
+声明式资源管理将作业和资源申请进行了隔离，抽象了一个中间管理层来进行资源的管理。
+作业只是提交需求的资源信息，由中间的管理层进行资源的申请回收等
+
+    DefaultDeclarativeSlotPool有三个接收声明式资源的接口，分别为
+                    increaseResourceRequirementsBy(增加)、
+                    decreaseResourceRequirementsBy(减少)、
+                    setResourceRequirements(设置)。
+    反向追踪来看，setResourceRequirements是Adaptive调度器调用到的，
+                increaseResourceRequirementsBy是NG调用到的。应该是slotpool兼容了传统和adaptive方式，传统的每个slot单独申请一次，adaptive是一次性申请。
+                这里的totalResourceRequirements 是单个job的，从代码追踪来看，DeclarativeSlotPool是由JobMaster触发的创建，是每个Job单独的。
+
+     totalResourceRequirements是资源申请列表，反向追踪调用链来看，是Adaptive调度器调用的
+
+ */
 public class DefaultDeclarativeSlotPool implements DeclarativeSlotPool {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultDeclarativeSlotPool.class);
@@ -174,6 +193,7 @@ public class DefaultDeclarativeSlotPool implements DeclarativeSlotPool {
         return currentResourceRequirements;
     }
 
+    // task manager 端提供 slot
     @Override
     public Collection<SlotOffer> offerSlots(
             Collection<? extends SlotOffer> offers,
@@ -185,17 +205,18 @@ public class DefaultDeclarativeSlotPool implements DeclarativeSlotPool {
                 "Received {} slot offers from TaskExecutor {}.",
                 offers.size(),
                 taskManagerLocation);
-        final Collection<SlotOffer> acceptedSlotOffers = new ArrayList<>();//该方法最终会返回它
+        final Collection<SlotOffer> acceptedSlotOffers = new ArrayList<>(); // 该方法最终会返回它
         final Collection<AllocatedSlot> acceptedSlots = new ArrayList<>();
 
         for (SlotOffer offer : offers) {
             if (slotPool.containsSlot(offer.getAllocationId())) {
-                // we have already accepted this offer
+                // 已经接受过 该 SlotOffer
                 acceptedSlotOffers.add(offer);
             } else {
                 Optional<AllocatedSlot> acceptedSlot =
                         matchOfferWithOutstandingRequirements(
                                 offer, taskManagerLocation, taskManagerGateway);
+
                 if (acceptedSlot.isPresent()) {
                     acceptedSlotOffers.add(offer);
                     acceptedSlots.add(acceptedSlot.get());
@@ -219,6 +240,7 @@ public class DefaultDeclarativeSlotPool implements DeclarativeSlotPool {
         return acceptedSlotOffers;
     }
 
+    // 将 SlotOffer 与 未满足的需求 相匹配
     private Optional<AllocatedSlot> matchOfferWithOutstandingRequirements(
             SlotOffer slotOffer,
             TaskManagerLocation taskManagerLocation,
@@ -237,8 +259,10 @@ public class DefaultDeclarativeSlotPool implements DeclarativeSlotPool {
                     slotOffer.getAllocationId(),
                     matchedRequirement);
 
+            // 增加可用资源 , 更新 fulfilledResourceRequirements 结构
             increaseAvailableResources(ResourceCounter.withResource(matchedRequirement, 1));
 
+            // 创建被分配的 slot
             final AllocatedSlot allocatedSlot =
                     createAllocatedSlot(slotOffer, taskManagerLocation, taskManagerGateway);
 

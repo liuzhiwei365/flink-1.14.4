@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.table.ColumnFunctionsTest
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.593 s - in org.apache.flink.table.planner.plan.batch.table.ColumnFunctionsTest

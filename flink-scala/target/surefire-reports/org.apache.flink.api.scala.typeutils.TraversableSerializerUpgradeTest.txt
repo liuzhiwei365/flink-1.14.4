@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.api.scala.typeutils.TraversableSerializerUpgradeTest
--------------------------------------------------------------------------------
-Tests run: 216, Failures: 0, Errors: 0, Skipped: 108, Time elapsed: 27.717 s - in org.apache.flink.api.scala.typeutils.TraversableSerializerUpgradeTest

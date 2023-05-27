@@ -34,9 +34,9 @@ import java.util.Objects;
 @Deprecated
 public final class RowtimeAttributeDescriptor {
 
-    private final String attributeName;
-    private final TimestampExtractor timestampExtractor;
-    private final WatermarkStrategy watermarkStrategy;
+    private final String attributeName;//时间属性名称
+    private final TimestampExtractor timestampExtractor;//如何提取事件时间
+    private final WatermarkStrategy watermarkStrategy;//如何生成 watermark
 
     public RowtimeAttributeDescriptor(
             String attributeName,

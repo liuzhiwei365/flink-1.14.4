@@ -52,7 +52,7 @@ final class ChannelState {
     }
 
     public void blockChannel(InputChannelInfo channelInfo) {
-        //阻塞消费
+        // 阻塞消费
         inputs[channelInfo.getGateIdx()].blockConsumption(channelInfo);
         blockedChannels.add(channelInfo);
     }

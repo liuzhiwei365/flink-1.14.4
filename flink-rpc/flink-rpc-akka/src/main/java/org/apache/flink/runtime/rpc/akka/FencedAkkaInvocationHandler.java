@@ -51,6 +51,10 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * @param <F> type of the fencing token
  */
+// FencedAkkaInvocationHandler覆盖了父类的tell及ask方法,
+// 将runAsync、scheduleRunAsync、callAsync方法的语义变为Fenced
+// FencedAkkaInvocationHandler继承了AkkaInvocationHandler,实现了FencedMainThreadExecutable、FencedRpcGateway接口;
+// runAsyncWithoutFencing、callAsyncWithoutFencing发送的均为UnfencedMessage
 public class FencedAkkaInvocationHandler<F extends Serializable> extends AkkaInvocationHandler
         implements FencedMainThreadExecutable, FencedRpcGateway<F> {
 
@@ -81,8 +85,19 @@ public class FencedAkkaInvocationHandler<F extends Serializable> extends AkkaInv
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        // 得到该方法对象  所属的字节码对象
         Class<?> declaringClass = method.getDeclaringClass();
 
+        /*
+          只有当代理的方法属于 FencedMainThreadExecutable 和 FencedRpcGateway 类的方法 的时候,
+          交给本类的对象处理 ; 其余的情况交给父类的对象处理
+
+          实际上只有runAsyncWithoutFencing,callAsyncWithoutFencing,getFencingToken 这三个方法会被本类的对象代理
+          也就是本类的这三个方法
+
+          FencedAkkaInvocationHandler的invoke方法针对FencedRpcGateway、FencedMainThreadExecutable的方法则对当前
+          对象进行对应方法调用，其他的就转为调用父类的invoke方法
+        */
         if (declaringClass.equals(FencedMainThreadExecutable.class)
                 || declaringClass.equals(FencedRpcGateway.class)) {
             return method.invoke(this, args);
@@ -145,6 +160,7 @@ public class FencedAkkaInvocationHandler<F extends Serializable> extends AkkaInv
         return fencingTokenSupplier.get();
     }
 
+    // 就是把 message 包装成 fenceMessage
     private <P> FencedMessage<F, P> fenceMessage(P message) {
         if (isLocal) {
             return new LocalFencedMessage<>(fencingTokenSupplier.get(), message);

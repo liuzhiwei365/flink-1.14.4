@@ -100,7 +100,7 @@ public final class KeyGroupRangeAssignment {
                 maxParallelism >= parallelism,
                 "Maximum parallelism must not be smaller than parallelism.");
 
-        //当前 operator索引位置
+        // 当前 operator索引位置
         int start = ((operatorIndex * maxParallelism + parallelism - 1) / parallelism);
         // 当前operator下一个索引的位置
         int end = ((operatorIndex + 1) * maxParallelism - 1) / parallelism;

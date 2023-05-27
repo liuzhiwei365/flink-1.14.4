@@ -75,6 +75,7 @@ public abstract class AbstractHaServices implements HighAvailabilityServices {
 
     @Override
     public LeaderRetrievalService getResourceManagerLeaderRetriever() {
+        // getLeaderPathForResourceManager 方法 拿到监听路径
         return createLeaderRetrievalService(getLeaderPathForResourceManager());
     }
 

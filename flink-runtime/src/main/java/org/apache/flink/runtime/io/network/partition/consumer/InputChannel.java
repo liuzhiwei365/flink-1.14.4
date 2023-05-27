@@ -308,7 +308,7 @@ public abstract class InputChannel {
 
         private final Buffer buffer;
         private final Buffer.DataType nextDataType;
-        private final int buffersInBacklog;//挤压的 buffer 数量
+        private final int buffersInBacklog; // 挤压的 buffer 数量
         private final int sequenceNumber;
 
         public BufferAndAvailability(

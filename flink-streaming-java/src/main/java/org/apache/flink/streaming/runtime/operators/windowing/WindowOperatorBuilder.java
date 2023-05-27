@@ -72,7 +72,7 @@ public class WindowOperatorBuilder<T, K, W extends Window> {
 
     private final ExecutionConfig config;
 
-    private final WindowAssigner<? super T, W> windowAssigner;//窗口分配器
+    private final WindowAssigner<? super T, W> windowAssigner; // 窗口分配器
 
     private final TypeInformation<T> inputType;
 
@@ -80,9 +80,9 @@ public class WindowOperatorBuilder<T, K, W extends Window> {
 
     private final TypeInformation<K> keyType;
 
-    private Trigger<? super T, ? super W> trigger;//触发器
+    private Trigger<? super T, ? super W> trigger; // 触发器
 
-    @Nullable private Evictor<? super T, ? super W> evictor;//驱逐器
+    @Nullable private Evictor<? super T, ? super W> evictor; // 驱逐器
 
     private long allowedLateness = 0L;
 
@@ -158,12 +158,12 @@ public class WindowOperatorBuilder<T, K, W extends Window> {
         }
 
         if (evictor != null) {
-            //当有剔除器时,创建EvictingWindowOperator 算子
+            // 当有剔除器时,创建EvictingWindowOperator 算子
             return buildEvictingWindowOperator(
                     new InternalIterableWindowFunction<>(
                             new ReduceApplyWindowFunction<>(reduceFunction, function)));
         } else {
-            //当没有剔除器时,创建 WindowOperator 算子
+            // 当没有剔除器时,创建 WindowOperator 算子
             ReducingStateDescriptor<T> stateDesc =
                     new ReducingStateDescriptor<>(
                             WINDOW_STATE_NAME, reduceFunction, inputType.createSerializer(config));
@@ -173,7 +173,8 @@ public class WindowOperatorBuilder<T, K, W extends Window> {
         }
     }
 
-    // 用户调用的 WindowedStream.aggregate, WindowedStream.reduce , WindowedStream.apply, WindowedStream.process 方法
+    // 用户调用的 WindowedStream.aggregate, WindowedStream.reduce , WindowedStream.apply,
+    // WindowedStream.process 方法
     // 最终都会调到本类WindowOperatorbuilder 的相应的 方法 ,在WindowOperatorbuilder 的相应的 方法中会创建不同的状态
     // aggregate 对应 AggregatingState; reduce 对应 ReducingState ; apply 和 process 对应 ListState
 
@@ -306,7 +307,8 @@ public class WindowOperatorBuilder<T, K, W extends Window> {
                         new StreamElementSerializer(inputType.createSerializer(config));
 
         ListStateDescriptor<StreamRecord<T>> stateDesc =
-                new ListStateDescriptor<>(WINDOW_STATE_NAME, streamRecordSerializer);// ListState会存储窗口的数据
+                new ListStateDescriptor<>(
+                        WINDOW_STATE_NAME, streamRecordSerializer); // ListState会存储窗口的数据
 
         return new EvictingWindowOperator<>(
                 windowAssigner,

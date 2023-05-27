@@ -254,7 +254,8 @@ public class AkkaRpcService implements RpcService {
         checkNotNull(rpcEndpoint, "rpc endpoint");
 
         final SupervisorActor.ActorRegistration actorRegistration =
-                registerAkkaRpcActor(rpcEndpoint);
+                registerAkkaRpcActor(rpcEndpoint); // 创建actor、注册  放在相应的数据结构中
+
         final ActorRef actorRef = actorRegistration.getActorRef();
         final CompletableFuture<Void> actorTerminationFuture =
                 actorRegistration.getTerminationFuture();
@@ -273,6 +274,7 @@ public class AkkaRpcService implements RpcService {
             hostname = host.get();
         }
 
+        // 抽取  既实现了 RpcEndpoint  又实现了 RpcGateway 接口的 所有的类
         Set<Class<?>> implementedRpcGateways =
                 new HashSet<>(RpcUtils.extractImplementedRpcGateways(rpcEndpoint.getClass()));
 
@@ -281,8 +283,10 @@ public class AkkaRpcService implements RpcService {
 
         final InvocationHandler akkaInvocationHandler;
 
+        // 只有TaskExecutor 不是 FencedRpcEndpoint 对象
+        // Dispathcer, JobMaster,ResourceManager 都是  FencedRpcEndpoint 对象
         if (rpcEndpoint instanceof FencedRpcEndpoint) {
-            // a FencedRpcEndpoint needs a FencedAkkaInvocationHandler
+            // FencedRpcEndpoint 对应 FencedAkkaInvocationHandler
             akkaInvocationHandler =
                     new FencedAkkaInvocationHandler<>(
                             akkaAddress,
@@ -291,12 +295,14 @@ public class AkkaRpcService implements RpcService {
                             configuration.getTimeout(),
                             configuration.getMaximumFramesize(),
                             actorTerminationFuture,
-                            ((FencedRpcEndpoint<?>) rpcEndpoint)::getFencingToken,
+                            ((FencedRpcEndpoint<?>) rpcEndpoint)
+                                    ::getFencingToken, // 拿Dispathcer 来说,就是DispathcerId
                             captureAskCallstacks,
                             flinkClassLoader);
 
             implementedRpcGateways.add(FencedMainThreadExecutable.class);
         } else {
+            // RpcEndpoint 对应 AkkaInvocationHandler
             akkaInvocationHandler =
                     new AkkaInvocationHandler(
                             akkaAddress,
@@ -315,6 +321,11 @@ public class AkkaRpcService implements RpcService {
         ClassLoader classLoader = getClass().getClassLoader();
 
         @SuppressWarnings("unchecked")
+
+        // implementedRpcGateways 中的所有类对象的方法  都会被 akkaInvocationHandler 的invoke方法拦截处理
+        // 这点非常重要  此处的设计非常精妙
+        // 所有实现了RpcGateway的类 , RpcServer ,AkkaBasedEndpoint 等类都会被 代理调用
+        //
         RpcServer server =
                 (RpcServer)
                         Proxy.newProxyInstance(
@@ -544,6 +555,7 @@ public class AkkaRpcService implements RpcService {
                 address,
                 clazz.getName());
 
+        // 解析地址,得到actorRef
         final CompletableFuture<ActorRef> actorRefFuture = resolveActorAddress(address);
 
         final CompletableFuture<HandshakeSuccessMessage> handshakeFuture =

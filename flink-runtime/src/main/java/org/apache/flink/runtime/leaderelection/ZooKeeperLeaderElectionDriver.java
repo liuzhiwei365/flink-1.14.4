@@ -103,20 +103,26 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
         this.leaderContenderDescription = checkNotNull(leaderContenderDescription);
 
         leaderLatchPath = ZooKeeperUtils.generateLeaderLatchPath(path);
+        /* Curator有两种leader选举的recipe,分别是LeaderSelector和L eaderLatch
+           前者是所有存活的客户端不间断的轮流做Leader,大同社会。
+           后者是一旦选举 出Leader,除非有客户端挂掉重新触发选举，否则不会交出领导权。某党?
+        */
         leaderLatch = new LeaderLatch(client, leaderLatchPath);
         this.cache =
                 ZooKeeperUtils.createTreeCache(
                         client,
                         connectionInformationPath,
-                        this::retrieveLeaderInformationFromZooKeeper);
+                        this::retrieveLeaderInformationFromZooKeeper); // 从zk 取回 leader 信息
 
         running = true;
 
+        // this实现了 LeaderLatchListener 接口, LeaderLatchListener 有两个方法: isLeader() 和 notLeader() 方法
         leaderLatch.addListener(this);
         leaderLatch.start();
 
         cache.start();
 
+        // 这里的ConnectionStateListener 可以认为是一个函数式接口, 会回调stateChanged  方法
         client.getConnectionStateListenable().addListener(listener);
     }
 
@@ -223,6 +229,7 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
 
                     if (owner == sessionID) {
                         try {
+                            // 最终写到zk上面的是字节数组
                             client.setData().forPath(connectionInformationPath, baos.toByteArray());
 
                             dataWritten = true;

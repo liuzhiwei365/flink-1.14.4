@@ -93,6 +93,7 @@ class TaskExecutorManager implements AutoCloseable {
     private final ResourceActions resourceActions;
 
     /** All currently registered task managers. */
+    // 本来最重要的数据结构
     private final Map<InstanceID, TaskManagerRegistration> taskManagerRegistrations =
             new HashMap<>();
 

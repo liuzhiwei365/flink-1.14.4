@@ -77,7 +77,7 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N> {
 
     private TypeSerializer<N> namespaceSerializer;
 
-    private Triggerable<K, N> triggerTarget; //这里就是 WindowOperator 对象
+    private Triggerable<K, N> triggerTarget; // 这里就是 WindowOperator 对象
 
     private volatile boolean isInitialized;
 

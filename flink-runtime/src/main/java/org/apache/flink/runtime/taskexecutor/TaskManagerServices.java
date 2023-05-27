@@ -105,6 +105,7 @@ public class TaskManagerServices {
         this.shuffleEnvironment = Preconditions.checkNotNull(shuffleEnvironment);
         this.kvStateService = Preconditions.checkNotNull(kvStateService);
         this.broadcastVariableManager = Preconditions.checkNotNull(broadcastVariableManager);
+
         this.taskSlotTable = Preconditions.checkNotNull(taskSlotTable);
         this.jobTable = Preconditions.checkNotNull(jobTable);
         this.jobLeaderService = Preconditions.checkNotNull(jobLeaderService);
@@ -285,6 +286,7 @@ public class TaskManagerServices {
                         taskEventDispatcher,
                         taskManagerMetricGroup,
                         ioExecutor);
+
         final int listeningDataPort = shuffleEnvironment.start();
 
         final KvStateService kvStateService =
@@ -303,6 +305,7 @@ public class TaskManagerServices {
 
         final BroadcastVariableManager broadcastVariableManager = new BroadcastVariableManager();
 
+        // 真正帮助TaskExecutor完成一切和Slot有关操作的组件
         final TaskSlotTable<Task> taskSlotTable =
                 createTaskSlotTable(
                         taskManagerServicesConfiguration.getNumberOfSlots(),
@@ -381,6 +384,7 @@ public class TaskManagerServices {
         final TimerService<AllocationID> timerService =
                 new DefaultTimerService<>(
                         new ScheduledThreadPoolExecutor(1), timerServiceShutdownTimeout);
+
         return new TaskSlotTableImpl<>(
                 numberOfSlots,
                 TaskExecutorResourceUtils.generateTotalAvailableResourceProfile(

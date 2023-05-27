@@ -76,6 +76,8 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
     public Map<Integer, byte[]> traverseStreamGraphAndGenerateHashes(StreamGraph streamGraph) {
         // The hash function used to generate the hash
         final HashFunction hashFunction = Hashing.murmur3_128(0);
+
+        // 存储每个顶点 id 对应 的hash 值
         final Map<Integer, byte[]> hashes = new HashMap<>();
 
         Set<Integer> visited = new HashSet<>();
@@ -104,9 +106,11 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
 
         StreamNode currentNode;
         while ((currentNode = remaining.poll()) != null) {
+
             // Generate the hash code. Because multiple path exist to each
             // node, we might not have all required inputs available to
             // generate the hash code.
+
             if (generateNodeHash(
                     currentNode,
                     hashFunction,
@@ -150,11 +154,13 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
             boolean isChainingEnabled,
             StreamGraph streamGraph) {
 
-        // Check for user-specified ID
+        // 检查用户是否指定了 transformation uid
         String userSpecifiedHash = node.getTransformationUID();
 
         if (userSpecifiedHash == null) {
-            // Check that all input nodes have their hashes computed
+            // 如果用户没有指定 transformation uid
+
+            // 在给每个node 分配 hash值时,先要检查其 所有的依赖的 node 是否已经分配,如果存在有一个没有分配就返回 false
             for (StreamEdge inEdge : node.getInEdges()) {
                 // If the input node has not been visited yet, the current
                 // node will be visited again at a later point when all input
@@ -242,6 +248,7 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
             byte[] otherHash = hashes.get(inEdge.getSourceId());
 
             // Sanity check
+            // 要确保 依赖的 input node 的hash已经生成
             if (otherHash == null) {
                 throw new IllegalStateException(
                         "Missing hash for input node "
@@ -251,11 +258,15 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
                                 + ".");
             }
 
+            // 要注意的是，该节点的哈希值还与该节点和下游节点能够 chain 在一起的个数有关
+            // 最后还需要跟其上游所有节点的哈希值进行异或操作
+            // 保证 hash 唯一
             for (int j = 0; j < hash.length; j++) {
                 hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
             }
         }
 
+        // debug 打印
         if (LOG.isDebugEnabled()) {
             String udfClassName = "";
             if (node.getOperatorFactory() instanceof UdfStreamOperatorFactory) {

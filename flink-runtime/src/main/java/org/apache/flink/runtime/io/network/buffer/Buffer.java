@@ -270,7 +270,7 @@ public interface Buffer {
         EVENT_BUFFER(false, true, false, false, false),
 
         /** Same as EVENT_BUFFER, but the event has been prioritized (e.g. it skipped buffers). */
-        //与EVENT_BUFFER相同,但事件已按优先级排序
+        // 与EVENT_BUFFER相同,但事件已按优先级排序
         PRIORITIZED_EVENT_BUFFER(false, true, false, true, false),
 
         /**

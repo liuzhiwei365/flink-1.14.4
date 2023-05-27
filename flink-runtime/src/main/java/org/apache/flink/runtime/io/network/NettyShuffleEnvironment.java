@@ -89,6 +89,7 @@ public class NettyShuffleEnvironment
 
     private final ConnectionManager connectionManager;
 
+    // 管理 task 写出的数据
     private final ResultPartitionManager resultPartitionManager;
 
     private final FileChannelManager fileChannelManager;

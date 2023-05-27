@@ -153,6 +153,8 @@ public class TaskDeploymentDescriptorFactory {
         if (serializedShuffleDescriptors == null) {
             serializedShuffleDescriptors =
                     computeConsumedPartitionShuffleDescriptors(consumedPartitionGroup);
+
+            //  将shuffle描述信息缓存到临时文件
             intermediateResult.cacheShuffleDescriptors(
                     consumedPartitionGroup, serializedShuffleDescriptors);
         }

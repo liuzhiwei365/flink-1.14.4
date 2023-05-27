@@ -58,17 +58,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** A converter between {@link LogicalType} and {@link DataType}. */
+// 逻辑类型 和数据类型 之间 互转
 public final class LogicalTypeDataTypeConverter {
 
     private static final DefaultDataTypeCreator dataTypeCreator = new DefaultDataTypeCreator();
 
-    /** Returns the data type of a logical type without explicit conversions. */
+    //逻辑类型  转换为  数据类型
     public static DataType toDataType(LogicalType logicalType) {
         return logicalType.accept(dataTypeCreator);
     }
 
-    /** Returns the logical type of a data type. */
+    //数据类型  转换为  逻辑类型   ,  数据类型是对逻辑类型进行了包装
     public static LogicalType toLogicalType(DataType dataType) {
         return dataType.getLogicalType();
     }

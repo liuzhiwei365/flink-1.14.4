@@ -65,11 +65,10 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public final class CatalogManager {
     private static final Logger LOG = LoggerFactory.getLogger(CatalogManager.class);
 
-    // A map between names and catalogs.
+    // 目前 Catalog 只有四个实现类:  JdbcCatalog  PostgresCatalog  HiveCatalog  GenericInMemoryCatalog  (默认就存在一个内存的catalog)
     private final Map<String, Catalog> catalogs;
 
-    // Those tables take precedence over corresponding permanent tables, thus they shadow
-    // tables coming from catalogs.
+    // 临时表 优先 永久表 , 会覆盖永久表
     private final Map<ObjectIdentifier, CatalogBaseTable> temporaryTables;
 
     // The name of the current catalog and database
@@ -340,12 +339,14 @@ public final class CatalogManager {
 
         @VisibleForTesting
         public static TableLookupResult temporary(ResolvedCatalogBaseTable<?> resolvedTable) {
+            // 临时表没有catalog
             return new TableLookupResult(null, resolvedTable);
         }
 
         @VisibleForTesting
         public static TableLookupResult permanent(
                 Catalog catalog, ResolvedCatalogBaseTable<?> resolvedTable) {
+            // 永久表有 catalog
             return new TableLookupResult(Preconditions.checkNotNull(catalog), resolvedTable);
         }
 
@@ -860,8 +861,10 @@ public final class CatalogManager {
     public ResolvedCatalogBaseTable<?> resolveCatalogBaseTable(CatalogBaseTable baseTable) {
         Preconditions.checkState(schemaResolver != null, "Schema resolver is not initialized.");
         if (baseTable instanceof CatalogTable) {
+            // 解析 catalog table
             return resolveCatalogTable((CatalogTable) baseTable);
         } else if (baseTable instanceof CatalogView) {
+            // 解析 catalog view
             return resolveCatalogView((CatalogView) baseTable);
         }
         throw new IllegalArgumentException(
@@ -872,8 +875,11 @@ public final class CatalogManager {
     public ResolvedCatalogTable resolveCatalogTable(CatalogTable table) {
         Preconditions.checkState(schemaResolver != null, "Schema resolver is not initialized.");
         if (table instanceof ResolvedCatalogTable) {
+            // 已经解析过 ,直接返回
             return (ResolvedCatalogTable) table;
         }
+        // 重点: 未解析的schema 经过 DefaultSchemaResolver 的访问, 会被解析成 ResolvedSchema
+        // 而解析的过程 会走 watermark 和 主键的策略 (这点很重要 )
         final ResolvedSchema resolvedSchema = table.getUnresolvedSchema().resolve(schemaResolver);
         return new ResolvedCatalogTable(table, resolvedSchema);
     }

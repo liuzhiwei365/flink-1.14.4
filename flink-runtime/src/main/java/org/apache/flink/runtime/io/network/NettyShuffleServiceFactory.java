@@ -133,8 +133,8 @@ public class NettyShuffleServiceFactory
                                 resultPartitionManager, taskEventPublisher, nettyConfig)
                         : new LocalConnectionManager();
 
-        //(1) 每个task实例中的ResultPartition 和 InputGate中所需要的 buffer空间都是从NetBufferPool中申请的
-        //(2) ShuffleEnvironment 与 NetBufferPool 在同一个TaskManager中的不同task之间共享
+        // (1) 每个task实例中的ResultPartition 和 InputGate中所需要的 buffer空间都是从NetBufferPool中申请的
+        // (2) ShuffleEnvironment 与 NetBufferPool 在同一个TaskManager中的不同task之间共享
         NetworkBufferPool networkBufferPool =
                 new NetworkBufferPool(
                         config.numNetworkBuffers(),

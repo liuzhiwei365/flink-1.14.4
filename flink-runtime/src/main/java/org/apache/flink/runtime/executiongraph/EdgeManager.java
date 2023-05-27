@@ -35,16 +35,17 @@ import static org.apache.flink.util.Preconditions.checkState;
 /** Class that manages all the connections between tasks. */
 public class EdgeManager {
 
-    //消费的顶点组   value设计成一个List 的原因是 为了兼顾 拆分流的场景
+    // 消费的顶点组   value设计成一个List 的原因是 为了兼顾 拆分流的场景
     private final Map<IntermediateResultPartitionID, List<ConsumerVertexGroup>> partitionConsumers =
             new HashMap<>();
-    //被消费的分区组  value设计成一个List 的原因是为了兼顾 合并流的场景
+    // 被消费的分区组  value设计成一个List 的原因是为了兼顾 合并流的场景
     private final Map<ExecutionVertexID, List<ConsumedPartitionGroup>> vertexConsumedPartitions =
             new HashMap<>();
 
     private final Map<IntermediateResultPartitionID, List<ConsumedPartitionGroup>>
             consumedPartitionsById = new HashMap<>();
 
+    //所谓连接，无非就是把新来的ConsumerVertexGroup 添加到 EdgeManager 的
     public void connectPartitionWithConsumerVertexGroup(
             IntermediateResultPartitionID resultPartitionId,
             ConsumerVertexGroup consumerVertexGroup) {
@@ -58,7 +59,8 @@ public class EdgeManager {
         checkState(
                 consumers.isEmpty(), "Currently there has to be exactly one consumer in real jobs");
 
-        //源的并行度 小于 目标并行度时,且为pointwise模式时, consumerVertexGroup的成员变量vertices 的容量大于1 ,但是consumers 的容量为1
+        // 源的并行度 小于 目标并行度时,且为pointwise模式时, consumerVertexGroup的成员变量vertices 的容量大于1 ,但是consumers
+        // 的容量为1
         consumers.add(consumerVertexGroup);
     }
 
@@ -84,12 +86,13 @@ public class EdgeManager {
         return vertexConsumedPartitions.computeIfAbsent(executionVertexId, id -> new ArrayList<>());
     }
 
+    // 下游Edge
     public List<ConsumerVertexGroup> getConsumerVertexGroupsForPartition(
             IntermediateResultPartitionID resultPartitionId) {
         return Collections.unmodifiableList(
                 getConsumerVertexGroupsForPartitionInternal(resultPartitionId));
     }
-
+    // 上游Edge
     public List<ConsumedPartitionGroup> getConsumedPartitionGroupsForVertex(
             ExecutionVertexID executionVertexId) {
         return Collections.unmodifiableList(

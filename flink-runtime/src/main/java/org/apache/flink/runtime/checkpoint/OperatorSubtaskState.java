@@ -46,17 +46,15 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * <p>The full state of the logical operator is represented by {@link OperatorState} which consists
  * of {@link OperatorSubtaskState}s.
  *
- * <p>
- *     Typically, we expect all collections in this class to be of size 0 or 1, because there is up
+ * <p>Typically, we expect all collections in this class to be of size 0 or 1, because there is up
  * to one state handle produced per state type (e.g. managed-keyed, raw-operator, ...). In
  * particular, this holds when taking a snapshot. The purpose of having the state handles in
  * collections is that this class is also reused in restoring state. Under normal circumstances, the
  * expected size of each collection is still 0 or 1, except for scale-down.
  *
- *     In scale-down, one operator subtask can become responsible for the state of multiple previous subtasks. The
- * collections can then store all the state handles that are relevant to build up the new subtask
- * state.
- *
+ * <p>In scale-down, one operator subtask can become responsible for the state of multiple previous
+ * subtasks. The collections can then store all the state handles that are relevant to build up the
+ * new subtask state.
  */
 //    通常,我们期望此类中的所有集合的大小为0或1,因为每个状态类型（例如托管键控、原始运算符等）最多生成一个状态句柄。
 // 特别是,在拍摄快照时，这一点适用。在集合中使用状态句柄的目的是，在恢复状态时也可以重用此类。在正常情况下,每个

@@ -88,6 +88,7 @@ public class HeartbeatMonitorImpl<O> implements HeartbeatMonitor<O>, Runnable {
 
         lastHeartbeat = 0L;
 
+        // 重置下次心跳的调度
         resetHeartbeatTimeout(heartbeatTimeoutIntervalMs);
     }
 
@@ -152,6 +153,7 @@ public class HeartbeatMonitorImpl<O> implements HeartbeatMonitor<O>, Runnable {
     public void run() {
         // The heartbeat has timed out if we're in state running
         if (state.compareAndSet(State.RUNNING, State.TIMEOUT)) {
+            // 重连
             heartbeatListener.notifyHeartbeatTimeout(resourceID);
         }
     }
@@ -164,6 +166,8 @@ public class HeartbeatMonitorImpl<O> implements HeartbeatMonitor<O>, Runnable {
         if (state.get() == State.RUNNING) {
             cancelTimeout();
 
+            // 如果scheduledExecutor 是 MainThreadExecutor 对象
+            // 会转到本类的 run 方法
             futureTimeout =
                     scheduledExecutor.schedule(this, heartbeatTimeout, TimeUnit.MILLISECONDS);
 

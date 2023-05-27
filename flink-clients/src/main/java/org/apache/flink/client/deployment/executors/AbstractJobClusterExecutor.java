@@ -67,10 +67,12 @@ public class AbstractJobClusterExecutor<
             @Nonnull final Configuration configuration,
             @Nonnull final ClassLoader userCodeClassloader)
             throws Exception {
+
         final JobGraph jobGraph = PipelineExecutorUtils.getJobGraph(pipeline, configuration);
 
         try (final ClusterDescriptor<ClusterID> clusterDescriptor =
                 clusterClientFactory.createClusterDescriptor(configuration)) {
+
             final ExecutionConfigAccessor configAccessor =
                     ExecutionConfigAccessor.fromConfiguration(configuration);
 

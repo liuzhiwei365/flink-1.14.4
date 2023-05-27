@@ -158,7 +158,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
 
     private final ClassLoader userCodeLoader;
 
-    private final SlotPoolService slotPoolService;//维护来自所有TM 的 slots信息
+    private final SlotPoolService slotPoolService; // 维护来自所有TM 的 slots信息
 
     private final long initializationTimestamp;
 
@@ -177,7 +177,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
 
     // --------- Scheduler --------
 
-    private final SchedulerNG schedulerNG;
+    private final SchedulerNG schedulerNG; // 构造的时候会创建 ExecutionGraph
 
     private final JobManagerJobStatusListener jobStatusListener;
 
@@ -315,10 +315,14 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
                                     return Optional.of(taskManagerInfo.f1);
                                 });
 
+        // 注册 shuffle
         this.shuffleMaster = checkNotNull(shuffleMaster);
 
         this.jobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);
         this.jobStatusListener = new JobManagerJobStatusListener();
+
+        // 内部会创建Execution Graph
+        // 调度器目前只有两种实现  Ng调度  和 Adaptive
         this.schedulerNG =
                 createScheduler(
                         slotPoolServiceSchedulerFactory,
@@ -613,6 +617,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
         }
     }
 
+    // TaskExecutor 会根据 jobMasterGateway 对象 来Rpc 调用 本方法 , 向JobMaster 提供slot
     @Override
     public CompletableFuture<Collection<SlotOffer>> offerSlots(
             final ResourceID taskManagerId, final Collection<SlotOffer> slots, final Time timeout) {
@@ -632,6 +637,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
                 new RpcTaskManagerGateway(taskExecutorGateway, getFencingToken());
 
         return CompletableFuture.completedFuture(
+                // 最终将 slot 提供给 JobMaster 的 SlotPoolService 的组件
                 slotPoolService.offerSlots(taskManagerLocation, rpcTaskManagerGateway, slots));
     }
 
@@ -784,6 +790,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
         return CompletableFuture.completedFuture(schedulerNG.requestJob());
     }
 
+    // JobMaster实际触发 checkpoint 的入口
     @Override
     public CompletableFuture<String> triggerSavepoint(
             @Nullable final String targetDirectory, final boolean cancelJob, final Time timeout) {
@@ -791,6 +798,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
         return schedulerNG.triggerSavepoint(targetDirectory, cancelJob);
     }
 
+    // JobMaster实际触发 savepoint 的入口
     @Override
     public CompletableFuture<String> stopWithSavepoint(
             @Nullable final String targetDirectory, final boolean terminate, final Time timeout) {
@@ -879,6 +887,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
                 jobGraph.getJobID(),
                 getFencingToken());
 
+        // 会启动所有的算子协调者
         startScheduling();
     }
 
@@ -895,6 +904,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
             //   - activate leader retrieval for the resource manager
             //   - on notification of the leader, the connection will be established and
             //     the slot pool will start requesting slots
+
             resourceManagerLeaderRetriever.start(new ResourceManagerLeaderListener());
         } catch (Exception e) {
             handleStartJobMasterServicesError(e);
@@ -962,6 +972,9 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
     }
 
     private void startScheduling() {
+        // SchedulerNG 是调度器的接口
+        // 目前 对 startScheduling方法的实现 只有 SchedulerBase 和 AdaptiveScheduler 两种实现
+        // SchedulerBase是一个抽血类, 还有子类 DefaultScheduler
         schedulerNG.startScheduling();
     }
 
@@ -988,6 +1001,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
     private void jobStatusChanged(final JobStatus newJobStatus) {
         validateRunsInMainThread();
         if (newJobStatus.isGloballyTerminalState()) {
+            // 如果新作业属于全局终止状态,则 JobMasterPartitionTracker 停止追踪所有分区
             runAsync(
                     () -> {
                         Collection<ResultPartitionID> allTracked =
@@ -1012,6 +1026,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
         resourceManagerAddress =
                 createResourceManagerAddress(newResourceManagerAddress, resourceManagerId);
 
+        // 重新连接到 新的ResourceManager
         reconnectToResourceManager(
                 new FlinkException(
                         String.format(
@@ -1085,6 +1100,8 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
                     new EstablishedResourceManagerConnection(
                             resourceManagerGateway, resourceManagerResourceId);
 
+            // slotPoolService 是 JobMaster 向 ResourceManager 做资源申请的句柄
+            //
             slotPoolService.connectToResourceManager(resourceManagerGateway);
 
             resourceManagerHeartbeatManager.monitorTarget(

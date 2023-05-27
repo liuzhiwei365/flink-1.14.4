@@ -41,6 +41,8 @@ public class DefaultLogicalTopology implements LogicalTopology {
 
     private final List<DefaultLogicalVertex> verticesSorted;
 
+    // 逻辑拓扑阶段 与 JobGraph阶段 对应
+
     private final Map<JobVertexID, DefaultLogicalVertex> idToVertexMap;
 
     private final Map<IntermediateDataSetID, DefaultLogicalResult> idToResultMap;
@@ -78,6 +80,7 @@ public class DefaultLogicalTopology implements LogicalTopology {
             this.verticesSorted.add(logicalVertex);
             this.idToVertexMap.put(logicalVertex.getId(), logicalVertex);
 
+            // 如果是分流的情况, 则IntermediateDataSet 会有多个
             for (IntermediateDataSet intermediateDataSet : jobVertex.getProducedDataSets()) {
                 final DefaultLogicalResult logicalResult =
                         new DefaultLogicalResult(intermediateDataSet, vertexRetriever);
@@ -105,6 +108,7 @@ public class DefaultLogicalTopology implements LogicalTopology {
 
     @Override
     public Iterable<DefaultLogicalPipelinedRegion> getAllPipelinedRegions() {
+        // 计算 PipelinedRegions
         final Set<Set<LogicalVertex>> regionsRaw =
                 LogicalPipelinedRegionComputeUtil.computePipelinedRegions(verticesSorted);
 

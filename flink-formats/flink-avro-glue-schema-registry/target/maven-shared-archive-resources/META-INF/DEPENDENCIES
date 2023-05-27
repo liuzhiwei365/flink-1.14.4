@@ -1,0 +1,143 @@
+// ------------------------------------------------------------------
+// Transitive dependencies of this project determined from the
+// maven pom organized by organization.
+// ------------------------------------------------------------------
+
+Flink : Formats : Avro AWS Glue Schema Registry
+
+
+From: 'an unknown organization'
+  - FindBugs-jsr305 (http://findbugs.sourceforge.net/) com.google.code.findbugs:jsr305:jar:1.3.9
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - error-prone annotations (http://nexus.sonatype.org/oss-repository-hosting.html/error_prone_parent/error_prone_annotations) com.google.errorprone:error_prone_annotations:jar:2.3.4
+    License: Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Guava InternalFutureFailureAccess and InternalFutures (https://github.com/google/guava/failureaccess) com.google.guava:failureaccess:bundle:1.0.1
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Guava: Google Core Libraries for Java (https://github.com/google/guava/guava) com.google.guava:guava:bundle:29.0-jre
+    License: Apache License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Guava ListenableFuture only (https://github.com/google/guava/listenablefuture) com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - J2ObjC Annotations (https://github.com/google/j2objc/) com.google.j2objc:j2objc-annotations:jar:1.3
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Apache Kafka (https://kafka.apache.org) org.apache.kafka:connect-api:jar:2.5.0
+    License: The Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Apache Kafka (https://kafka.apache.org) org.apache.kafka:connect-json:jar:2.5.0
+    License: The Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Apache Kafka (https://kafka.apache.org) org.apache.kafka:kafka-clients:jar:2.5.0
+    License: The Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Apache Kafka (https://kafka.apache.org) org.apache.kafka:kafka-streams:jar:2.5.0
+    License: The Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Checker Qual (https://checkerframework.org) org.checkerframework:checker-qual:jar:2.11.1
+    License: The MIT License  (http://opensource.org/licenses/MIT)
+  - LZ4 and xxHash (https://github.com/lz4/lz4-java) org.lz4:lz4-java:jar:1.8.0
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Project Lombok (https://projectlombok.org) org.projectlombok:lombok:jar:1.18.2
+    License: The MIT License  (https://projectlombok.org/LICENSE)
+  - Project Lombok (https://projectlombok.org) org.projectlombok:lombok-utils:jar:1.18.12
+    License: The MIT License  (https://projectlombok.org/LICENSE)
+  - reactive-streams (http://www.reactive-streams.org/) org.reactivestreams:reactive-streams:jar:1.0.2
+    License: CC0  (http://creativecommons.org/publicdomain/zero/1.0/)
+  - RocksDB JNI (http://rocksdb.org/) org.rocksdb:rocksdbjni:jar:5.18.3
+    License: Apache License 2.0  (http://www.apache.org/licenses/LICENSE-2.0.html)    License: GNU General Public License, version 2  (http://www.gnu.org/licenses/gpl-2.0.html)
+  - AWS Java SDK :: Annotations (https://aws.amazon.com/sdkforjava/core/annotations) software.amazon.awssdk:annotations:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Arns (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:arns:jar:2.15.26
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Auth (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:auth:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: AWS Core (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:aws-core:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Core :: Protocols :: AWS Json Protocol (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:aws-json-protocol:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Core :: Protocols :: AWS Query Protocol (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:aws-query-protocol:jar:2.15.30
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Services :: Amazon CloudWatch (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:cloudwatch:jar:2.15.30
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Services :: AWS Glue (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:glue:jar:2.15.32
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: HTTP Client Interface (https://aws.amazon.com/sdkforjava/http-client-spi) software.amazon.awssdk:http-client-spi:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Metrics SPI (https://aws.amazon.com/sdkforjava/core/metrics-spi) software.amazon.awssdk:metrics-spi:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: HTTP Clients :: Netty Non-Blocking I/O (https://aws.amazon.com/sdkforjava/http-clients/netty-nio-client) software.amazon.awssdk:netty-nio-client:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Profiles (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:profiles:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Core :: Protocols :: Protocol Core (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:protocol-core:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Regions (https://aws.amazon.com/sdkforjava/core/regions) software.amazon.awssdk:regions:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: SDK Core (https://aws.amazon.com/sdkforjava) software.amazon.awssdk:sdk-core:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Java SDK :: Utilities (https://aws.amazon.com/sdkforjava/utils) software.amazon.awssdk:utils:jar:2.16.86
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Event Stream (https://github.com/awslabs/aws-eventstream-java) software.amazon.eventstream:eventstream:jar:1.0.1
+    License: Apache License, Version 2.0  (https://aws.amazon.com/apache2.0)
+  - AWS Glue Schema Registry common (https://aws.amazon.com/glue) software.amazon.glue:schema-registry-common:jar:1.0.1
+    License: Apache License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - AWS Glue Schema Registry AVRO Serializer Deserializer (https://aws.amazon.com/glue) software.amazon.glue:schema-registry-serde:jar:1.0.1
+    License: Apache License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'com.github.luben'
+  - zstd-jni (https://github.com/luben/zstd-jni) com.github.luben:zstd-jni:jar:1.4.4-7
+    License: BSD 2-Clause License  (https://opensource.org/licenses/BSD-2-Clause)
+
+From: 'FasterXML' (http://fasterxml.com/)
+  - Jackson-annotations (http://github.com/FasterXML/jackson) com.fasterxml.jackson.core:jackson-annotations:bundle:2.12.1
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Jackson-core (https://github.com/FasterXML/jackson-core) com.fasterxml.jackson.core:jackson-core:bundle:2.12.1
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - jackson-databind (http://github.com/FasterXML/jackson) com.fasterxml.jackson.core:jackson-databind:bundle:2.12.1
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Jackson datatype: jdk8 (https://github.com/FasterXML/jackson-modules-java8/jackson-datatype-jdk8) com.fasterxml.jackson.datatype:jackson-datatype-jdk8:bundle:2.12.1
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'The Apache Software Foundation' (http://www.apache.org/)
+  - Apache Commons Lang (http://commons.apache.org/proper/commons-lang/) org.apache.commons:commons-lang3:jar:3.3.2
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'The Apache Software Foundation' (https://www.apache.org/)
+  - Apache Avro (https://avro.apache.org) org.apache.avro:avro:bundle:1.10.0
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Apache Commons Compress (https://commons.apache.org/proper/commons-compress/) org.apache.commons:commons-compress:jar:1.21
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Flink : Formats : Avro (https://flink.apache.org/flink-formats/flink-avro) org.apache.flink:flink-avro:jar:1.14.4
+    License: The Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - flink-shaded-force-shading (http://flink.apache.org/flink-shaded-force-shading) org.apache.flink:flink-shaded-force-shading:jar:14.0
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'The Netty Project' (https://netty.io/)
+  - Netty/Buffer (https://netty.io/netty-buffer/) io.netty:netty-buffer:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Codec (https://netty.io/netty-codec/) io.netty:netty-codec:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Codec/HTTP (https://netty.io/netty-codec-http/) io.netty:netty-codec-http:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Codec/HTTP2 (https://netty.io/netty-codec-http2/) io.netty:netty-codec-http2:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Common (https://netty.io/netty-common/) io.netty:netty-common:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Handler (https://netty.io/netty-handler/) io.netty:netty-handler:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Resolver (https://netty.io/netty-resolver/) io.netty:netty-resolver:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Transport (https://netty.io/netty-transport/) io.netty:netty-transport:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Transport/Native/Epoll (https://netty.io/netty-transport-native-epoll/) io.netty:netty-transport-native-epoll:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+  - Netty/Transport/Native/Unix/Common (https://netty.io/netty-transport-native-unix-common/) io.netty:netty-transport-native-unix-common:jar:4.1.63.Final
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0)
+
+From: 'Typesafe' (http://typesafe.com/)
+  - Netty Reactive Streams Implementation (https://github.com/playframework/netty-reactive-streams/netty-reactive-streams) com.typesafe.netty:netty-reactive-streams:jar:2.0.5
+    License: Apache License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Netty Reactive Streams HTTP support (https://github.com/playframework/netty-reactive-streams/netty-reactive-streams-http) com.typesafe.netty:netty-reactive-streams-http:jar:2.0.5
+    License: Apache License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'xerial.org' (https://github.com/xerial/snappy-java)
+  - snappy-java (https://github.com/xerial/snappy-java) org.xerial.snappy:snappy-java:bundle:1.1.8.3
+    License: Apache-2.0  (https://www.apache.org/licenses/LICENSE-2.0.html)
+
+
+
+

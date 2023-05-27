@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main"  >
+<target name="main">
+  <echo message="bundling java11-exclusive dependencies"/>
+  <unzip dest="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-dist/target/classes/META-INF/versions/11">
+    <fileset dir="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-dist/target/temporary/java11_exclusive">
+      <include name="*"/>
+    </fileset>
+  </unzip>
+</target>
+</project>

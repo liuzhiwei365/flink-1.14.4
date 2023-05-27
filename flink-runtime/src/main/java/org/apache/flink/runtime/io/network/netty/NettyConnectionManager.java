@@ -59,7 +59,7 @@ public class NettyConnectionManager implements ConnectionManager {
 
     @Override
     public int start() throws IOException {
-        //每个
+        // 每个
         client.init(nettyProtocol, bufferPool);
 
         return server.init(nettyProtocol, bufferPool);

@@ -177,6 +177,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         this.executionFailureHandler =
                 new ExecutionFailureHandler(
                         getSchedulingTopology(), failoverStrategy, restartBackoffTimeStrategy);
+
         this.schedulingStrategy =
                 schedulingStrategyFactory.createInstance(this, getSchedulingTopology());
 
@@ -209,6 +210,19 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         log.info(
                 "Starting scheduling with scheduling strategy [{}]",
                 schedulingStrategy.getClass().getName());
+        /*
+           transitionToRunning的调用逻辑如下
+               transitionToRunning
+               transitionState(JobStatus.CREATED, JobStatus.RUNNING)
+               transitionState(current, newState, null)
+               notifyJobStatusChange(newState, error)
+                   回调所有 jobStatusListeners 的jobStatusChanges方法
+                        其中:
+                          1  CheckpointCoordinatorDeActivator 会调用 CheckpointCoordinator的
+                               startCheckpointScheduler 来开启checkpoint的调度
+
+                          2  JobMaster.JobManagerJobStatusListener 内部类
+        */
         transitionToRunning();
         schedulingStrategy.startScheduling();
     }
@@ -247,10 +261,13 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
             final ExecutionVertexID executionVertexId, @Nullable final Throwable error) {
         final long timestamp = System.currentTimeMillis();
         setGlobalFailureCause(error, timestamp);
+        // 通知 算子协调者 任务失败
         notifyCoordinatorsAboutTaskFailure(executionVertexId, error);
+        // 处理执行失败,构造返回失败处理结果
         final FailureHandlingResult failureHandlingResult =
                 executionFailureHandler.getFailureHandlingResult(
                         executionVertexId, error, timestamp);
+        // 根据失败处理的结果,决定是否重启
         maybeRestartTasks(failureHandlingResult);
     }
 
@@ -282,7 +299,9 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         }
     }
 
+    // 重启任务（延迟）
     private void restartTasksWithDelay(final FailureHandlingResult failureHandlingResult) {
+        // 得到要重启的顶点
         final Set<ExecutionVertexID> verticesToRestart =
                 failureHandlingResult.getVerticesToRestart();
 
@@ -330,6 +349,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
     private void restartTasks(
             final Set<ExecutionVertexVersion> executionVertexVersions,
             final boolean isGlobalRecovery) {
+        // 获取所有需要重启的且没有发生版本修改的计算节点
         final Set<ExecutionVertexID> verticesToRestart =
                 executionVertexVersioner.getUnmodifiedExecutionVertices(executionVertexVersions);
 
@@ -338,6 +358,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         resetForNewExecutions(verticesToRestart);
 
         try {
+            //重启所有的任务的时候得 恢复状态
             restoreState(verticesToRestart, isGlobalRecovery);
         } catch (Throwable t) {
             handleGlobalFailure(t);
@@ -465,7 +486,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                         .handle(deployAll(deploymentHandles)));
     }
 
-    //分配计算资源和注册shuffle 信息
+    // 分配计算资源和注册shuffle 信息
     private CompletableFuture<Void> assignAllResourcesAndRegisterProducedPartitions(
             final List<DeploymentHandle> deploymentHandles) {
         final List<CompletableFuture<Void>> resultFutures = new ArrayList<>();
@@ -474,8 +495,9 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                     deploymentHandle
                             .getSlotExecutionVertexAssignment()
                             .getLogicalSlotFuture()
-                            .handle(assignResource(deploymentHandle))//分配计算资源
-                            .thenCompose(registerProducedPartitions(deploymentHandle))//注册shuffle信息
+                            .handle(assignResource(deploymentHandle)) // 分配计算资源
+                            .thenCompose(
+                                    registerProducedPartitions(deploymentHandle)) // 注册shuffle信息
                             .handle(
                                     (ignore, throwable) -> {
                                         if (throwable != null) {
@@ -541,7 +563,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
             }
 
             final ExecutionVertex executionVertex = getExecutionVertex(executionVertexId);
-            executionVertex.tryAssignResource(logicalSlot);  //分配slot
+            executionVertex.tryAssignResource(logicalSlot); // 分配slot
 
             startReserveAllocation(executionVertexId, logicalSlot.getAllocationId());
 

@@ -43,6 +43,7 @@ import org.apache.flink.util.CloseableIterator;
 import java.time.Duration;
 
 /** Table sink for {@link TableResult#collect()}. */
+// 专门针对要收集打印到sql客户端的情况
 @Internal
 final class CollectDynamicSink implements DynamicTableSink {
 

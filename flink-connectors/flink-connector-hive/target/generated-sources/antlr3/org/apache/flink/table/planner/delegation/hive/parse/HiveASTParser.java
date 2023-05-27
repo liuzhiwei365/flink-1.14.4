@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 org/apache/flink/table/planner/delegation/hive/parse/HiveASTParser.g 2022-06-10 20:27:38
+// $ANTLR 3.5.2 org/apache/flink/table/planner/delegation/hive/parse/HiveASTParser.g 2023-03-06 17:56:58
 
 package org.apache.flink.table.planner.delegation.hive.parse;
 
@@ -1446,7 +1446,7 @@ public class HiveASTParser extends Parser {
 					if (state.failed) return retval;
 					if ( state.backtracking==0 ) stream_execStatement.add(execStatement7.getTree());
 					// AST REWRITE
-					// elements: explainOption, execStatement
+					// elements: execStatement, explainOption
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -2578,7 +2578,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: path, tab, isoverwrite, islocal
+			// elements: path, islocal, isoverwrite, tab
 			// token labels: islocal, path, isoverwrite
 			// rule labels: tab, retval
 			// token list labels: 
@@ -3052,7 +3052,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: ext, tableLocation, path, tab
+			// elements: tableLocation, path, tab, ext
 			// token labels: ext, path
 			// rule labels: tab, retval
 			// token list labels: 
@@ -3292,7 +3292,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: batchSize, dbName, tblName, eventId, rangeEnd
+			// elements: eventId, rangeEnd, batchSize, tblName, dbName
 			// token labels: eventId, batchSize, rangeEnd
 			// rule labels: dbName, tblName, retval
 			// token list labels: 
@@ -3322,7 +3322,7 @@ public class HiveASTParser extends Parser {
 				stream_tblName.reset();
 
 				// org/apache/flink/table/planner/delegation/hive/parse/HiveASTParser.g:835:42: ( ^( TOK_FROM $eventId ( TOK_TO $rangeEnd)? ( TOK_LIMIT $batchSize)? ) )?
-				if ( stream_batchSize.hasNext()||stream_eventId.hasNext()||stream_rangeEnd.hasNext() ) {
+				if ( stream_eventId.hasNext()||stream_rangeEnd.hasNext()||stream_batchSize.hasNext() ) {
 					// org/apache/flink/table/planner/delegation/hive/parse/HiveASTParser.g:835:42: ^( TOK_FROM $eventId ( TOK_TO $rangeEnd)? ( TOK_LIMIT $batchSize)? )
 					{
 					HiveParserASTNode root_2 = (HiveParserASTNode)adaptor.nil();
@@ -3346,9 +3346,9 @@ public class HiveASTParser extends Parser {
 					}
 
 				}
-				stream_batchSize.reset();
 				stream_eventId.reset();
 				stream_rangeEnd.reset();
+				stream_batchSize.reset();
 
 				adaptor.addChild(root_0, root_1);
 				}
@@ -3489,7 +3489,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: path, tblName, dbName
+			// elements: tblName, path, dbName
 			// token labels: path
 			// rule labels: dbName, tblName, retval
 			// token list labels: 
@@ -5158,7 +5158,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: databaseComment, ifNotExists, dbLocation, dbprops, name
+			// elements: databaseComment, ifNotExists, dbprops, name, dbLocation
 			// token labels: 
 			// rule labels: name, dbprops, retval
 			// token list labels: 
@@ -6367,7 +6367,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: name, selectStatementWithCTE, tableLocation, likeName, temp, tableFileFormat, tableBuckets, tableRowFormat, tableSkewed, tablePartition, columnNameTypeOrConstraintList, ext, tableComment, ifNotExists, tablePropertiesPrefixed
+			// elements: tableFileFormat, tableSkewed, tableBuckets, tableRowFormat, tablePropertiesPrefixed, tablePartition, ext, likeName, columnNameTypeOrConstraintList, selectStatementWithCTE, ifNotExists, temp, tableLocation, tableComment, name
 			// token labels: ext, temp
 			// rule labels: likeName, name, retval
 			// token list labels: 
@@ -6595,7 +6595,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tablePartitionPrefix, columnNameList
+			// elements: columnNameList, tablePartitionPrefix
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -6920,7 +6920,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: typeName, indexName, autoRebuild, tablePropertiesPrefixed, indexedCols, tableRowFormat, tab, tableFileFormat, tableLocation, indexTblName, indexPropertiesPrefixed, indexComment
+			// elements: indexTblName, indexPropertiesPrefixed, tableFileFormat, tableLocation, autoRebuild, tab, indexName, tableRowFormat, indexedCols, indexComment, typeName, tablePropertiesPrefixed
 			// token labels: typeName
 			// rule labels: indexedCols, tab, indexName, retval
 			// token list labels: 
@@ -7815,7 +7815,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tableName, replicationClause, KW_PURGE, ifExists
+			// elements: ifExists, tableName, KW_PURGE, replicationClause
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -8009,7 +8009,7 @@ public class HiveASTParser extends Parser {
 					if (state.failed) return retval;
 					if ( state.backtracking==0 ) stream_alterTableStatementSuffix.add(alterTableStatementSuffix214.getTree());
 					// AST REWRITE
-					// elements: tableName, alterTableStatementSuffix
+					// elements: alterTableStatementSuffix, tableName
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -8077,7 +8077,7 @@ public class HiveASTParser extends Parser {
 					if (state.failed) return retval;
 					if ( state.backtracking==0 ) stream_alterViewStatementSuffix.add(alterViewStatementSuffix219.getTree());
 					// AST REWRITE
-					// elements: alterViewStatementSuffix, tableName
+					// elements: tableName, alterViewStatementSuffix
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -8702,7 +8702,7 @@ public class HiveASTParser extends Parser {
 					if (state.failed) return retval;
 					if ( state.backtracking==0 ) stream_alterTblPartitionStatementSuffix.add(alterTblPartitionStatementSuffix240.getTree());
 					// AST REWRITE
-					// elements: alterTblPartitionStatementSuffix, partitionSpec
+					// elements: partitionSpec, alterTblPartitionStatementSuffix
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -9484,7 +9484,7 @@ public class HiveASTParser extends Parser {
 					if ( state.backtracking==0 ) stream_KW_REBUILD.add(KW_REBUILD267);
 
 					// AST REWRITE
-					// elements: tableName, partitionSpec, indexName
+					// elements: partitionSpec, tableName, indexName
 					// token labels: 
 					// rule labels: indexName, retval
 					// token list labels: 
@@ -9842,7 +9842,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_dbProperties.add(dbProperties276.getTree());
 			// AST REWRITE
-			// elements: dbProperties, name
+			// elements: name, dbProperties
 			// token labels: 
 			// rule labels: name, retval
 			// token list labels: 
@@ -9944,7 +9944,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_principalName.add(principalName279.getTree());
 			// AST REWRITE
-			// elements: principalName, dbName
+			// elements: dbName, principalName
 			// token labels: 
 			// rule labels: dbName, retval
 			// token list labels: 
@@ -10045,7 +10045,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_StringLiteral.add(newLocation);
 
 			// AST REWRITE
-			// elements: dbName, newLocation
+			// elements: newLocation, dbName
 			// token labels: newLocation
 			// rule labels: dbName, retval
 			// token list labels: 
@@ -10317,7 +10317,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: columnNameTypeList, columnNameTypeList, restrictOrCascade, restrictOrCascade
+			// elements: columnNameTypeList, restrictOrCascade, restrictOrCascade, columnNameTypeList
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -10527,7 +10527,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: alterForeignKeyWithName, alterConstraintWithName
+			// elements: alterConstraintWithName, alterForeignKeyWithName
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -10847,7 +10847,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: alterStatementChangeColPosition, colType, newName, comment, alterColumnConstraint, oldName, restrictOrCascade
+			// elements: newName, colType, alterStatementChangeColPosition, oldName, alterColumnConstraint, comment, restrictOrCascade
 			// token labels: comment
 			// rule labels: newName, oldName, retval
 			// token list labels: 
@@ -11036,7 +11036,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: colName, tableProperties, comment
+			// elements: tableProperties, comment, colName
 			// token labels: comment
 			// rule labels: colName, retval
 			// token list labels: 
@@ -11412,7 +11412,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: alterStatementSuffixAddPartitionsElement, alterStatementSuffixAddPartitionsElement, ifNotExists, ifNotExists
+			// elements: alterStatementSuffixAddPartitionsElement, ifNotExists, alterStatementSuffixAddPartitionsElement, ifNotExists
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -12137,7 +12137,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: replicationClause, ifExists, KW_PURGE, ifExists, replicationClause, dropPartitionSpec, dropPartitionSpec
+			// elements: KW_PURGE, ifExists, dropPartitionSpec, dropPartitionSpec, ifExists, replicationClause, replicationClause
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -12567,7 +12567,7 @@ public class HiveASTParser extends Parser {
 					if (state.failed) return retval;
 					if ( state.backtracking==0 ) stream_tableProperties.add(tableProperties345.getTree());
 					// AST REWRITE
-					// elements: ifExists, tableProperties
+					// elements: tableProperties, ifExists
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -12741,7 +12741,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: tableProperties, serdeName
+					// elements: serdeName, tableProperties
 					// token labels: serdeName
 					// rule labels: retval
 					// token list labels: 
@@ -13612,7 +13612,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_StringLiteral.add(value);
 
 			// AST REWRITE
-			// elements: key, value
+			// elements: value, key
 			// token labels: value
 			// rule labels: key, retval
 			// token list labels: 
@@ -14024,7 +14024,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_tableName.add(exchangename.getTree());
 			// AST REWRITE
-			// elements: exchangename, partitionSpec
+			// elements: partitionSpec, exchangename
 			// token labels: 
 			// rule labels: exchangename, retval
 			// token list labels: 
@@ -14279,7 +14279,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: comment, colName, tableProperties
+			// elements: colName, tableProperties, comment
 			// token labels: comment
 			// rule labels: colName, retval
 			// token list labels: 
@@ -14685,7 +14685,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tableProperties, blocking, compactType
+			// elements: blocking, compactType, tableProperties
 			// token labels: compactType
 			// rule labels: retval
 			// token list labels: 
@@ -14883,7 +14883,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: inDriver, outFmt, outDriver, serdeCls, inFmt
+					// elements: inFmt, outDriver, inDriver, outFmt, serdeCls
 					// token labels: inFmt, inDriver, outDriver, serdeCls, outFmt
 					// rule labels: retval
 					// token list labels: 
@@ -15464,7 +15464,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tabTypeExpr, partitionSpec
+			// elements: partitionSpec, tabTypeExpr
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -15595,7 +15595,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tableName, extColumnName, partitionSpec
+			// elements: tableName, partitionSpec, extColumnName
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -16331,7 +16331,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: dbName, KW_EXTENDED
+					// elements: KW_EXTENDED, dbName
 					// token labels: 
 					// rule labels: dbName, retval
 					// token list labels: 
@@ -16402,7 +16402,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: KW_EXTENDED, name
+					// elements: name, KW_EXTENDED
 					// token labels: 
 					// rule labels: name, retval
 					// token list labels: 
@@ -16504,7 +16504,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: descOptions, parttype
+					// elements: parttype, descOptions
 					// token labels: descOptions
 					// rule labels: parttype, retval
 					// token list labels: 
@@ -16780,7 +16780,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: parttype, partialscan, KW_COLUMNS, noscan, statsColumnName
+					// elements: statsColumnName, noscan, partialscan, KW_COLUMNS, parttype
 					// token labels: partialscan, noscan
 					// rule labels: statsColumnName, parttype, retval
 					// token list labels: 
@@ -17400,7 +17400,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: db_name, showStmtIdentifier
+					// elements: showStmtIdentifier, db_name
 					// token labels: 
 					// rule labels: db_name, retval
 					// token list labels: 
@@ -17778,7 +17778,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: showFunctionIdentifier, KW_LIKE
+					// elements: KW_LIKE, showFunctionIdentifier
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -17853,7 +17853,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: partitionSpec, tabName
+					// elements: tabName, partitionSpec
 					// token labels: 
 					// rule labels: tabName, retval
 					// token list labels: 
@@ -18140,7 +18140,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: db_name, showStmtIdentifier, partitionSpec
+					// elements: showStmtIdentifier, db_name, partitionSpec
 					// token labels: 
 					// rule labels: db_name, retval
 					// token list labels: 
@@ -18381,7 +18381,7 @@ public class HiveASTParser extends Parser {
 							}
 
 							// AST REWRITE
-							// elements: dbName, isExtended
+							// elements: isExtended, dbName
 							// token labels: dbName, isExtended
 							// rule labels: retval
 							// token list labels: 
@@ -18890,7 +18890,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_lockMode.add(lockMode515.getTree());
 			// AST REWRITE
-			// elements: partitionSpec, lockMode, tableName
+			// elements: lockMode, partitionSpec, tableName
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -19038,7 +19038,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_lockMode.add(lockMode519.getTree());
 			// AST REWRITE
-			// elements: lockMode, dbName
+			// elements: dbName, lockMode
 			// token labels: dbName
 			// rule labels: retval
 			// token list labels: 
@@ -19691,7 +19691,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: privList, withGrantOption, principalSpecification, privilegeObject
+			// elements: privList, principalSpecification, privilegeObject, withGrantOption
 			// token labels: 
 			// rule labels: privList, retval
 			// token list labels: 
@@ -19849,7 +19849,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_principalSpecification.add(principalSpecification542.getTree());
 			// AST REWRITE
-			// elements: privilegeObject, grantOptionFor, privilegeList, principalSpecification
+			// elements: privilegeList, grantOptionFor, principalSpecification, privilegeObject
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -20040,7 +20040,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: withAdminOption, principalSpecification, identifier
+			// elements: identifier, principalSpecification, withAdminOption
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -20236,7 +20236,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_principalSpecification.add(principalSpecification558.getTree());
 			// AST REWRITE
-			// elements: adminOptionFor, principalSpecification, identifier
+			// elements: principalSpecification, adminOptionFor, identifier
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -20871,7 +20871,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: privilegeIncludeColObject, principalName
+			// elements: principalName, privilegeIncludeColObject
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -21690,7 +21690,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: tableName, partitionSpec
+					// elements: partitionSpec, tableName
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -22305,7 +22305,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: cols, tableName, partitionSpec
+					// elements: tableName, cols, partitionSpec
 					// token labels: 
 					// rule labels: cols, retval
 					// token list labels: 
@@ -22641,7 +22641,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: cols, privilegeType
+			// elements: privilegeType, cols
 			// token labels: 
 			// rule labels: cols, retval
 			// token list labels: 
@@ -24048,7 +24048,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: partitionSpec, tableName, repair
+			// elements: partitionSpec, repair, tableName
 			// token labels: repair
 			// rule labels: retval
 			// token list labels: 
@@ -24275,7 +24275,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_StringLiteral.add(resPath);
 
 			// AST REWRITE
-			// elements: resType, resPath
+			// elements: resPath, resType
 			// token labels: resPath
 			// rule labels: resType, retval
 			// token list labels: 
@@ -24614,7 +24614,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: functionIdentifier, rList, StringLiteral, functionIdentifier, rList, StringLiteral
+			// elements: rList, functionIdentifier, functionIdentifier, StringLiteral, rList, StringLiteral
 			// token labels: 
 			// rule labels: rList, retval
 			// token list labels: 
@@ -24778,7 +24778,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_functionIdentifier.add(functionIdentifier661.getTree());
 			// AST REWRITE
-			// elements: ifExists, ifExists, functionIdentifier, functionIdentifier
+			// elements: ifExists, functionIdentifier, functionIdentifier, ifExists
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -25027,7 +25027,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_expression.add(expression671.getTree());
 			// AST REWRITE
-			// elements: expression, columnNameTypeList, Identifier
+			// elements: Identifier, columnNameTypeList, expression
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -25154,7 +25154,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_Identifier.add(Identifier676);
 
 			// AST REWRITE
-			// elements: Identifier, ifExists
+			// elements: ifExists, Identifier
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -25412,7 +25412,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_selectStatementWithCTE.add(selectStatementWithCTE688.getTree());
 			// AST REWRITE
-			// elements: tablePropertiesPrefixed, ifNotExists, name, columnNameCommentList, viewPartition, orReplace, selectStatementWithCTE, tableComment
+			// elements: tablePropertiesPrefixed, viewPartition, tableComment, selectStatementWithCTE, columnNameCommentList, orReplace, name, ifNotExists
 			// token labels: 
 			// rule labels: name, retval
 			// token list labels: 
@@ -25718,7 +25718,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_selectStatementWithCTE.add(selectStatementWithCTE700.getTree());
 			// AST REWRITE
-			// elements: ifNotExists, name, rewriteEnabled, tablePropertiesPrefixed, tableLocation, selectStatementWithCTE, tableRowFormat, tableComment, tableFileFormat
+			// elements: rewriteEnabled, tablePropertiesPrefixed, selectStatementWithCTE, tableComment, tableRowFormat, tableFileFormat, name, ifNotExists, tableLocation
 			// token labels: 
 			// rule labels: name, retval
 			// token list labels: 
@@ -25982,7 +25982,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_viewName.add(viewName709.getTree());
 			// AST REWRITE
-			// elements: ifExists, viewName
+			// elements: viewName, ifExists
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -26657,7 +26657,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_KW_BUCKETS.add(KW_BUCKETS734);
 
 			// AST REWRITE
-			// elements: bucketCols, sortCols, num
+			// elements: sortCols, bucketCols, num
 			// token labels: num
 			// rule labels: bucketCols, sortCols, retval
 			// token list labels: 
@@ -26831,7 +26831,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: skewedCols, storedAsDirs, skewedValues
+			// elements: skewedCols, skewedValues, storedAsDirs
 			// token labels: 
 			// rule labels: skewedCols, skewedValues, retval
 			// token list labels: 
@@ -27667,7 +27667,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tableRowFormatCollItemsIdentifier, tableRowNullFormat, tableRowFormatLinesIdentifier, tableRowFormatFieldIdentifier, tableRowFormatMapKeysIdentifier
+			// elements: tableRowFormatLinesIdentifier, tableRowNullFormat, tableRowFormatFieldIdentifier, tableRowFormatCollItemsIdentifier, tableRowFormatMapKeysIdentifier
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -29214,7 +29214,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: outDriver, outFmt, inDriver, inFmt
+					// elements: inFmt, outFmt, inDriver, outDriver
 					// token labels: inFmt, inDriver, outDriver, outFmt
 					// rule labels: retval
 					// token list labels: 
@@ -31157,7 +31157,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_constraintTraits.add(constraintTraits843.getTree());
 			// AST REWRITE
-			// elements: tableConstraintType, tableConstraintType, pkCols, constraintName, pkCols, constraintTraits, constraintTraits
+			// elements: tableConstraintType, pkCols, constraintName, pkCols, constraintTraits, tableConstraintType, constraintTraits
 			// token labels: 
 			// rule labels: constraintName, pkCols, retval
 			// token list labels: 
@@ -31304,7 +31304,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: pkCols, tableConstraintType, constraintOptsAlter, constraintName
+			// elements: constraintName, pkCols, constraintOptsAlter, tableConstraintType
 			// token labels: 
 			// rule labels: constraintName, pkCols, retval
 			// token list labels: 
@@ -31467,16 +31467,16 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tabName, constraintOptsAlter, constraintName, parCols, fkCols
+			// elements: parCols, constraintOptsAlter, fkCols, tabName, constraintName
 			// token labels: 
-			// rule labels: tabName, parCols, fkCols, constraintName, retval
+			// rule labels: parCols, tabName, fkCols, constraintName, retval
 			// token list labels: 
 			// rule list labels: 
 			// wildcard labels: 
 			if ( state.backtracking==0 ) {
 			retval.tree = root_0;
-			RewriteRuleSubtreeStream stream_tabName=new RewriteRuleSubtreeStream(adaptor,"rule tabName",tabName!=null?tabName.getTree():null);
 			RewriteRuleSubtreeStream stream_parCols=new RewriteRuleSubtreeStream(adaptor,"rule parCols",parCols!=null?parCols.getTree():null);
+			RewriteRuleSubtreeStream stream_tabName=new RewriteRuleSubtreeStream(adaptor,"rule tabName",tabName!=null?tabName.getTree():null);
 			RewriteRuleSubtreeStream stream_fkCols=new RewriteRuleSubtreeStream(adaptor,"rule fkCols",fkCols!=null?fkCols.getTree():null);
 			RewriteRuleSubtreeStream stream_constraintName=new RewriteRuleSubtreeStream(adaptor,"rule constraintName",constraintName!=null?constraintName.getTree():null);
 			RewriteRuleSubtreeStream stream_retval=new RewriteRuleSubtreeStream(adaptor,"rule retval",retval!=null?retval.getTree():null);
@@ -32414,7 +32414,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: identifier, identifier, nullSpec, identifier, nullSpec, nullSpec, identifier, identifier, identifier
+			// elements: identifier, identifier, identifier, identifier, identifier, nullSpec, identifier, nullSpec, nullSpec
 			// token labels: 
 			// rule labels: nullSpec, retval
 			// token list labels: 
@@ -32746,7 +32746,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: comment, colName
+			// elements: colName, comment
 			// token labels: comment
 			// rule labels: colName, retval
 			// token list labels: 
@@ -32880,7 +32880,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: nullSpec, expression, expression, expression, expression, expression, nullSpec, expression, nullSpec
+			// elements: expression, expression, nullSpec, expression, nullSpec, expression, expression, nullSpec, expression
 			// token labels: 
 			// rule labels: nullSpec, retval
 			// token list labels: 
@@ -33098,7 +33098,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: comment, colType, colType, colName, colName
+			// elements: comment, colName, colName, colType, colType
 			// token labels: comment
 			// rule labels: colName, retval
 			// token list labels: 
@@ -33358,7 +33358,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: colConstraint, colType, comment, colName
+			// elements: comment, colConstraint, colType, colName
 			// token labels: comment
 			// rule labels: colName, retval
 			// token list labels: 
@@ -33901,7 +33901,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: constraintOptsAlter, constraintName, colName, tabName, colName, tabName, constraintOptsAlter
+			// elements: colName, tabName, constraintOptsAlter, tabName, constraintOptsAlter, constraintName, colName
 			// token labels: 
 			// rule labels: colName, tabName, constraintName, retval
 			// token list labels: 
@@ -34099,7 +34099,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: columnConstraintType, columnConstraintType, constraintOptsAlter, constraintName, constraintOptsAlter
+			// elements: constraintName, columnConstraintType, columnConstraintType, constraintOptsAlter, constraintOptsAlter
 			// token labels: 
 			// rule labels: constraintName, retval
 			// token list labels: 
@@ -34614,7 +34614,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: colType, colType, colName, comment, colName
+			// elements: colName, colType, colName, comment, colType
 			// token labels: comment
 			// rule labels: colName, retval
 			// token list labels: 
@@ -35618,7 +35618,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: scale, prec
+					// elements: prec, scale
 					// token labels: prec, scale
 					// rule labels: retval
 					// token list labels: 
@@ -36035,7 +36035,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_GREATERTHAN.add(GREATERTHAN955);
 
 			// AST REWRITE
-			// elements: right, left
+			// elements: left, right
 			// token labels: 
 			// rule labels: left, right, retval
 			// token list labels: 
@@ -37110,7 +37110,7 @@ public class HiveASTParser extends Parser {
 			if ( state.backtracking==0 ) stream_RPAREN.add(RPAREN987);
 
 			// AST REWRITE
-			// elements: queryStatementExpression, identifier
+			// elements: identifier, queryStatementExpression
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -37904,9 +37904,9 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: h, s, f, g, win, w
+					// elements: f, w, g, h, win, s
 					// token labels: 
-					// rule labels: s, f, g, w, h, win, retval
+					// rule labels: s, f, w, g, h, win, retval
 					// token list labels: 
 					// rule list labels: 
 					// wildcard labels: 
@@ -37914,8 +37914,8 @@ public class HiveASTParser extends Parser {
 					retval.tree = root_0;
 					RewriteRuleSubtreeStream stream_s=new RewriteRuleSubtreeStream(adaptor,"rule s",s!=null?s.getTree():null);
 					RewriteRuleSubtreeStream stream_f=new RewriteRuleSubtreeStream(adaptor,"rule f",f!=null?f.getTree():null);
-					RewriteRuleSubtreeStream stream_g=new RewriteRuleSubtreeStream(adaptor,"rule g",g!=null?g.getTree():null);
 					RewriteRuleSubtreeStream stream_w=new RewriteRuleSubtreeStream(adaptor,"rule w",w!=null?w.getTree():null);
+					RewriteRuleSubtreeStream stream_g=new RewriteRuleSubtreeStream(adaptor,"rule g",g!=null?g.getTree():null);
 					RewriteRuleSubtreeStream stream_h=new RewriteRuleSubtreeStream(adaptor,"rule h",h!=null?h.getTree():null);
 					RewriteRuleSubtreeStream stream_win=new RewriteRuleSubtreeStream(adaptor,"rule win",win!=null?win.getTree():null);
 					RewriteRuleSubtreeStream stream_retval=new RewriteRuleSubtreeStream(adaptor,"rule retval",retval!=null?retval.getTree():null);
@@ -38200,7 +38200,7 @@ public class HiveASTParser extends Parser {
 			   }
 			   }
 			// AST REWRITE
-			// elements: sort, c, o, d, l
+			// elements: o, c, sort, d, l
 			// token labels: 
 			// rule labels: c, d, sort, l, retval, o
 			// token list labels: 
@@ -39092,7 +39092,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: window_clause, whereClause, groupByClause, lateralView, sortByClause, selectClause, insertClause, clusterByClause, distributeByClause, orderByClause, limitClause, havingClause
+					// elements: selectClause, window_clause, whereClause, groupByClause, distributeByClause, orderByClause, insertClause, clusterByClause, limitClause, lateralView, havingClause, sortByClause
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -39391,7 +39391,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: havingClause, groupByClause, orderByClause, distributeByClause, window_clause, limitClause, selectClause, lateralView, whereClause, sortByClause, clusterByClause
+					// elements: whereClause, orderByClause, window_clause, havingClause, lateralView, distributeByClause, limitClause, selectClause, sortByClause, clusterByClause, groupByClause
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -39635,7 +39635,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: ifNotExists, destination
+					// elements: destination, ifNotExists
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -39732,7 +39732,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: targetCols, tableOrPartition
+					// elements: tableOrPartition, targetCols
 					// token labels: 
 					// rule labels: targetCols, retval
 					// token list labels: 
@@ -39915,7 +39915,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: local, tableRowFormat, StringLiteral, tableFileFormat
+					// elements: StringLiteral, tableRowFormat, local, tableFileFormat
 					// token labels: local
 					// rule labels: retval
 					// token list labels: 
@@ -40149,7 +40149,7 @@ public class HiveASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: offset, num
+					// elements: num, offset
 					// token labels: offset, num
 					// rule labels: retval
 					// token list labels: 
@@ -40202,7 +40202,7 @@ public class HiveASTParser extends Parser {
 					if ( state.backtracking==0 ) stream_Number.add(offset);
 
 					// AST REWRITE
-					// elements: num, offset
+					// elements: offset, num
 					// token labels: offset, num
 					// rule labels: retval
 					// token list labels: 
@@ -40327,7 +40327,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: tableName, whereClause
+			// elements: whereClause, tableName
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -40641,7 +40641,7 @@ public class HiveASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: whereClause, tableName, setColumnsClause
+			// elements: tableName, setColumnsClause, whereClause
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -41921,7 +41921,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_whenClauses.add(whenClauses1092.getTree());
 			// AST REWRITE
-			// elements: joinSourcePart, tableName, identifier, expression, whenClauses
+			// elements: identifier, expression, whenClauses, tableName, joinSourcePart
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -42327,7 +42327,7 @@ public class HiveASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_updateOrDelete.add(updateOrDelete1110.getTree());
 			// AST REWRITE
-			// elements: expression, updateOrDelete
+			// elements: updateOrDelete, expression
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -42915,281 +42915,281 @@ public class HiveASTParser extends Parser {
 	// $ANTLR end synpred21_HiveASTParser
 
 	// Delegated rules
-	public HiveASTParser_SelectClauseASTParser.selectTrfmClause_return selectTrfmClause() throws RecognitionException { return gSelectClauseASTParser.selectTrfmClause(); }
-
-	public HiveASTParser_FromClauseASTParser.valueRowConstructor_return valueRowConstructor() throws RecognitionException { return gFromClauseASTParser.valueRowConstructor(); }
-
-	public HiveASTParser_IdentifiersASTParser.intervalValue_return intervalValue() throws RecognitionException { return gIdentifiersASTParser.intervalValue(); }
-
-	public HiveASTParser_IdentifiersASTParser.partitionSpec_return partitionSpec() throws RecognitionException { return gIdentifiersASTParser.partitionSpec(); }
-
-	public HiveASTParser_IdentifiersASTParser.groupby_expression_return groupby_expression() throws RecognitionException { return gIdentifiersASTParser.groupby_expression(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceAndExpression_return precedenceAndExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceAndExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.intervalExpression_return intervalExpression() throws RecognitionException { return gIdentifiersASTParser.intervalExpression(); }
-
-	public HiveASTParser_FromClauseASTParser.joinSource_return joinSource() throws RecognitionException { return gFromClauseASTParser.joinSource(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceConcatenateOperator_return precedenceConcatenateOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceConcatenateOperator(); }
-
-	public HiveASTParser_FromClauseASTParser.joinSourcePart_return joinSourcePart() throws RecognitionException { return gFromClauseASTParser.joinSourcePart(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionPart_return precedenceSimilarExpressionPart(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionPart(t); }
-
-	public HiveASTParser_FromClauseASTParser.joinToken_return joinToken() throws RecognitionException { return gFromClauseASTParser.joinToken(); }
-
-	public HiveASTParser_FromClauseASTParser.searchCondition_return searchCondition() throws RecognitionException { return gFromClauseASTParser.searchCondition(); }
-
-	public HiveASTParser_FromClauseASTParser.valuesTableConstructor_return valuesTableConstructor() throws RecognitionException { return gFromClauseASTParser.valuesTableConstructor(); }
-
-	public HiveASTParser_IdentifiersASTParser.subQueryExpression_return subQueryExpression() throws RecognitionException { return gIdentifiersASTParser.subQueryExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.intervalQualifiers_return intervalQualifiers() throws RecognitionException { return gIdentifiersASTParser.intervalQualifiers(); }
-
-	public HiveASTParser_SelectClauseASTParser.selectList_return selectList() throws RecognitionException { return gSelectClauseASTParser.selectList(); }
-
-	public HiveASTParser_IdentifiersASTParser.distributeByClause_return distributeByClause() throws RecognitionException { return gIdentifiersASTParser.distributeByClause(); }
-
-	public HiveASTParser_FromClauseASTParser.tableAlias_return tableAlias() throws RecognitionException { return gFromClauseASTParser.tableAlias(); }
-
-	public HiveASTParser_SelectClauseASTParser.selectExpressionList_return selectExpressionList() throws RecognitionException { return gSelectClauseASTParser.selectExpressionList(); }
-
 	public HiveASTParser_IdentifiersASTParser.precedenceRegexpOperator_return precedenceRegexpOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceRegexpOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.groupingSetExpression_return groupingSetExpression() throws RecognitionException { return gIdentifiersASTParser.groupingSetExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceUnarySuffixExpression_return precedenceUnarySuffixExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceUnarySuffixExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedencePlusExpression_return precedencePlusExpression() throws RecognitionException { return gIdentifiersASTParser.precedencePlusExpression(); }
-
-	public HiveASTParser_FromClauseASTParser.tableOrColumn_return tableOrColumn() throws RecognitionException { return gFromClauseASTParser.tableOrColumn(); }
-
-	public HiveASTParser_FromClauseASTParser.tableName_return tableName() throws RecognitionException { return gFromClauseASTParser.tableName(); }
-
-	public HiveASTParser_IdentifiersASTParser.stringLiteralSequence_return stringLiteralSequence() throws RecognitionException { return gIdentifiersASTParser.stringLiteralSequence(); }
-
-	public HiveASTParser_FromClauseASTParser.virtualTableSource_return virtualTableSource() throws RecognitionException { return gFromClauseASTParser.virtualTableSource(); }
-
-	public HiveASTParser_FromClauseASTParser.atomjoinSource_return atomjoinSource() throws RecognitionException { return gFromClauseASTParser.atomjoinSource(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionIn_return precedenceSimilarExpressionIn(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionIn(t); }
-
-	public HiveASTParser_FromClauseASTParser.lateralView_return lateralView() throws RecognitionException { return gFromClauseASTParser.lateralView(); }
-
-	public HiveASTParser_IdentifiersASTParser.caseExpression_return caseExpression() throws RecognitionException { return gIdentifiersASTParser.caseExpression(); }
-
-	public HiveASTParser_FromClauseASTParser.tableSource_return tableSource() throws RecognitionException { return gFromClauseASTParser.tableSource(); }
-
-	public HiveASTParser_FromClauseASTParser.uniqueJoinToken_return uniqueJoinToken() throws RecognitionException { return gFromClauseASTParser.uniqueJoinToken(); }
-
-	public HiveASTParser_SelectClauseASTParser.selectExpression_return selectExpression() throws RecognitionException { return gSelectClauseASTParser.selectExpression(); }
-
-	public HiveASTParser_FromClauseASTParser.viewName_return viewName() throws RecognitionException { return gFromClauseASTParser.viewName(); }
-
-	public HiveASTParser_IdentifiersASTParser.expressionsNotInParenthesis_return expressionsNotInParenthesis(boolean isStruct) throws RecognitionException { return gIdentifiersASTParser.expressionsNotInParenthesis(isStruct); }
-
-	public HiveASTParser_IdentifiersASTParser.groupingSetExpressionMultiple_return groupingSetExpressionMultiple() throws RecognitionException { return gIdentifiersASTParser.groupingSetExpressionMultiple(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseOrOperator_return precedenceBitwiseOrOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseOrOperator(); }
-
-	public HiveASTParser_FromClauseASTParser.splitSample_return splitSample() throws RecognitionException { return gFromClauseASTParser.splitSample(); }
-
-	public HiveASTParser_IdentifiersASTParser.floorExpression_return floorExpression() throws RecognitionException { return gIdentifiersASTParser.floorExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.functionIdentifier_return functionIdentifier() throws RecognitionException { return gIdentifiersASTParser.functionIdentifier(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceNotOperator_return precedenceNotOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceNotOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.booleanValue_return booleanValue() throws RecognitionException { return gIdentifiersASTParser.booleanValue(); }
-
-	public HiveASTParser_FromClauseASTParser.uniqueJoinExpr_return uniqueJoinExpr() throws RecognitionException { return gFromClauseASTParser.uniqueJoinExpr(); }
-
-	public HiveASTParser_SelectClauseASTParser.selectItem_return selectItem() throws RecognitionException { return gSelectClauseASTParser.selectItem(); }
-
-	public HiveASTParser_IdentifiersASTParser.groupByEmpty_return groupByEmpty() throws RecognitionException { return gIdentifiersASTParser.groupByEmpty(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseOrExpression_return precedenceBitwiseOrExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseOrExpression(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_value_expression_return window_value_expression() throws RecognitionException { return gSelectClauseASTParser.window_value_expression(); }
-
-	public HiveASTParser_FromClauseASTParser.valuesClause_return valuesClause() throws RecognitionException { return gFromClauseASTParser.valuesClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.booleanValueTok_return booleanValueTok() throws RecognitionException { return gIdentifiersASTParser.booleanValueTok(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceUnaryPrefixExpression_return precedenceUnaryPrefixExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceUnaryPrefixExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.havingClause_return havingClause() throws RecognitionException { return gIdentifiersASTParser.havingClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.groupingExpressionSingle_return groupingExpressionSingle() throws RecognitionException { return gIdentifiersASTParser.groupingExpressionSingle(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceStarExpression_return precedenceStarExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceStarExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpression_return precedenceSimilarExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpression(); }
-
-	public HiveASTParser_FromClauseASTParser.tableAllColumns_return tableAllColumns() throws RecognitionException { return gFromClauseASTParser.tableAllColumns(); }
-
-	public HiveASTParser_FromClauseASTParser.uniqueJoinSource_return uniqueJoinSource() throws RecognitionException { return gFromClauseASTParser.uniqueJoinSource(); }
-
-	public HiveASTParser_IdentifiersASTParser.dropPartitionVal_return dropPartitionVal() throws RecognitionException { return gIdentifiersASTParser.dropPartitionVal(); }
-
-	public HiveASTParser_IdentifiersASTParser.sysFuncNames_return sysFuncNames() throws RecognitionException { return gIdentifiersASTParser.sysFuncNames(); }
-
-	public HiveASTParser_IdentifiersASTParser.orderByClause_return orderByClause() throws RecognitionException { return gIdentifiersASTParser.orderByClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionMain_return precedenceSimilarExpressionMain() throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionMain(); }
-
-	public HiveASTParser_IdentifiersASTParser.dropPartitionOperator_return dropPartitionOperator() throws RecognitionException { return gIdentifiersASTParser.dropPartitionOperator(); }
-
-	public HiveASTParser_FromClauseASTParser.tableBucketSample_return tableBucketSample() throws RecognitionException { return gFromClauseASTParser.tableBucketSample(); }
-
-	public HiveASTParser_SelectClauseASTParser.selectClause_return selectClause() throws RecognitionException { return gSelectClauseASTParser.selectClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionPartNot_return precedenceSimilarExpressionPartNot(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionPartNot(t); }
-
-	public HiveASTParser_IdentifiersASTParser.groupByClause_return groupByClause() throws RecognitionException { return gIdentifiersASTParser.groupByClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.partitionVal_return partitionVal() throws RecognitionException { return gIdentifiersASTParser.partitionVal(); }
-
-	public HiveASTParser_IdentifiersASTParser.rollupOldSyntax_return rollupOldSyntax() throws RecognitionException { return gIdentifiersASTParser.rollupOldSyntax(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceOrExpression_return precedenceOrExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceOrExpression(); }
-
-	public HiveASTParser_FromClauseASTParser.subQuerySource_return subQuerySource() throws RecognitionException { return gFromClauseASTParser.subQuerySource(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceEqualOperator_return precedenceEqualOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceEqualOperator(); }
-
-	public HiveASTParser_FromClauseASTParser.aliasList_return aliasList() throws RecognitionException { return gFromClauseASTParser.aliasList(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceConcatenateExpression_return precedenceConcatenateExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceConcatenateExpression(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_frame_return window_frame() throws RecognitionException { return gSelectClauseASTParser.window_frame(); }
 
 	public HiveASTParser_SelectClauseASTParser.window_frame_boundary_return window_frame_boundary() throws RecognitionException { return gSelectClauseASTParser.window_frame_boundary(); }
 
-	public HiveASTParser_IdentifiersASTParser.extractExpression_return extractExpression() throws RecognitionException { return gIdentifiersASTParser.extractExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.timestampLiteral_return timestampLiteral() throws RecognitionException { return gIdentifiersASTParser.timestampLiteral(); }
-
-	public HiveASTParser_IdentifiersASTParser.tableOrPartition_return tableOrPartition() throws RecognitionException { return gIdentifiersASTParser.tableOrPartition(); }
+	public HiveASTParser_IdentifiersASTParser.booleanValue_return booleanValue() throws RecognitionException { return gIdentifiersASTParser.booleanValue(); }
 
 	public HiveASTParser_IdentifiersASTParser.precedenceSimilarOperator_return precedenceSimilarOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarOperator(); }
 
-	public HiveASTParser_FromClauseASTParser.expressionList_return expressionList() throws RecognitionException { return gFromClauseASTParser.expressionList(); }
+	public HiveASTParser_IdentifiersASTParser.rollupOldSyntax_return rollupOldSyntax() throws RecognitionException { return gIdentifiersASTParser.rollupOldSyntax(); }
 
-	public HiveASTParser_IdentifiersASTParser.precedenceFieldExpression_return precedenceFieldExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceFieldExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.castExpression_return castExpression() throws RecognitionException { return gIdentifiersASTParser.castExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.clusterByClause_return clusterByClause() throws RecognitionException { return gIdentifiersASTParser.clusterByClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.expressionPart_return expressionPart(CommonTree t, boolean isStruct) throws RecognitionException { return gIdentifiersASTParser.expressionPart(t, isStruct); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseXorOperator_return precedenceBitwiseXorOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseXorOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.sql11ReservedKeywordsUsedAsFunctionName_return sql11ReservedKeywordsUsedAsFunctionName() throws RecognitionException { return gIdentifiersASTParser.sql11ReservedKeywordsUsedAsFunctionName(); }
-
-	public HiveASTParser_IdentifiersASTParser.functionName_return functionName() throws RecognitionException { return gIdentifiersASTParser.functionName(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceOrOperator_return precedenceOrOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceOrOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceEqualExpression_return precedenceEqualExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceEqualExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceUnaryOperator_return precedenceUnaryOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceUnaryOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.nonReserved_return nonReserved() throws RecognitionException { return gIdentifiersASTParser.nonReserved(); }
-
-	public HiveASTParser_IdentifiersASTParser.sortByClause_return sortByClause() throws RecognitionException { return gIdentifiersASTParser.sortByClause(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_range_expression_return window_range_expression() throws RecognitionException { return gSelectClauseASTParser.window_range_expression(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_clause_return window_clause() throws RecognitionException { return gSelectClauseASTParser.window_clause(); }
-
-	public HiveASTParser_IdentifiersASTParser.havingCondition_return havingCondition() throws RecognitionException { return gIdentifiersASTParser.havingCondition(); }
-
-	public HiveASTParser_FromClauseASTParser.partitionTableFunctionSource_return partitionTableFunctionSource() throws RecognitionException { return gFromClauseASTParser.partitionTableFunctionSource(); }
-
-	public HiveASTParser_FromClauseASTParser.uniqueJoinTableSource_return uniqueJoinTableSource() throws RecognitionException { return gFromClauseASTParser.uniqueJoinTableSource(); }
+	public HiveASTParser_SelectClauseASTParser.selectItem_return selectItem() throws RecognitionException { return gSelectClauseASTParser.selectItem(); }
 
 	public HiveASTParser_FromClauseASTParser.fromSource_return fromSource() throws RecognitionException { return gFromClauseASTParser.fromSource(); }
 
-	public HiveASTParser_FromClauseASTParser.whereClause_return whereClause() throws RecognitionException { return gFromClauseASTParser.whereClause(); }
+	public HiveASTParser_IdentifiersASTParser.subQueryExpression_return subQueryExpression() throws RecognitionException { return gIdentifiersASTParser.subQueryExpression(); }
 
-	public HiveASTParser_FromClauseASTParser.tableNameColList_return tableNameColList() throws RecognitionException { return gFromClauseASTParser.tableNameColList(); }
+	public HiveASTParser_FromClauseASTParser.joinSourcePart_return joinSourcePart() throws RecognitionException { return gFromClauseASTParser.joinSourcePart(); }
 
-	public HiveASTParser_FromClauseASTParser.partitionedTableFunction_return partitionedTableFunction() throws RecognitionException { return gFromClauseASTParser.partitionedTableFunction(); }
+	public HiveASTParser_IdentifiersASTParser.tableOrPartition_return tableOrPartition() throws RecognitionException { return gIdentifiersASTParser.tableOrPartition(); }
 
-	public HiveASTParser_FromClauseASTParser.tableSample_return tableSample() throws RecognitionException { return gFromClauseASTParser.tableSample(); }
-
-	public HiveASTParser_IdentifiersASTParser.constant_return constant() throws RecognitionException { return gIdentifiersASTParser.constant(); }
-
-	public HiveASTParser_IdentifiersASTParser.dateLiteral_return dateLiteral() throws RecognitionException { return gIdentifiersASTParser.dateLiteral(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_specification_return window_specification() throws RecognitionException { return gSelectClauseASTParser.window_specification(); }
-
-	public HiveASTParser_IdentifiersASTParser.columnRefOrderNotInParenthesis_return columnRefOrderNotInParenthesis() throws RecognitionException { return gIdentifiersASTParser.columnRefOrderNotInParenthesis(); }
-
-	public HiveASTParser_IdentifiersASTParser.charSetStringLiteral_return charSetStringLiteral() throws RecognitionException { return gIdentifiersASTParser.charSetStringLiteral(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedencePlusOperator_return precedencePlusOperator() throws RecognitionException { return gIdentifiersASTParser.precedencePlusOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.identifier_return identifier() throws RecognitionException { return gIdentifiersASTParser.identifier(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseXorExpression_return precedenceBitwiseXorExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseXorExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.function_return function() throws RecognitionException { return gIdentifiersASTParser.function(); }
-
-	public HiveASTParser_IdentifiersASTParser.rollupStandard_return rollupStandard() throws RecognitionException { return gIdentifiersASTParser.rollupStandard(); }
-
-	public HiveASTParser_IdentifiersASTParser.intervalLiteral_return intervalLiteral() throws RecognitionException { return gIdentifiersASTParser.intervalLiteral(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionAtom_return precedenceSimilarExpressionAtom(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionAtom(t); }
-
-	public HiveASTParser_IdentifiersASTParser.whenExpression_return whenExpression() throws RecognitionException { return gIdentifiersASTParser.whenExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceStarOperator_return precedenceStarOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceStarOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceAndOperator_return precedenceAndOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceAndOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.principalIdentifier_return principalIdentifier() throws RecognitionException { return gIdentifiersASTParser.principalIdentifier(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_frame_start_boundary_return window_frame_start_boundary() throws RecognitionException { return gSelectClauseASTParser.window_frame_start_boundary(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceNotExpression_return precedenceNotExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceNotExpression(); }
-
-	public HiveASTParser_IdentifiersASTParser.expressionsInParenthesis_return expressionsInParenthesis(boolean isStruct) throws RecognitionException { return gIdentifiersASTParser.expressionsInParenthesis(isStruct); }
-
-	public HiveASTParser_IdentifiersASTParser.expression_return expression() throws RecognitionException { return gIdentifiersASTParser.expression(); }
-
-	public HiveASTParser_SelectClauseASTParser.window_defn_return window_defn() throws RecognitionException { return gSelectClauseASTParser.window_defn(); }
-
-	public HiveASTParser_FromClauseASTParser.partitioningSpec_return partitioningSpec() throws RecognitionException { return gFromClauseASTParser.partitioningSpec(); }
-
-	public HiveASTParser_SelectClauseASTParser.trfmClause_return trfmClause() throws RecognitionException { return gSelectClauseASTParser.trfmClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.nullCondition_return nullCondition() throws RecognitionException { return gIdentifiersASTParser.nullCondition(); }
-
-	public HiveASTParser_IdentifiersASTParser.columnRefOrderInParenthesis_return columnRefOrderInParenthesis() throws RecognitionException { return gIdentifiersASTParser.columnRefOrderInParenthesis(); }
-
-	public HiveASTParser_IdentifiersASTParser.partitionByClause_return partitionByClause() throws RecognitionException { return gIdentifiersASTParser.partitionByClause(); }
-
-	public HiveASTParser_IdentifiersASTParser.precedenceAmpersandOperator_return precedenceAmpersandOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceAmpersandOperator(); }
-
-	public HiveASTParser_IdentifiersASTParser.dropPartitionSpec_return dropPartitionSpec() throws RecognitionException { return gIdentifiersASTParser.dropPartitionSpec(); }
-
-	public HiveASTParser_IdentifiersASTParser.timeQualifiers_return timeQualifiers() throws RecognitionException { return gIdentifiersASTParser.timeQualifiers(); }
+	public HiveASTParser_IdentifiersASTParser.sortByClause_return sortByClause() throws RecognitionException { return gIdentifiersASTParser.sortByClause(); }
 
 	public HiveASTParser_IdentifiersASTParser.atomExpression_return atomExpression() throws RecognitionException { return gIdentifiersASTParser.atomExpression(); }
 
+	public HiveASTParser_SelectClauseASTParser.window_value_expression_return window_value_expression() throws RecognitionException { return gSelectClauseASTParser.window_value_expression(); }
+
+	public HiveASTParser_IdentifiersASTParser.expressionsNotInParenthesis_return expressionsNotInParenthesis(boolean isStruct) throws RecognitionException { return gIdentifiersASTParser.expressionsNotInParenthesis(isStruct); }
+
+	public HiveASTParser_SelectClauseASTParser.window_frame_start_boundary_return window_frame_start_boundary() throws RecognitionException { return gSelectClauseASTParser.window_frame_start_boundary(); }
+
+	public HiveASTParser_IdentifiersASTParser.principalIdentifier_return principalIdentifier() throws RecognitionException { return gIdentifiersASTParser.principalIdentifier(); }
+
 	public HiveASTParser_FromClauseASTParser.fromClause_return fromClause() throws RecognitionException { return gFromClauseASTParser.fromClause(); }
 
-	public HiveASTParser_IdentifiersASTParser.precedenceAmpersandExpression_return precedenceAmpersandExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceAmpersandExpression(); }
+	public HiveASTParser_IdentifiersASTParser.clusterByClause_return clusterByClause() throws RecognitionException { return gIdentifiersASTParser.clusterByClause(); }
+
+	public HiveASTParser_FromClauseASTParser.expressionList_return expressionList() throws RecognitionException { return gFromClauseASTParser.expressionList(); }
+
+	public HiveASTParser_SelectClauseASTParser.selectTrfmClause_return selectTrfmClause() throws RecognitionException { return gSelectClauseASTParser.selectTrfmClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.stringLiteralSequence_return stringLiteralSequence() throws RecognitionException { return gIdentifiersASTParser.stringLiteralSequence(); }
+
+	public HiveASTParser_FromClauseASTParser.joinToken_return joinToken() throws RecognitionException { return gFromClauseASTParser.joinToken(); }
+
+	public HiveASTParser_IdentifiersASTParser.expressionsInParenthesis_return expressionsInParenthesis(boolean isStruct) throws RecognitionException { return gIdentifiersASTParser.expressionsInParenthesis(isStruct); }
+
+	public HiveASTParser_FromClauseASTParser.tableName_return tableName() throws RecognitionException { return gFromClauseASTParser.tableName(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceUnarySuffixExpression_return precedenceUnarySuffixExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceUnarySuffixExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.caseExpression_return caseExpression() throws RecognitionException { return gIdentifiersASTParser.caseExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseOrOperator_return precedenceBitwiseOrOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseOrOperator(); }
+
+	public HiveASTParser_FromClauseASTParser.valuesTableConstructor_return valuesTableConstructor() throws RecognitionException { return gFromClauseASTParser.valuesTableConstructor(); }
+
+	public HiveASTParser_IdentifiersASTParser.functionIdentifier_return functionIdentifier() throws RecognitionException { return gIdentifiersASTParser.functionIdentifier(); }
+
+	public HiveASTParser_FromClauseASTParser.tableNameColList_return tableNameColList() throws RecognitionException { return gFromClauseASTParser.tableNameColList(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionAtom_return precedenceSimilarExpressionAtom(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionAtom(t); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionPart_return precedenceSimilarExpressionPart(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionPart(t); }
+
+	public HiveASTParser_FromClauseASTParser.partitionTableFunctionSource_return partitionTableFunctionSource() throws RecognitionException { return gFromClauseASTParser.partitionTableFunctionSource(); }
+
+	public HiveASTParser_SelectClauseASTParser.selectExpression_return selectExpression() throws RecognitionException { return gSelectClauseASTParser.selectExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.partitionVal_return partitionVal() throws RecognitionException { return gIdentifiersASTParser.partitionVal(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceEqualExpression_return precedenceEqualExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceEqualExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.columnRefOrderNotInParenthesis_return columnRefOrderNotInParenthesis() throws RecognitionException { return gIdentifiersASTParser.columnRefOrderNotInParenthesis(); }
+
+	public HiveASTParser_FromClauseASTParser.tableAllColumns_return tableAllColumns() throws RecognitionException { return gFromClauseASTParser.tableAllColumns(); }
+
+	public HiveASTParser_IdentifiersASTParser.extractExpression_return extractExpression() throws RecognitionException { return gIdentifiersASTParser.extractExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseOrExpression_return precedenceBitwiseOrExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseOrExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceFieldExpression_return precedenceFieldExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceFieldExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.dropPartitionVal_return dropPartitionVal() throws RecognitionException { return gIdentifiersASTParser.dropPartitionVal(); }
+
+	public HiveASTParser_SelectClauseASTParser.trfmClause_return trfmClause() throws RecognitionException { return gSelectClauseASTParser.trfmClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.groupByClause_return groupByClause() throws RecognitionException { return gIdentifiersASTParser.groupByClause(); }
+
+	public HiveASTParser_FromClauseASTParser.joinSource_return joinSource() throws RecognitionException { return gFromClauseASTParser.joinSource(); }
+
+	public HiveASTParser_FromClauseASTParser.viewName_return viewName() throws RecognitionException { return gFromClauseASTParser.viewName(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedencePlusExpression_return precedencePlusExpression() throws RecognitionException { return gIdentifiersASTParser.precedencePlusExpression(); }
+
+	public HiveASTParser_FromClauseASTParser.atomjoinSource_return atomjoinSource() throws RecognitionException { return gFromClauseASTParser.atomjoinSource(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceAndExpression_return precedenceAndExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceAndExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.expressionPart_return expressionPart(CommonTree t, boolean isStruct) throws RecognitionException { return gIdentifiersASTParser.expressionPart(t, isStruct); }
+
+	public HiveASTParser_IdentifiersASTParser.dropPartitionSpec_return dropPartitionSpec() throws RecognitionException { return gIdentifiersASTParser.dropPartitionSpec(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceConcatenateExpression_return precedenceConcatenateExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceConcatenateExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.havingCondition_return havingCondition() throws RecognitionException { return gIdentifiersASTParser.havingCondition(); }
+
+	public HiveASTParser_FromClauseASTParser.whereClause_return whereClause() throws RecognitionException { return gFromClauseASTParser.whereClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.orderByClause_return orderByClause() throws RecognitionException { return gIdentifiersASTParser.orderByClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.function_return function() throws RecognitionException { return gIdentifiersASTParser.function(); }
+
+	public HiveASTParser_FromClauseASTParser.partitioningSpec_return partitioningSpec() throws RecognitionException { return gFromClauseASTParser.partitioningSpec(); }
+
+	public HiveASTParser_IdentifiersASTParser.dropPartitionOperator_return dropPartitionOperator() throws RecognitionException { return gIdentifiersASTParser.dropPartitionOperator(); }
+
+	public HiveASTParser_IdentifiersASTParser.havingClause_return havingClause() throws RecognitionException { return gIdentifiersASTParser.havingClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.columnRefOrderInParenthesis_return columnRefOrderInParenthesis() throws RecognitionException { return gIdentifiersASTParser.columnRefOrderInParenthesis(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceNotOperator_return precedenceNotOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceNotOperator(); }
+
+	public HiveASTParser_FromClauseASTParser.tableOrColumn_return tableOrColumn() throws RecognitionException { return gFromClauseASTParser.tableOrColumn(); }
+
+	public HiveASTParser_IdentifiersASTParser.groupingSetExpression_return groupingSetExpression() throws RecognitionException { return gIdentifiersASTParser.groupingSetExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceOrOperator_return precedenceOrOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceOrOperator(); }
+
+	public HiveASTParser_SelectClauseASTParser.window_specification_return window_specification() throws RecognitionException { return gSelectClauseASTParser.window_specification(); }
+
+	public HiveASTParser_IdentifiersASTParser.sql11ReservedKeywordsUsedAsFunctionName_return sql11ReservedKeywordsUsedAsFunctionName() throws RecognitionException { return gIdentifiersASTParser.sql11ReservedKeywordsUsedAsFunctionName(); }
+
+	public HiveASTParser_IdentifiersASTParser.intervalExpression_return intervalExpression() throws RecognitionException { return gIdentifiersASTParser.intervalExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceConcatenateOperator_return precedenceConcatenateOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceConcatenateOperator(); }
+
+	public HiveASTParser_IdentifiersASTParser.charSetStringLiteral_return charSetStringLiteral() throws RecognitionException { return gIdentifiersASTParser.charSetStringLiteral(); }
+
+	public HiveASTParser_FromClauseASTParser.partitionedTableFunction_return partitionedTableFunction() throws RecognitionException { return gFromClauseASTParser.partitionedTableFunction(); }
+
+	public HiveASTParser_SelectClauseASTParser.selectExpressionList_return selectExpressionList() throws RecognitionException { return gSelectClauseASTParser.selectExpressionList(); }
+
+	public HiveASTParser_IdentifiersASTParser.timeQualifiers_return timeQualifiers() throws RecognitionException { return gIdentifiersASTParser.timeQualifiers(); }
+
+	public HiveASTParser_IdentifiersASTParser.groupby_expression_return groupby_expression() throws RecognitionException { return gIdentifiersASTParser.groupby_expression(); }
+
+	public HiveASTParser_FromClauseASTParser.valueRowConstructor_return valueRowConstructor() throws RecognitionException { return gFromClauseASTParser.valueRowConstructor(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceStarOperator_return precedenceStarOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceStarOperator(); }
+
+	public HiveASTParser_SelectClauseASTParser.window_clause_return window_clause() throws RecognitionException { return gSelectClauseASTParser.window_clause(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceOrExpression_return precedenceOrExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceOrExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceStarExpression_return precedenceStarExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceStarExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.rollupStandard_return rollupStandard() throws RecognitionException { return gIdentifiersASTParser.rollupStandard(); }
+
+	public HiveASTParser_IdentifiersASTParser.expressions_return expressions() throws RecognitionException { return gIdentifiersASTParser.expressions(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceNotExpression_return precedenceNotExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceNotExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.constant_return constant() throws RecognitionException { return gIdentifiersASTParser.constant(); }
+
+	public HiveASTParser_SelectClauseASTParser.window_frame_return window_frame() throws RecognitionException { return gSelectClauseASTParser.window_frame(); }
+
+	public HiveASTParser_SelectClauseASTParser.selectClause_return selectClause() throws RecognitionException { return gSelectClauseASTParser.selectClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.partitionByClause_return partitionByClause() throws RecognitionException { return gIdentifiersASTParser.partitionByClause(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedencePlusOperator_return precedencePlusOperator() throws RecognitionException { return gIdentifiersASTParser.precedencePlusOperator(); }
 
 	public HiveASTParser_IdentifiersASTParser.floorDateQualifiers_return floorDateQualifiers() throws RecognitionException { return gIdentifiersASTParser.floorDateQualifiers(); }
 
+	public HiveASTParser_FromClauseASTParser.tableSource_return tableSource() throws RecognitionException { return gFromClauseASTParser.tableSource(); }
+
+	public HiveASTParser_IdentifiersASTParser.castExpression_return castExpression() throws RecognitionException { return gIdentifiersASTParser.castExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpression_return precedenceSimilarExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceAmpersandOperator_return precedenceAmpersandOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceAmpersandOperator(); }
+
+	public HiveASTParser_IdentifiersASTParser.distributeByClause_return distributeByClause() throws RecognitionException { return gIdentifiersASTParser.distributeByClause(); }
+
+	public HiveASTParser_SelectClauseASTParser.selectList_return selectList() throws RecognitionException { return gSelectClauseASTParser.selectList(); }
+
+	public HiveASTParser_IdentifiersASTParser.nonReserved_return nonReserved() throws RecognitionException { return gIdentifiersASTParser.nonReserved(); }
+
+	public HiveASTParser_FromClauseASTParser.aliasList_return aliasList() throws RecognitionException { return gFromClauseASTParser.aliasList(); }
+
+	public HiveASTParser_FromClauseASTParser.tableSample_return tableSample() throws RecognitionException { return gFromClauseASTParser.tableSample(); }
+
+	public HiveASTParser_FromClauseASTParser.subQuerySource_return subQuerySource() throws RecognitionException { return gFromClauseASTParser.subQuerySource(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseXorOperator_return precedenceBitwiseXorOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseXorOperator(); }
+
+	public HiveASTParser_IdentifiersASTParser.groupByEmpty_return groupByEmpty() throws RecognitionException { return gIdentifiersASTParser.groupByEmpty(); }
+
+	public HiveASTParser_IdentifiersASTParser.booleanValueTok_return booleanValueTok() throws RecognitionException { return gIdentifiersASTParser.booleanValueTok(); }
+
+	public HiveASTParser_FromClauseASTParser.tableBucketSample_return tableBucketSample() throws RecognitionException { return gFromClauseASTParser.tableBucketSample(); }
+
+	public HiveASTParser_IdentifiersASTParser.functionName_return functionName() throws RecognitionException { return gIdentifiersASTParser.functionName(); }
+
+	public HiveASTParser_FromClauseASTParser.virtualTableSource_return virtualTableSource() throws RecognitionException { return gFromClauseASTParser.virtualTableSource(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionPartNot_return precedenceSimilarExpressionPartNot(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionPartNot(t); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceAndOperator_return precedenceAndOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceAndOperator(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceAmpersandExpression_return precedenceAmpersandExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceAmpersandExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.floorExpression_return floorExpression() throws RecognitionException { return gIdentifiersASTParser.floorExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.timestampLiteral_return timestampLiteral() throws RecognitionException { return gIdentifiersASTParser.timestampLiteral(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceUnaryOperator_return precedenceUnaryOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceUnaryOperator(); }
+
+	public HiveASTParser_SelectClauseASTParser.window_defn_return window_defn() throws RecognitionException { return gSelectClauseASTParser.window_defn(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceBitwiseXorExpression_return precedenceBitwiseXorExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceBitwiseXorExpression(); }
+
+	public HiveASTParser_FromClauseASTParser.tableAlias_return tableAlias() throws RecognitionException { return gFromClauseASTParser.tableAlias(); }
+
+	public HiveASTParser_IdentifiersASTParser.whenExpression_return whenExpression() throws RecognitionException { return gIdentifiersASTParser.whenExpression(); }
+
+	public HiveASTParser_IdentifiersASTParser.partitionSpec_return partitionSpec() throws RecognitionException { return gIdentifiersASTParser.partitionSpec(); }
+
+	public HiveASTParser_IdentifiersASTParser.expression_return expression() throws RecognitionException { return gIdentifiersASTParser.expression(); }
+
+	public HiveASTParser_SelectClauseASTParser.window_range_expression_return window_range_expression() throws RecognitionException { return gSelectClauseASTParser.window_range_expression(); }
+
+	public HiveASTParser_IdentifiersASTParser.nullCondition_return nullCondition() throws RecognitionException { return gIdentifiersASTParser.nullCondition(); }
+
+	public HiveASTParser_FromClauseASTParser.valuesClause_return valuesClause() throws RecognitionException { return gFromClauseASTParser.valuesClause(); }
+
 	public HiveASTParser_IdentifiersASTParser.descFuncNames_return descFuncNames() throws RecognitionException { return gIdentifiersASTParser.descFuncNames(); }
 
-	public HiveASTParser_IdentifiersASTParser.expressions_return expressions() throws RecognitionException { return gIdentifiersASTParser.expressions(); }
+	public HiveASTParser_IdentifiersASTParser.intervalValue_return intervalValue() throws RecognitionException { return gIdentifiersASTParser.intervalValue(); }
+
+	public HiveASTParser_FromClauseASTParser.uniqueJoinTableSource_return uniqueJoinTableSource() throws RecognitionException { return gFromClauseASTParser.uniqueJoinTableSource(); }
+
+	public HiveASTParser_FromClauseASTParser.uniqueJoinToken_return uniqueJoinToken() throws RecognitionException { return gFromClauseASTParser.uniqueJoinToken(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionMain_return precedenceSimilarExpressionMain() throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionMain(); }
+
+	public HiveASTParser_IdentifiersASTParser.groupingSetExpressionMultiple_return groupingSetExpressionMultiple() throws RecognitionException { return gIdentifiersASTParser.groupingSetExpressionMultiple(); }
+
+	public HiveASTParser_FromClauseASTParser.uniqueJoinExpr_return uniqueJoinExpr() throws RecognitionException { return gFromClauseASTParser.uniqueJoinExpr(); }
+
+	public HiveASTParser_IdentifiersASTParser.sysFuncNames_return sysFuncNames() throws RecognitionException { return gIdentifiersASTParser.sysFuncNames(); }
+
+	public HiveASTParser_FromClauseASTParser.uniqueJoinSource_return uniqueJoinSource() throws RecognitionException { return gFromClauseASTParser.uniqueJoinSource(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceSimilarExpressionIn_return precedenceSimilarExpressionIn(CommonTree t) throws RecognitionException { return gIdentifiersASTParser.precedenceSimilarExpressionIn(t); }
+
+	public HiveASTParser_FromClauseASTParser.searchCondition_return searchCondition() throws RecognitionException { return gFromClauseASTParser.searchCondition(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceEqualOperator_return precedenceEqualOperator() throws RecognitionException { return gIdentifiersASTParser.precedenceEqualOperator(); }
+
+	public HiveASTParser_IdentifiersASTParser.groupingExpressionSingle_return groupingExpressionSingle() throws RecognitionException { return gIdentifiersASTParser.groupingExpressionSingle(); }
+
+	public HiveASTParser_IdentifiersASTParser.dateLiteral_return dateLiteral() throws RecognitionException { return gIdentifiersASTParser.dateLiteral(); }
+
+	public HiveASTParser_IdentifiersASTParser.identifier_return identifier() throws RecognitionException { return gIdentifiersASTParser.identifier(); }
+
+	public HiveASTParser_IdentifiersASTParser.precedenceUnaryPrefixExpression_return precedenceUnaryPrefixExpression() throws RecognitionException { return gIdentifiersASTParser.precedenceUnaryPrefixExpression(); }
+
+	public HiveASTParser_FromClauseASTParser.splitSample_return splitSample() throws RecognitionException { return gFromClauseASTParser.splitSample(); }
+
+	public HiveASTParser_IdentifiersASTParser.intervalQualifiers_return intervalQualifiers() throws RecognitionException { return gIdentifiersASTParser.intervalQualifiers(); }
+
+	public HiveASTParser_IdentifiersASTParser.intervalLiteral_return intervalLiteral() throws RecognitionException { return gIdentifiersASTParser.intervalLiteral(); }
+
+	public HiveASTParser_FromClauseASTParser.lateralView_return lateralView() throws RecognitionException { return gFromClauseASTParser.lateralView(); }
 
 	public final boolean synpred17_HiveASTParser() {
 		state.backtracking++;

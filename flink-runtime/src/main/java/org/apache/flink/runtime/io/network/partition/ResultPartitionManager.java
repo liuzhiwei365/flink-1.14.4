@@ -36,7 +36,7 @@ public class ResultPartitionManager implements ResultPartitionProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(ResultPartitionManager.class);
 
-    //提供ResultPartition 注册的容器
+    // 提供ResultPartition 注册的容器
     private final Map<ResultPartitionID, ResultPartition> registeredPartitions = new HashMap<>(16);
 
     private boolean isShutdown;

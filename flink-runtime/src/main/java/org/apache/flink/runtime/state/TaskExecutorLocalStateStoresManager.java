@@ -51,6 +51,7 @@ public class TaskExecutorLocalStateStoresManager {
      * This map holds all local state stores for tasks running on the task manager / executor that
      * own the instance of this. Maps from allocation id to all the subtask's local state stores.
      */
+    // 维护了每个子任务 的 本地状态存储
     @GuardedBy("lock")
     private final Map<AllocationID, Map<JobVertexSubtaskKey, OwnedTaskLocalStateStore>>
             taskStateStoresByAllocationID;
@@ -190,6 +191,7 @@ public class TaskExecutorLocalStateStoresManager {
         }
     }
 
+    // 清理指定 AllocationId 的本地状态
     public void releaseLocalStateForAllocationId(@Nonnull AllocationID allocationID) {
 
         if (LOG.isDebugEnabled()) {
@@ -197,7 +199,6 @@ public class TaskExecutorLocalStateStoresManager {
         }
 
         Map<JobVertexSubtaskKey, OwnedTaskLocalStateStore> cleanupLocalStores;
-
         synchronized (lock) {
             if (closed) {
                 return;
@@ -206,9 +207,11 @@ public class TaskExecutorLocalStateStoresManager {
         }
 
         if (cleanupLocalStores != null) {
+            // 从内存的数据结构上清理 本地状态
             doRelease(cleanupLocalStores.values());
         }
 
+        // 从物理磁盘上清理 本地状态
         cleanupAllocationBaseDirs(allocationID);
     }
 

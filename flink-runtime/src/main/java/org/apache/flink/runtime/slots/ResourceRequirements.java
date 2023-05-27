@@ -29,6 +29,8 @@ import java.util.Objects;
  * Represents the total resource requirements for a job, and the information required to connect to
  * the corresponding job master.
  */
+
+// 本类封装了 一个Job 所需的所有资源  和 该Job 的 JobMaster 连接地址
 public class ResourceRequirements implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.formats.avro.typeutils.AvroSerializerUpgradeTest
--------------------------------------------------------------------------------
-Tests run: 48, Failures: 0, Errors: 0, Skipped: 24, Time elapsed: 0.981 s - in org.apache.flink.formats.avro.typeutils.AvroSerializerUpgradeTest

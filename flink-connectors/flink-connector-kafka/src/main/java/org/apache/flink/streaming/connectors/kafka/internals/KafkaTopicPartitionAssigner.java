@@ -47,12 +47,15 @@ public class KafkaTopicPartitionAssigner {
      * @return index of the target subtask that the Kafka partition should be assigned to.
      */
     public static int assign(KafkaTopicPartition partition, int numParallelSubtasks) {
+        // 0x7FFFFFFF 就是  111 1111 1111  1111 1111 1111 1111 1111 （二进制的31位数）
         int startIndex =
                 ((partition.getTopic().hashCode() * 31) & 0x7FFFFFFF) % numParallelSubtasks;
 
         // here, the assumption is that the id of Kafka partitions are always ascending
         // starting from 0, and therefore can be used directly as the offset clockwise from the
         // start index
+
+        //  kafka 的 分区数最好设置成为 flink并行度的整数倍 ,这样才能更加均匀, 如果有多个topic ,那么多个topic最好都是并行度的整数倍
         return (startIndex + partition.getPartition()) % numParallelSubtasks;
     }
 }

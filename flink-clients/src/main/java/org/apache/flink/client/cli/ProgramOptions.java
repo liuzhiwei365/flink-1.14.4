@@ -65,23 +65,29 @@ public class ProgramOptions extends CommandLineOptions {
 
     private final SavepointRestoreSettings savepointSettings;
 
+    //  ProgramOptions  的构造的时候，会解析命令行参数
+    //  在解析的时候会利用 commons-cli （apache的）api
     protected ProgramOptions(CommandLine line) throws CliArgsException {
         super(line);
 
+        //  -c
         this.entryPointClass =
                 line.hasOption(CLASS_OPTION.getOpt())
                         ? line.getOptionValue(CLASS_OPTION.getOpt())
                         : null;
 
+        //  -j
         this.jarFilePath =
                 line.hasOption(JAR_OPTION.getOpt())
                         ? line.getOptionValue(JAR_OPTION.getOpt())
                         : null;
 
+        //  -a
         this.programArgs = extractProgramArgs(line);
 
         List<URL> classpaths = new ArrayList<URL>();
         if (line.hasOption(CLASSPATH_OPTION.getOpt())) {
+            // -C  指定类路径
             for (String path : line.getOptionValues(CLASSPATH_OPTION.getOpt())) {
                 try {
                     classpaths.add(new URL(path));
@@ -91,7 +97,7 @@ public class ProgramOptions extends CommandLineOptions {
             }
         }
         this.classpaths = classpaths;
-
+        // -p
         if (line.hasOption(PARALLELISM_OPTION.getOpt())) {
             String parString = line.getOptionValue(PARALLELISM_OPTION.getOpt());
             try {
@@ -107,6 +113,7 @@ public class ProgramOptions extends CommandLineOptions {
             parallelism = ExecutionConfig.PARALLELISM_DEFAULT;
         }
 
+        // -d
         detachedMode =
                 line.hasOption(DETACHED_OPTION.getOpt())
                         || line.hasOption(YARN_DETACHED_OPTION.getOpt());

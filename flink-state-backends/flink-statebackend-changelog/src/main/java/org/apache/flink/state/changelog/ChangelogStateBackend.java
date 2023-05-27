@@ -61,7 +61,7 @@ import static java.util.Collections.singletonList;
  * state changes to State Changelog.
  */
 
-//此状态后端保存底层DelegatedStateBend中的工作状态，并将状态更改转发到状态更改日志
+// 此状态后端保存底层DelegatedStateBend中的工作状态，并将状态更改转发到状态更改日志
 @Internal
 public class ChangelogStateBackend implements DelegatingStateBackend, ConfigurableStateBackend {
 

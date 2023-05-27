@@ -339,6 +339,7 @@ public class SourceCoordinatorContext<SplitT extends SourceSplit>
      * @param restoredCheckpointId the checkpoint that the task is recovered to.
      * @return A list of splits that needs to be added back to the {@link SplitEnumerator}.
      */
+    // 在一个source reader失败的时候将分片放回
     List<SplitT> getAndRemoveUncheckpointedAssignment(int subtaskId, long restoredCheckpointId) {
         return assignmentTracker.getAndRemoveUncheckpointedAssignment(
                 subtaskId, restoredCheckpointId);

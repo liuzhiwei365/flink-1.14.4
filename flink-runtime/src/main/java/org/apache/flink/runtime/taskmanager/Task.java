@@ -661,11 +661,10 @@ public class Task
 
             LOG.debug("Registering task at network: {}.", this);
             // 1.设置所有的  该task  ResultPartitionWriter 和 InputGate
-            // 2.所有RusultPartition 注册到 RusultPartitionManager
+            // 2.所有RusultPartition 注册到 ResultPartitionManager
             setupPartitionsAndGates(consumableNotifyingPartitionWriters, inputGates);
 
-
-            //发布订阅事件有关
+            // 发布订阅事件有关
             for (ResultPartitionWriter partitionWriter : consumableNotifyingPartitionWriters) {
                 taskEventDispatcher.registerPartition(partitionWriter.getPartitionId());
             }
@@ -738,7 +737,7 @@ public class Task
             // monitored for system exit (in addition to invoking thread itself monitored below).
             FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
             try {
-                // now load and instantiate the task's invokable code
+                // 主节点在向 TaskExecutor提交 任务的时候用的是 Task类来封装的 ,在这里才会进一步被细化成  TaskInvokable 的各个子类,有很多种
                 invokable =
                         loadAndInstantiateInvokable(
                                 userCodeClassLoader.asClassLoader(), nameOfInvokableClass, env);
@@ -766,6 +765,7 @@ public class Task
             // make sure the user code classloader is accessible thread-locally
             executingThread.setContextClassLoader(userCodeClassLoader.asClassLoader());
 
+            // 恢复该 invokable（任务） 的所有状态,并且开启处理信箱 run mailbox
             restoreAndInvoke(invokable);
 
             // make sure, we enter the catch block if the task leaves the invoke() method due
@@ -1331,7 +1331,7 @@ public class Task
             checkState(invokable instanceof CheckpointableTask, "invokable is not checkpointable");
             try {
                 ((CheckpointableTask) invokable)
-                        .triggerCheckpointAsync(checkpointMetaData, checkpointOptions)//main
+                        .triggerCheckpointAsync(checkpointMetaData, checkpointOptions) // main
                         .handle(
                                 (triggerResult, exception) -> {
                                     if (exception != null || !triggerResult) {

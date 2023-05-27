@@ -63,7 +63,7 @@ import static org.apache.flink.util.IOUtils.closeQuietly;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
-//负责一个StreamTask 中 ,各个算子的 snapshot
+// 负责一个StreamTask 中 ,各个算子的 snapshot
 class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
 
     private static final Logger LOG =
@@ -319,7 +319,8 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
             channelStateWriter.finishOutput(metadata.getCheckpointId());
         }
 
-        // Step (4): Take the state snapshot. This should be largely asynchronous, to not impact progress of the streaming topology
+        // Step (4): Take the state snapshot. This should be largely asynchronous, to not impact
+        // progress of the streaming topology
         // 第4步，异步执行checkpoint操作，checkpoint数据落地
         Map<OperatorID, OperatorSnapshotFutures> snapshotFutures =
                 new HashMap<>(operatorChain.getNumberOfOperators());
@@ -328,7 +329,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
             if (takeSnapshotSync(
                     snapshotFutures, metadata, metrics, options, operatorChain, isRunning)) {
 
-                //snapshotFutures 封装了所有执行snapshot的 future对象
+                // snapshotFutures 封装了所有执行snapshot的 future对象
                 finishAndReportAsync(
                         snapshotFutures,
                         metadata,

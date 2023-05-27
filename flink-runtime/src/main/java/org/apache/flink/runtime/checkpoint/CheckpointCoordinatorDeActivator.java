@@ -29,9 +29,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * checkpoint scheduler.
  */
 
-
-//CheckpointCoordinator 是通过CheckpointCoordinatorDeActivator监听器来监听job的状态
-//当job的状态是running的时候,coordinator会启动 checkpoint 服务,从而周期性触发checkpoint
+// CheckpointCoordinator 是通过CheckpointCoordinatorDeActivator监听器来监听job的状态
+// 当job的状态是running的时候,coordinator会启动 checkpoint 服务,从而周期性触发checkpoint
 public class CheckpointCoordinatorDeActivator implements JobStatusListener {
 
     private final CheckpointCoordinator coordinator;

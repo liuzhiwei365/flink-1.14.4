@@ -166,6 +166,7 @@ public final class ExceptionUtils {
         while (it != null) {
             String newMessage = throwableToMessage.apply(it);
             if (newMessage != null) {
+                // 利用反射 将Throwable 类 的 detailMessage字段重新设置一下
                 updateDetailMessageOfThrowable(it, newMessage);
             }
 

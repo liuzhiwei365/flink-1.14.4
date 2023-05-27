@@ -32,8 +32,9 @@ import org.apache.flink.util.AbstractID;
  * is used when a task requests a logical slot from the SlotPool. Multiple logical slot requests can
  * map to one physical slot request (due to slot sharing).
  *
- * 多个逻辑插槽请求可以映射到一个物理插槽请求(由于插槽共享)
+ * <p>多个逻辑插槽请求可以映射到一个物理插槽请求(由于插槽共享)
  */
+// 物理槽位的唯一标识
 public class AllocationID extends AbstractID {
 
     private static final long serialVersionUID = 1L;

@@ -116,12 +116,14 @@ class HeapSnapshotStrategy<K>
                                 UncompressedStreamCompressionDecorator.INSTANCE,
                                 keyGroupCompressionDecorator));
 
-        //SupplierWithException是Java Supplier可能抛出异常的函数接口，
+        // SupplierWithException是Java Supplier可能抛出异常的函数接口，
         // 第一个泛型参数是supplier执行返回类型，第二个参数为Supplier中函数抛出的异常
         final SupplierWithException<CheckpointStreamWithResultProvider, Exception>
                 checkpointStreamSupplier =
-                        localRecoveryConfig.isLocalRecoveryEnabled()//是否使用本地恢复
-                                        && !checkpointOptions.getCheckpointType().isSavepoint()//不是savepoint
+                        localRecoveryConfig.isLocalRecoveryEnabled() // 是否使用本地恢复
+                                        && !checkpointOptions
+                                                .getCheckpointType()
+                                                .isSavepoint() // 不是savepoint
                                 ? () ->
                                         createDuplicatingStream(
                                                 checkpointId,
@@ -142,17 +144,18 @@ class HeapSnapshotStrategy<K>
 
             snapshotCloseableRegistry.registerCloseable(streamWithResultProvider);
 
-            //输出数据流
+            // 输出数据流
             final CheckpointStreamFactory.CheckpointStateOutputStream localStream =
                     streamWithResultProvider.getCheckpointOutputStream();
 
-            //jdk DataOutputStream 的子类
-            final DataOutputViewStreamWrapper outView = new DataOutputViewStreamWrapper(localStream);
+            // jdk DataOutputStream 的子类
+            final DataOutputViewStreamWrapper outView =
+                    new DataOutputViewStreamWrapper(localStream);
 
-            //使用KeyedBackendSerializationProxy写cp数据
+            // 使用KeyedBackendSerializationProxy写cp数据
             serializationProxy.write(outView);
 
-            //存储每一个键组在流中的偏移量
+            // 存储每一个键组在流中的偏移量
             final long[] keyGroupRangeOffsets = new long[keyGroupRange.getNumberOfKeyGroups()];
 
             for (int keyGroupPos = 0;

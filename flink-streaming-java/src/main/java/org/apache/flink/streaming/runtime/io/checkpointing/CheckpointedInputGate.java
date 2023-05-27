@@ -52,7 +52,6 @@ import static org.apache.flink.util.concurrent.FutureUtils.assertNoException;
  * CheckpointBarrier} from the {@link InputGate}.
  */
 
-
 // 具有对齐功能的 InputGate
 @Internal
 public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEvent>, Closeable {
@@ -162,10 +161,10 @@ public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEven
         BufferOrEvent bufferOrEvent = next.get();
 
         if (bufferOrEvent.isEvent()) {
-            //如果是事件
+            // 如果是事件
             return handleEvent(bufferOrEvent);
         } else if (bufferOrEvent.isBuffer()) {
-            //根据buffer可以解析得到实际的用户数据
+            // 根据buffer可以解析得到实际的用户数据
             /**
              * https://issues.apache.org/jira/browse/FLINK-19537 This is not entirely true, as it's
              * ignoring the buffer/bytes accumulated in the record deserializers. If buffer is
@@ -177,7 +176,7 @@ public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEven
              * However the current is on average accurate and it might be just good enough (at least
              * for the time being).
              */
-            //如果是普通buffer,累计数据的字节
+            // 如果是普通buffer,累计数据的字节
             barrierHandler.addProcessedBytes(bufferOrEvent.getBuffer().getSize());
         }
         return next;
@@ -194,7 +193,7 @@ public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEven
                     bufferOrEvent.getChannelInfo());
         } else if (eventClass == EndOfData.class) { // 数据结束时发送的消息
             inputGate.acknowledgeAllRecordsProcessed(bufferOrEvent.getChannelInfo());
-        } else if (eventClass == EndOfPartitionEvent.class) {//上游的相关分区的数据结束
+        } else if (eventClass == EndOfPartitionEvent.class) { // 上游的相关分区的数据结束
             barrierHandler.processEndOfPartition(bufferOrEvent.getChannelInfo());
         } else if (eventClass == EventAnnouncement.class) {
             EventAnnouncement eventAnnouncement = (EventAnnouncement) bufferOrEvent.getEvent();

@@ -63,7 +63,7 @@ public abstract class AbstractKeyedStateBackend<K>
     private final ArrayList<KeySelectionListener<K>> keySelectionListeners;
 
     /** So that we can give out state when the user uses the same key. */
-    private final HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName;//核心结构
+    private final HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName; // 核心结构
 
     /** For caching the last accessed partitioned state. */
     private String lastName;
@@ -308,7 +308,7 @@ public abstract class AbstractKeyedStateBackend<K>
 
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
 
-            //如果开启QueryableState
+            // 如果开启QueryableState
             publishQueryableStateIfEnabled(stateDescriptor, kvState);
         }
         return (S) kvState;

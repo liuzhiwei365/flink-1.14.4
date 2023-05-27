@@ -187,6 +187,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 SchedulerUtils.createCheckpointIDCounterIfCheckpointingIsEnabled(
                         jobGraph, checkNotNull(checkpointRecoveryFactory));
 
+        // 构建 ExecutionGraph  内部有恢复checkpoint 的逻辑
         this.executionGraph =
                 createAndRestoreExecutionGraph(
                         completedCheckpointStore,
@@ -196,6 +197,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                         mainThreadExecutor,
                         jobStatusListener);
 
+        // 从执行图中 拿到调度拓扑
         this.schedulingTopology = executionGraph.getSchedulingTopology();
 
         stateLocationRetriever =
@@ -208,8 +210,10 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         this.executionGraphHandler =
                 new ExecutionGraphHandler(executionGraph, log, ioExecutor, this.mainThreadExecutor);
 
+        // 用来构造算子协调者
         this.operatorCoordinatorHandler =
                 new DefaultOperatorCoordinatorHandler(executionGraph, this::handleGlobalFailure);
+
         operatorCoordinatorHandler.initializeOperatorCoordinators(this.mainThreadExecutor);
 
         this.exceptionHistory =
@@ -358,18 +362,22 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 .forEach(ExecutionVertex::resetForNewExecution);
     }
 
+    // 恢复所有子任务状态
     protected void restoreState(
             final Set<ExecutionVertexID> vertices, final boolean isGlobalRecovery)
             throws Exception {
         final CheckpointCoordinator checkpointCoordinator =
                 executionGraph.getCheckpointCoordinator();
 
+        // 当快照协调者为null, 只需要恢复算子协调者的相关信息;不需要恢复快照协调者的信息,也没法恢复
         if (checkpointCoordinator == null) {
             // batch failover case - we only need to notify the OperatorCoordinators,
             // not do any actual state restore
             if (isGlobalRecovery) {
+                // 批作业仅仅只需要通知所有的算子协调者，而不需要做实际的状态恢复
                 notifyCoordinatorsOfEmptyGlobalRestore();
             } else {
+                // 通知 算子协调者的 子任务恢复
                 notifyCoordinatorsOfSubtaskRestore(
                         getInvolvedExecutionJobVerticesAndSubtasks(vertices),
                         OperatorCoordinator.NO_CHECKPOINT);
@@ -386,12 +394,14 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 new CheckpointException(CheckpointFailureReason.JOB_FAILOVER_REGION));
 
         if (isGlobalRecovery) {
+            // 这种情况只需要恢复快照状态
             final Set<ExecutionJobVertex> jobVerticesToRestore =
                     getInvolvedExecutionJobVertices(vertices);
 
             checkpointCoordinator.restoreLatestCheckpointedStateToAll(jobVerticesToRestore, true);
 
         } else {
+            // 这种情况, 快照状态 和 算子协调者的状态 都得恢复
             final Map<ExecutionJobVertex, IntArrayList> subtasksToRestore =
                     getInvolvedExecutionJobVerticesAndSubtasks(vertices);
 
@@ -412,6 +422,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         }
     }
 
+    //通知算子协调者的恢复
     private void notifyCoordinatorsOfSubtaskRestore(
             final Map<ExecutionJobVertex, IntArrayList> restoredSubtasks, final long checkpointId) {
 
@@ -420,6 +431,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             final ExecutionJobVertex jobVertex = vertexSubtasks.getKey();
             final IntArrayList subtasks = vertexSubtasks.getValue();
 
+            // 得到 该 jobVertex 的所有算子协调者
             final Collection<OperatorCoordinatorHolder> coordinators =
                     jobVertex.getOperatorCoordinators();
             if (coordinators.isEmpty()) {
@@ -430,6 +442,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 final int subtask =
                         subtasks.removeLast(); // this is how IntArrayList implements iterations
                 for (final OperatorCoordinatorHolder opCoordinator : coordinators) {
+                    // 依次让每个算子协调者恢复其 子任务的 在主节点的状态
                     opCoordinator.subtaskReset(subtask, checkpointId);
                 }
             }
@@ -455,6 +468,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         return tasks;
     }
 
+    // 数据结构的整理，得到所有涉及的ExecutionJobVertex 及其子任务编号 列表
     private Map<ExecutionJobVertex, IntArrayList> getInvolvedExecutionJobVerticesAndSubtasks(
             final Set<ExecutionVertexID> executionVertices) {
 
@@ -581,7 +595,9 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
     @Override
     public final void startScheduling() {
         mainThreadExecutor.assertRunningInMainThread();
+        // 注册job的监控信息
         registerJobMetrics();
+        // 启动所有的算子协调者
         operatorCoordinatorHandler.startAllOperatorCoordinators();
         startSchedulingInternal();
     }
@@ -857,7 +873,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         }
 
         return checkpointCoordinator
-                .triggerSavepoint(targetDirectory)
+                .triggerSavepoint(targetDirectory) // 核心
                 .thenApply(CompletedCheckpoint::getExternalPointer)
                 .handleAsync(
                         (path, throwable) -> {
@@ -892,6 +908,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
     @Override
     public void startCheckpointScheduler() {
         mainThreadExecutor.assertRunningInMainThread();
+        // 要注意快照协调者 和 算子协调者的 不同
         final CheckpointCoordinator checkpointCoordinator = getCheckpointCoordinator();
 
         if (checkpointCoordinator == null) {

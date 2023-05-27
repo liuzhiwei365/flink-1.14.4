@@ -59,6 +59,7 @@ import static org.apache.flink.table.client.cli.CliClient.DEFAULT_TERMINAL_FACTO
  *
  * <p>Make sure that the FLINK_CONF_DIR environment variable is set.
  */
+// sql 的入口
 public class SqlClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(SqlClient.class);
@@ -132,6 +133,7 @@ public class SqlClient {
 
         try (CliClient cli = new CliClient(terminalFactory, sessionId, executor, historyFilePath)) {
             if (options.getInitFile() != null) {
+                // 执行sql 脚本文件
                 boolean success = cli.executeInitialization(readFromURL(options.getInitFile()));
                 if (!success) {
                     System.out.println(
@@ -148,8 +150,10 @@ public class SqlClient {
             }
 
             if (!hasSqlFile && !hasUpdateStatement) {
+                // 交互式方式
                 cli.executeInInteractiveMode();
             } else {
+                //非交互式方式 ，执行一个文件中所有的sql
                 cli.executeInNonInteractiveMode(readExecutionContent());
             }
         }

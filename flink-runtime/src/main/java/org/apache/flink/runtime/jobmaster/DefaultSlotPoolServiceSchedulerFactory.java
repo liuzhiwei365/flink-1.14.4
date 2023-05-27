@@ -150,6 +150,8 @@ public final class DefaultSlotPoolServiceSchedulerFactory
 
         JobManagerOptions.SchedulerType schedulerType =
                 ClusterOptions.getSchedulerType(configuration);
+
+        // 即使是 调度类型是 Adaptive类型 ,但是是批作业的话 ,也是会重新回退为 Ng 调度类型
         if (schedulerType == JobManagerOptions.SchedulerType.Adaptive && jobType == JobType.BATCH) {
             LOG.info(
                     "Adaptive Scheduler configured, but Batch job detected. Changing scheduler type to NG / DefaultScheduler.");

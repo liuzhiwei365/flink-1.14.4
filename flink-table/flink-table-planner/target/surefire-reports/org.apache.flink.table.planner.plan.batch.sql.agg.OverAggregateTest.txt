@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.sql.agg.OverAggregateTest
--------------------------------------------------------------------------------
-Tests run: 28, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.068 s - in org.apache.flink.table.planner.plan.batch.sql.agg.OverAggregateTest

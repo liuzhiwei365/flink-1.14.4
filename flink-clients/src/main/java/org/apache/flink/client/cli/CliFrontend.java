@@ -210,6 +210,7 @@ public class CliFrontend {
         final ApplicationConfiguration applicationConfiguration =
                 new ApplicationConfiguration(
                         programOptions.getProgramArgs(), programOptions.getEntryPointClassName());
+        // 部署集群
         deployer.run(effectiveConfiguration, applicationConfiguration);
     }
 
@@ -243,6 +244,7 @@ public class CliFrontend {
         LOG.debug("Effective executor configuration: {}", effectiveConfiguration);
 
         try (PackagedProgram program = getPackagedProgram(programOptions, effectiveConfiguration)) {
+            // 执行用户代码
             executeProgram(effectiveConfiguration, program);
         }
     }
@@ -1050,10 +1052,10 @@ public class CliFrontend {
         try {
             // do action
             switch (action) {
-                case ACTION_RUN:
+                case ACTION_RUN: // 运行一个flink 作业,  内部执行 执行用户代码
                     run(params);
                     return 0;
-                case ACTION_RUN_APPLICATION:
+                case ACTION_RUN_APPLICATION: // 运行一个flink 集群, 内部开始部署集群
                     runApplication(params);
                     return 0;
                 case ACTION_LIST:

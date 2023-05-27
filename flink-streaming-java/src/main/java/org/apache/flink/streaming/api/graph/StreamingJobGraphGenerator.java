@@ -126,9 +126,29 @@ public class StreamingJobGraphGenerator {
 
     private final List<StreamEdge> physicalEdgesInOrder;
 
+    /*
+      如果StreamGraph  的结构如下:
+      1  -> 2 -> 3   ---   4 -> 5    ---   6 -> 7 -> 8 ->9
+
+      则map 中结构为:
+
+           1   ->  1
+                   2
+                   3
+
+           4   ->  4
+                   5
+
+           6   ->  7
+                   8
+                   9
+                   10
+    */
     private final Map<Integer, Map<Integer, StreamConfig>> chainedConfigs;
 
+    // 每个 JobVertex 的配置
     private final Map<Integer, StreamConfig> vertexConfigs;
+
     private final Map<Integer, String> chainedNames;
 
     private final Map<Integer, ResourceSpec> chainedMinResources;
@@ -159,13 +179,26 @@ public class StreamingJobGraphGenerator {
 
     private JobGraph createJobGraph() {
         preValidate();
-        jobGraph.setJobType(streamGraph.getJobType());
+        jobGraph.setJobType(streamGraph.getJobType()); // batch, streaming
 
         jobGraph.enableApproximateLocalRecovery(
                 streamGraph.getCheckpointConfig().isApproximateLocalRecoveryEnabled());
 
-        // Generate deterministic hashes for the nodes in order to identify them across
-        // submission iff they didn't change.
+        /*
+         这里生成了3个对象，一个是hashes，一个是legacyHashes，还有一个是chainedOperatorHashes
+
+             1 hashes的数据类型是映射（Map），键为节点id，值为哈希值
+
+             2 legacyHashes 的数据类型和含义与 hashes的一样，只不过它的哈希值是由用户指定的userHash加上
+                另一种算法计算出来的，这是为了显式地指定哈希值，以免版本变动导致哈希值不一致 （list中只有一个元素）
+
+                 会利用 StreamGraphUserHashHasher
+                 和  Transformation 对象的 userProvidedNodeHash成员变量  来生成 hash
+
+
+             3 chainedOperatorHashes的数据类型为Map＜Integer，Tuple2＜byte［］，byte］＞＞，其值是
+                一个列表（List），是将链接在一起的算子的哈希值放在同一个列表中进行维护
+        */
         Map<Integer, byte[]> hashes =
                 defaultStreamGraphHasher.traverseStreamGraphAndGenerateHashes(streamGraph);
 
@@ -177,6 +210,7 @@ public class StreamingJobGraphGenerator {
 
         setChaining(hashes, legacyHashes);
 
+        // 不能chain 的边,就是 物理上的边
         setPhysicalEdges();
 
         setSlotSharingAndCoLocation();
@@ -295,26 +329,37 @@ public class StreamingJobGraphGenerator {
     private Map<Integer, OperatorChainInfo> buildChainedInputsAndGetHeadInputs(
             final Map<Integer, byte[]> hashes, final List<Map<Integer, byte[]>> legacyHashes) {
 
+        // 维护所有的 连接起来的边 的 源信息
         final Map<Integer, ChainedSourceInfo> chainedSources = new HashMap<>();
+
         final Map<Integer, OperatorChainInfo> chainEntryPoints = new HashMap<>();
 
+        // 遍历所有的source node
         for (Integer sourceNodeId : streamGraph.getSourceIDs()) {
             final StreamNode sourceNode = streamGraph.getStreamNode(sourceNodeId);
 
+            // 当 source node 的算子工厂属性正常 且 出边 为 1 ,才走流程
             if (sourceNode.getOperatorFactory() instanceof SourceOperatorFactory
                     && sourceNode.getOutEdges().size() == 1) {
-                // as long as only NAry ops support this chaining, we need to skip the other parts
-                final StreamEdge sourceOutEdge = sourceNode.getOutEdges().get(0);
+
+                final StreamEdge sourceOutEdge =
+                        sourceNode.getOutEdges().get(0); // 前面已经判断过,所以这里只有一个元素
                 final StreamNode target = streamGraph.getStreamNode(sourceOutEdge.getTargetId());
+
                 final ChainingStrategy targetChainingStrategy =
                         target.getOperatorFactory().getChainingStrategy();
 
+                // 如果下游算子 的策略是 HEAD_WITH_SOURCES, 且可以链起来
                 if (targetChainingStrategy == ChainingStrategy.HEAD_WITH_SOURCES
                         && isChainableInput(sourceOutEdge, streamGraph)) {
+
                     final OperatorID opId = new OperatorID(hashes.get(sourceNodeId));
                     final StreamConfig.SourceInputConfig inputConfig =
                             new StreamConfig.SourceInputConfig(sourceOutEdge);
+
+                    // 构造 JobVertx 对应的 StreamConfig
                     final StreamConfig operatorConfig = new StreamConfig(new Configuration());
+                    // 设置 JobVertx 对应的 StreamConfig
                     setVertexConfig(
                             sourceNodeId,
                             operatorConfig,
@@ -324,11 +369,15 @@ public class StreamingJobGraphGenerator {
                     operatorConfig.setChainIndex(0); // sources are always first
                     operatorConfig.setOperatorID(opId);
                     operatorConfig.setOperatorName(sourceNode.getOperatorName());
+
+                    // 更新 连接起来的边 的 源信息
                     chainedSources.put(
                             sourceNodeId, new ChainedSourceInfo(operatorConfig, inputConfig));
 
                     final SourceOperatorFactory<?> sourceOpFact =
                             (SourceOperatorFactory<?>) sourceNode.getOperatorFactory();
+
+                    // 从 sourceNode 中拿出协调者 信息
                     final OperatorCoordinator.Provider coord =
                             sourceOpFact.getCoordinatorProvider(sourceNode.getOperatorName(), opId);
 
@@ -342,6 +391,7 @@ public class StreamingJobGraphGenerator {
                                                     legacyHashes,
                                                     chainedSources,
                                                     streamGraph));
+                    // 把算子协调者设置给 算子链
                     chainInfo.addCoordinatorProvider(coord);
                     continue;
                 }
@@ -364,8 +414,12 @@ public class StreamingJobGraphGenerator {
     private void setChaining(Map<Integer, byte[]> hashes, List<Map<Integer, byte[]>> legacyHashes) {
         // we separate out the sources that run as inputs to another operator (chained inputs)
         // from the sources that needs to run as the main (head) operator.
+
+        // 遍历并缓存所有的sourceNode以及生成后面用作checkpoint的SourceCoordinatorProvider
         final Map<Integer, OperatorChainInfo> chainEntryPoints =
                 buildChainedInputsAndGetHeadInputs(hashes, legacyHashes);
+
+        // 把 chainEntryPoints 排序
         final Collection<OperatorChainInfo> initialEntryPoints =
                 chainEntryPoints.entrySet().stream()
                         .sorted(Comparator.comparing(Map.Entry::getKey))
@@ -374,7 +428,7 @@ public class StreamingJobGraphGenerator {
 
         // iterate over a copy of the values, because this map gets concurrently modified
         for (OperatorChainInfo info : initialEntryPoints) {
-            createChain(
+            createChain( // 递归方法
                     info.getStartNodeId(),
                     1, // operators start at position 1 because 0 is for chained source inputs
                     info,
@@ -382,6 +436,7 @@ public class StreamingJobGraphGenerator {
         }
     }
 
+    // 递归 的方法
     private List<StreamEdge> createChain(
             final Integer currentNodeId,
             final int chainIndex,
@@ -391,13 +446,16 @@ public class StreamingJobGraphGenerator {
         Integer startNodeId = chainInfo.getStartNodeId();
         if (!builtVertices.contains(startNodeId)) {
 
+            // 物理出边
             List<StreamEdge> transitiveOutEdges = new ArrayList<StreamEdge>();
-
+            // 可链出边
             List<StreamEdge> chainableOutputs = new ArrayList<StreamEdge>();
+            // 不可链出边
             List<StreamEdge> nonChainableOutputs = new ArrayList<StreamEdge>();
 
             StreamNode currentNode = streamGraph.getStreamNode(currentNodeId);
 
+            // 遍历 当前 Node 的 所有出边 ,分类
             for (StreamEdge outEdge : currentNode.getOutEdges()) {
                 if (isChainable(outEdge, streamGraph)) {
                     chainableOutputs.add(outEdge);
@@ -406,25 +464,37 @@ public class StreamingJobGraphGenerator {
                 }
             }
 
+            // 若上面streamNode可链则继续循环调用createChain
+
+            // 此时获取下一个streamNodeId重复上述步骤并addAll所有不可链的edge用作后面connect直至当前的streamNode的outEdge不可链
             for (StreamEdge chainable : chainableOutputs) {
                 transitiveOutEdges.addAll(
-                        createChain(
+                        createChain( // 递归 继续这个链
                                 chainable.getTargetId(),
                                 chainIndex + 1,
                                 chainInfo,
                                 chainEntryPoints));
             }
 
+            // 一： 不可链 但是下游有streamNode
+            // 二： 不可链 下游无streamNode，属于end stream node
+            // 三： 不可链 下游已经创建完JobVertex
+
             for (StreamEdge nonChainable : nonChainableOutputs) {
                 transitiveOutEdges.add(nonChainable);
-                createChain(
+                createChain( // 递归 重新开启一个链
                         nonChainable.getTargetId(),
-                        1, // operators start at position 1 because 0 is for chained source inputs
+                        1,
                         chainEntryPoints.computeIfAbsent(
                                 nonChainable.getTargetId(),
                                 (k) -> chainInfo.newChain(nonChainable.getTargetId())),
                         chainEntryPoints);
             }
+
+            // 代码第一次走到这里说明createChain遍历到最后一个streamNode (*****)
+
+            // 反 向 创建  JobVertx
+            // 首先遍历出chainableOutputs  并merge当前链中所有StreamNode的资源（比如cpuCores，HeapMemory等）
 
             chainedNames.put(
                     currentNodeId,
@@ -432,6 +502,7 @@ public class StreamingJobGraphGenerator {
                             currentNodeId,
                             chainableOutputs,
                             Optional.ofNullable(chainEntryPoints.get(currentNodeId))));
+
             chainedMinResources.put(
                     currentNodeId, createChainedMinResources(currentNodeId, chainableOutputs));
             chainedPreferredResources.put(
@@ -443,6 +514,7 @@ public class StreamingJobGraphGenerator {
                             currentNodeId,
                             streamGraph.getStreamNode(currentNodeId).getOperatorName());
 
+            // 缓存所有inputFormat（比如jdbcinputformat，hbaseInputFormat等）
             if (currentNode.getInputFormat() != null) {
                 getOrCreateFormatContainer(startNodeId)
                         .addInputFormat(currentOperatorId, currentNode.getInputFormat());
@@ -453,6 +525,7 @@ public class StreamingJobGraphGenerator {
                         .addOutputFormat(currentOperatorId, currentNode.getOutputFormat());
             }
 
+            // 如果当前节点是开头节点 ,则 创建JobVertx 并返回StreamConfig ,否则先创建一个空的StreamConfig
             StreamConfig config =
                     currentNodeId.equals(startNodeId)
                             ? createJobVertex(startNodeId, chainInfo)
@@ -465,26 +538,36 @@ public class StreamingJobGraphGenerator {
                     nonChainableOutputs,
                     chainInfo.getChainedSources());
 
-            if (currentNodeId.equals(startNodeId)) {
+            /*
+            如果StreamGraph  的结构如下:
+               1  -> 2 -> 3   ---   4 -> 5    ---   6 -> 7 -> 8 ->9
 
+               则 这里的 startNodeId 依次是  6  4  1  (请理解反向)
+            */
+            if (currentNodeId.equals(startNodeId)) {
+                // 如果当前节点是  开头节点
                 config.setChainStart();
                 config.setChainIndex(chainIndex);
                 config.setOperatorName(streamGraph.getStreamNode(currentNodeId).getOperatorName());
 
                 for (StreamEdge edge : transitiveOutEdges) {
+                    // 通过 StreamEdge 构建出JobEdge, 创建IntermediateDataSet, 用来将JobVertex 和JobEdge 相连
+                    // JobGraph 比StreamGraph 多了一个IntermediateDataSet 元素
                     connect(startNodeId, edge);
                 }
 
                 config.setOutEdgesInOrder(transitiveOutEdges);
                 config.setTransitiveChainedTaskConfigs(chainedConfigs.get(startNodeId));
-
             } else {
+                // 如果当前节点是   非开头节点
                 chainedConfigs.computeIfAbsent(
-                        startNodeId, k -> new HashMap<Integer, StreamConfig>());
+                        startNodeId, k -> new HashMap<Integer, StreamConfig>()); // 为什么会在这里有 new
+                // Hashmap呢？因为是从后向前遍历的,开头节点是最后访问
 
                 config.setChainIndex(chainIndex);
                 StreamNode node = streamGraph.getStreamNode(currentNodeId);
                 config.setOperatorName(node.getOperatorName());
+                // 将当前节点的 StreamConfig 添加到该chain 的 config集合中
                 chainedConfigs.get(startNodeId).put(currentNodeId, config);
             }
 
@@ -771,7 +854,7 @@ public class StreamingJobGraphGenerator {
 
     private void connect(Integer headOfChain, StreamEdge edge) {
 
-        physicalEdgesInOrder.add(edge);
+        physicalEdgesInOrder.add(edge); // 为什么是物理的边呢? 因为 JobVertx 与 JobVertx 之间一定有shuffle
 
         Integer downStreamVertexID = edge.getTargetId();
 
@@ -802,6 +885,12 @@ public class StreamingJobGraphGenerator {
 
         checkBufferTimeout(resultPartitionType, edge);
 
+        /*
+          JobGraph 的 结构
+          JobVertex A->  IntermediateDataSet -> JobEdge -> JobVertex B
+
+          connectNewDataSetAsInput 连接的 是  IntermediateDataSet(中间数据集一定是shuffle的数据) 与 JobEdge
+        */
         JobEdge jobEdge;
         if (partitioner.isPointwise()) {
             jobEdge =
@@ -812,6 +901,7 @@ public class StreamingJobGraphGenerator {
                     downStreamVertex.connectNewDataSetAsInput(
                             headVertex, DistributionPattern.ALL_TO_ALL, resultPartitionType);
         }
+
         // set strategy name so that web interface can show it.
         jobEdge.setShipStrategyName(partitioner.toString());
         jobEdge.setDownstreamSubtaskStateMapper(partitioner.getDownstreamSubtaskStateMapper());

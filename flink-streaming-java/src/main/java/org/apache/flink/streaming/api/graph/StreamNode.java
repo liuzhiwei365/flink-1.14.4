@@ -80,6 +80,7 @@ public class StreamNode {
 
     private final Class<? extends TaskInvokable> jobVertexClass;
 
+    // 维护输入输出格式
     private InputFormat<?, ?> inputFormat;
     private OutputFormat<?> outputFormat;
 

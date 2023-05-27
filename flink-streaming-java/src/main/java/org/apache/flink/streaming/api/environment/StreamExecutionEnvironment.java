@@ -927,7 +927,7 @@ public class StreamExecutionEnvironment {
                 .getOptional(DeploymentOptions.JOB_LISTENERS)
                 .ifPresent(listeners -> registerCustomListeners(classLoader, listeners));
         configuration
-                .getOptional(PipelineOptions.CACHED_FILES)
+                .getOptional(PipelineOptions.CACHED_FILES) // pipeline.cached-files
                 .ifPresent(
                         f -> {
                             this.cacheFile.clear();
@@ -1894,6 +1894,7 @@ public class StreamExecutionEnvironment {
      * @return The result of the job execution, containing elapsed time and accumulators.
      * @throws Exception which occurs during job execution.
      */
+    // 执行flink 逻辑 的 入口之一
     public JobExecutionResult execute() throws Exception {
         return execute(getStreamGraph());
     }
@@ -2021,6 +2022,8 @@ public class StreamExecutionEnvironment {
      *     on submission succeeded.
      * @throws Exception which occurs during job execution.
      */
+
+    // 诸多执行的入口 都会来这里
     @Internal
     public JobClient executeAsync(StreamGraph streamGraph) throws Exception {
         checkNotNull(streamGraph, "StreamGraph cannot be null.");
@@ -2028,6 +2031,7 @@ public class StreamExecutionEnvironment {
                 configuration.get(DeploymentOptions.TARGET),
                 "No execution.target specified in your configuration file.");
 
+        // SPI 加载 PipelineExecutorFactory
         final PipelineExecutorFactory executorFactory =
                 executorServiceLoader.getExecutorFactory(configuration);
 
@@ -2036,9 +2040,22 @@ public class StreamExecutionEnvironment {
                 "Cannot find compatible factory for specified execution.target (=%s)",
                 configuration.get(DeploymentOptions.TARGET));
 
+        /*
+           RemoteExecutorFactory
+           WebSubmissionExecutorFactory
+           YarnJobClusterExecutorFactory
+           LocalExecutorFactory
+           EmbeddedExecutorFactory
+           MiniClusterPipelineExecutorFactory
+
+           YarnSessionClusterExecutorFactory
+           KubernetesSessionClusterExecutorFactory
+           // 作业 执行方式如上
+        */
         CompletableFuture<JobClient> jobClientFuture =
                 executorFactory
                         .getExecutor(configuration)
+                        // per job  YarnJobClusterExecutor
                         .execute(streamGraph, configuration, userClassloader);
 
         try {
@@ -2111,7 +2128,7 @@ public class StreamExecutionEnvironment {
                 .setChangelogStateBackendEnabled(changelogStateBackendEnabled)
                 .setSavepointDir(defaultSavepointDirectory)
                 .setChaining(isChainingEnabled)
-                .setUserArtifacts(cacheFile)
+                .setUserArtifacts(cacheFile) // 用户jar
                 .setTimeCharacteristic(timeCharacteristic)
                 .setDefaultBufferTimeout(bufferTimeout)
                 .setSlotSharingGroupResource(slotSharingGroupResources);

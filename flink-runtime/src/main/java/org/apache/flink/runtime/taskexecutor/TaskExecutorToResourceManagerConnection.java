@@ -70,6 +70,7 @@ public class TaskExecutorToResourceManagerConnection
                     registrationListener,
             TaskExecutorRegistration taskExecutorRegistration) {
 
+        // resourceManagerAddress 连接的时候需要用到
         super(log, resourceManagerAddress, resourceManagerId, executor);
 
         this.rpcService = checkNotNull(rpcService);

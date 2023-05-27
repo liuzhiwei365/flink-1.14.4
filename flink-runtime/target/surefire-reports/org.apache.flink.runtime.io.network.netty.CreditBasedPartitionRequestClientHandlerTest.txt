@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.runtime.io.network.netty.CreditBasedPartitionRequestClientHandlerTest
--------------------------------------------------------------------------------
-Tests run: 17, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 6.496 s - in org.apache.flink.runtime.io.network.netty.CreditBasedPartitionRequestClientHandlerTest

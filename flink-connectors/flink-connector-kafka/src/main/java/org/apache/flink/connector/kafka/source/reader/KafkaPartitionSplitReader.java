@@ -217,6 +217,7 @@ public class KafkaPartitionSplitReader
     public void notifyCheckpointComplete(
             Map<TopicPartition, OffsetAndMetadata> offsetsToCommit,
             OffsetCommitCallback offsetCommitCallback) {
+        // 在checkpoint 完成的时候异步提交偏移量
         consumer.commitAsync(offsetsToCommit, offsetCommitCallback);
     }
 

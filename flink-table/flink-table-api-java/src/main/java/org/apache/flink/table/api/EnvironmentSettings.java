@@ -134,6 +134,7 @@ public class EnvironmentSettings {
     /** Creates an instance of {@link EnvironmentSettings} from configuration. */
     public static EnvironmentSettings fromConfiguration(ReadableConfig configuration) {
         final Builder builder = new Builder();
+        //execution.runtime-mode 分为流模式 和批模式
         switch (configuration.get(RUNTIME_MODE)) {
             case STREAMING:
                 builder.inStreamingMode();

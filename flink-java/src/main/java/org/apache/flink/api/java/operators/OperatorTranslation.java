@@ -47,6 +47,7 @@ public class OperatorTranslation {
         List<GenericDataSinkBase<?>> planSinks = new ArrayList<>();
 
         for (DataSink<?> sink : sinks) {
+            // 循环 调用
             planSinks.add(translate(sink));
         }
 
@@ -55,6 +56,7 @@ public class OperatorTranslation {
         return p;
     }
 
+    // 会被反复调用
     private <T> GenericDataSinkBase<T> translate(DataSink<T> sink) {
 
         // translate the input recursively

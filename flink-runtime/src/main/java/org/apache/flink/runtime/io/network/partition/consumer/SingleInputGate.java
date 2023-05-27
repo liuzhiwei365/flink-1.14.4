@@ -258,7 +258,7 @@ public class SingleInputGate extends IndexedInputGate {
         checkState(
                 this.bufferPool == null,
                 "Bug in input gate setup logic: Already registered buffer pool.");
-        //创建LocalBufferPool, 用于向NetworkBufferPool申请Buffer内存空间
+        // 创建LocalBufferPool, 用于向NetworkBufferPool申请Buffer内存空间
         BufferPool bufferPool = bufferPoolFactory.get();
         setBufferPool(bufferPool);
 
@@ -295,9 +295,9 @@ public class SingleInputGate extends IndexedInputGate {
                                             + "channels [%s].",
                                     inputChannels.size(), numberOfInputChannels));
                 }
-                //将所有的RecoveredInputChannel 转化为 InputChannel
+                // 将所有的RecoveredInputChannel 转化为 InputChannel
                 convertRecoveredInputChannels();
-                //所有的inputChannel 请求上游 subResultPartition的连接
+                // 所有的inputChannel 请求上游 subResultPartition的连接
                 internalRequestPartitions();
             }
 
@@ -329,7 +329,7 @@ public class SingleInputGate extends IndexedInputGate {
     private void internalRequestPartitions() {
         for (InputChannel inputChannel : inputChannels.values()) {
             try {
-                //不同的inputChannel 的 请求的 subPartition 编号相同; 因为他们是上游不同task的相同的编号
+                // 不同的inputChannel 的 请求的 subPartition 编号相同; 因为他们是上游不同task的相同的编号
                 inputChannel.requestSubpartition(consumedSubpartitionIndex);
             } catch (Throwable t) {
                 inputChannel.setError(t);
@@ -473,7 +473,7 @@ public class SingleInputGate extends IndexedInputGate {
         // Next allocate the exclusive buffers per channel when the number of exclusive buffer is
         // larger than 0.
         synchronized (requestLock) {
-            //给每个channel 设置独占的buffer
+            // 给每个channel 设置独占的buffer
             for (InputChannel inputChannel : inputChannels.values()) {
                 inputChannel.setup();
             }
@@ -683,7 +683,7 @@ public class SingleInputGate extends IndexedInputGate {
         }
 
         Optional<InputWithData<InputChannel, BufferAndAvailability>> next =
-                waitAndGetNextData(blocking); //main
+                waitAndGetNextData(blocking); // main
 
         if (!next.isPresent()) {
             return Optional.empty();
@@ -691,7 +691,7 @@ public class SingleInputGate extends IndexedInputGate {
 
         InputWithData<InputChannel, BufferAndAvailability> inputWithData = next.get();
 
-        return Optional.of( //转换成buffer 或者 event
+        return Optional.of( // 转换成buffer 或者 event
                 transformToBufferOrEvent(
                         inputWithData.data.buffer(),
                         inputWithData.moreAvailable,
@@ -979,7 +979,7 @@ public class SingleInputGate extends IndexedInputGate {
         assert Thread.holdsLock(inputChannelsWithData);
 
         if (channelsWithEndOfPartitionEvents.get(channel.getChannelIndex())) {
-            //如果该inputChannel 的数据已经结束了,则该inputChannel没必要继续排队了
+            // 如果该inputChannel 的数据已经结束了,则该inputChannel没必要继续排队了
             return false;
         }
 

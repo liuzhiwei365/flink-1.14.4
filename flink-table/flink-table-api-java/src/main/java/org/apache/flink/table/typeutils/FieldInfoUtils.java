@@ -370,6 +370,7 @@ public class FieldInfoUtils {
             final DataType dataType = ((DataTypeQueryable) inputType).getDataType();
             final LogicalType type = dataType.getLogicalType();
             if (isCompositeType(type)) {
+                // 得到复合类型的字段名 列表
                 fieldNames = LogicalTypeChecks.getFieldNames(type);
             }
         }
@@ -797,8 +798,11 @@ public class FieldInfoUtils {
     }
 
     private static FieldInfo createTimeAttributeField(
-            UnresolvedReferenceExpression reference, TimestampKind kind, @Nullable String alias) {
+            UnresolvedReferenceExpression reference,
+            TimestampKind kind, //这里的Kind是TimestampKind.PROCTIME或TimestampKind.ROWTIME
+            @Nullable String alias) {
         final int idx;
+        //对于时间属性，没有对应的索引，用特殊的标识
         if (kind == TimestampKind.PROCTIME) {
             idx = TimeIndicatorTypeInfo.PROCTIME_STREAM_MARKER;
         } else {

@@ -45,6 +45,9 @@ import static java.util.Objects.requireNonNull;
  * @param <OUT> The output type of the operator
  * @param <F> The type of the user function
  */
+
+// 有个很重要的点,本类的所有生命周期方法,比如open() close() notifyCheckpointComplete()等 方法
+// 最终都会回调用户函数  userFunction 的生命周期方法
 @PublicEvolving
 public abstract class AbstractUdfStreamOperator<OUT, F extends Function>
         extends AbstractStreamOperator<OUT> implements OutputTypeConfigurable<OUT> {
@@ -81,6 +84,7 @@ public abstract class AbstractUdfStreamOperator<OUT, F extends Function>
         FunctionUtils.setFunctionRuntimeContext(userFunction, getRuntimeContext());
     }
 
+    // snapshotState方法 一定要与notifyCheckpointComplete方法 区别开来
     @Override
     public void snapshotState(StateSnapshotContext context) throws Exception {
         super.snapshotState(context);
@@ -123,6 +127,7 @@ public abstract class AbstractUdfStreamOperator<OUT, F extends Function>
         super.notifyCheckpointComplete(checkpointId);
 
         if (userFunction instanceof CheckpointListener) {
+            // 从这里可以看出利用用户的 userFunction 来继承 CheckpointListener 来 定义 checkpoint完成后的逻辑
             ((CheckpointListener) userFunction).notifyCheckpointComplete(checkpointId);
         }
     }

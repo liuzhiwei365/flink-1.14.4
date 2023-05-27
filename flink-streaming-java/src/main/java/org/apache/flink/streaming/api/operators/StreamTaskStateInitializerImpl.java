@@ -318,9 +318,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                         taskInfo.getNumberOfParallelSubtasks(),
                         taskInfo.getIndexOfThisSubtask());
 
-
-
-        //用于确保在任务取消的情况下 关闭在恢复过程中构造的数据流
+        // 用于确保在任务取消的情况下 关闭在恢复过程中构造的数据流
         CloseableRegistry cancelStreamRegistryForRestore = new CloseableRegistry();
         backendCloseableRegistry.registerCloseable(cancelStreamRegistryForRestore);
 
@@ -345,7 +343,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                 logDescription);
 
         try {
-            //创建keyedStateBackend, 同时对数据进行恢复; prioritizedOperatorSubtaskStates包含当前的状态
+            // 创建keyedStateBackend, 同时对数据进行恢复; prioritizedOperatorSubtaskStates包含当前的状态
             return backendRestorer.createAndRestore(
                     prioritizedOperatorSubtaskStates.getPrioritizedManagedKeyedState());
         } finally {
@@ -645,8 +643,10 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         private final CheckpointableKeyedStateBackend<?> keyedStateBackend;
         private final InternalTimeServiceManager<?> internalTimeServiceManager;
 
-        private final CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs;//管理原生的OperatorState
-        private final CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs;//管理原生的KeyedState
+        private final CloseableIterable<StatePartitionStreamProvider>
+                rawOperatorStateInputs; // 管理原生的OperatorState
+        private final CloseableIterable<KeyGroupStatePartitionStreamProvider>
+                rawKeyedStateInputs; // 管理原生的KeyedState
 
         StreamOperatorStateContextImpl(
                 @Nullable Long restoredCheckpointId,

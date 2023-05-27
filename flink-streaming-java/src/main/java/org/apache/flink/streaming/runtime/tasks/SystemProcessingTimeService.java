@@ -110,6 +110,7 @@ public class SystemProcessingTimeService implements TimerService {
         // that way we save unnecessary volatile accesses for each timer
         try {
             return timerService.schedule(
+                    // 把 callback 包装成为 Runnable 对象 , 以适配 jdk的 定时器
                     wrapOnTimerCallback(callback, timestamp), delay, TimeUnit.MILLISECONDS);
         } catch (RejectedExecutionException e) {
             final int status = this.status.get();
@@ -310,10 +311,12 @@ public class SystemProcessingTimeService implements TimerService {
 
         @Override
         public void run() {
+            // 只有 serviceStatus 的状态为 STATUS_ALIVE 才能运行后面的逻辑
             if (serviceStatus.get() != STATUS_ALIVE) {
                 return;
             }
             try {
+                // 这个callback 有可能是 TimestampsAndWatermarksOperator 对象
                 callback.onProcessingTime(nextTimestamp);
             } catch (Exception ex) {
                 exceptionHandler.handleException(ex);

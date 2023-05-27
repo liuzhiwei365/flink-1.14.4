@@ -105,7 +105,8 @@ public class HeartbeatManagerImpl<I, O> implements HeartbeatManager<I, O> {
         this.failedRpcRequestsUntilUnreachable = failedRpcRequestsUntilUnreachable;
         this.ownResourceID = Preconditions.checkNotNull(ownResourceID);
         this.heartbeatListener = Preconditions.checkNotNull(heartbeatListener, "heartbeatListener");
-        this.mainThreadExecutor = Preconditions.checkNotNull(mainThreadExecutor);
+
+        this.mainThreadExecutor = Preconditions.checkNotNull(mainThreadExecutor); //
         this.log = Preconditions.checkNotNull(log);
         this.heartbeatMonitorFactory = heartbeatMonitorFactory;
         this.heartbeatTargets = new ConcurrentHashMap<>(16);
@@ -141,6 +142,9 @@ public class HeartbeatManagerImpl<I, O> implements HeartbeatManager<I, O> {
                         "The target with resource ID {} is already been monitored.",
                         resourceID.getStringWithMetadata());
             } else {
+
+                // mainThreadExecutor
+
                 HeartbeatMonitor<O> heartbeatMonitor =
                         heartbeatMonitorFactory.createHeartbeatMonitor(
                                 resourceID,

@@ -63,7 +63,7 @@ import java.util.stream.Collectors;
 public class DeclarativeSlotManager implements SlotManager {
     private static final Logger LOG = LoggerFactory.getLogger(DeclarativeSlotManager.class);
 
-    private final SlotTracker slotTracker;
+    private final SlotTracker slotTracker; // DefaultSlotTracker  追踪 所有的slot 资源
     private final ResourceTracker resourceTracker;
     private final BiFunction<Executor, ResourceActions, TaskExecutorManager>
             taskExecutorManagerFactory;
@@ -270,11 +270,14 @@ public class DeclarativeSlotManager implements SlotManager {
         }
 
         if (!resourceRequirements.getResourceRequirements().isEmpty()) {
+            // 更新  jobMasterTargetAddresses  map
             jobMasterTargetAddresses.put(
                     resourceRequirements.getJobId(), resourceRequirements.getTargetAddress());
         }
+        // 默认实现是 DefaultResourceTracker  ,内部会交给指定 的 JobScopedResourceTracker 来
         resourceTracker.notifyResourceRequirements(
                 resourceRequirements.getJobId(), resourceRequirements.getResourceRequirements());
+
         checkResourceRequirements();
     }
 
@@ -440,10 +443,21 @@ public class DeclarativeSlotManager implements SlotManager {
      * each pair of these profiles is not matching, and S free/pending slots that don't fulfill any
      * requirement, then this method does a total of J*R*S resource profile comparisons.
      */
+    /*
+       用可用资源去匹配我们的资源需求:
+
+       1 在第一轮中, 需求与空闲的slot 相匹配 , 任何匹配都会导致slot的分配
+
+       2 其余未满足的需求, 与挂起的slot相匹配,  如果找不到匹配的挂起slot，则分配更多的worker
+
+       3 如果无法满足工作要求则向JobMaster 发送通知
+
+    */
     private void checkResourceRequirements() {
         final Map<JobID, Collection<ResourceRequirement>> missingResources =
                 resourceTracker.getMissingResources();
         if (missingResources.isEmpty()) {
+            // 不存在资源缺口
             return;
         }
 
@@ -452,8 +466,10 @@ public class DeclarativeSlotManager implements SlotManager {
                 missingResources.entrySet()) {
             final JobID jobId = resourceRequirements.getKey();
 
+            // 填充 指定Job 的资源缺口
             final ResourceCounter unfulfilledJobRequirements =
                     tryAllocateSlotsForJob(jobId, resourceRequirements.getValue());
+
             if (!unfulfilledJobRequirements.isEmpty()) {
                 unfulfilledRequirements.put(jobId, unfulfilledJobRequirements);
             }
@@ -508,18 +524,25 @@ public class DeclarativeSlotManager implements SlotManager {
      */
     private int internalTryAllocateSlots(
             JobID jobId, String targetAddress, ResourceRequirement resourceRequirement) {
+
         final ResourceProfile requiredResource = resourceRequirement.getResourceProfile();
+
+        // 拿到所有的空闲的slot
         Collection<TaskManagerSlotInformation> freeSlots = slotTracker.getFreeSlots();
 
         int numUnfulfilled = 0;
+
+        // 一个 resourceRequirement 有可能分配多个 slot
         for (int x = 0; x < resourceRequirement.getNumberOfRequiredSlots(); x++) {
 
             final Optional<TaskManagerSlotInformation> reservedSlot =
                     slotMatchingStrategy.findMatchingSlot(
                             requiredResource, freeSlots, this::getNumberRegisteredSlotsOf);
+
             if (reservedSlot.isPresent()) {
                 // we do not need to modify freeSlots because it is indirectly modified by the
                 // allocation
+                // 分配slot
                 allocateSlot(reservedSlot.get(), jobId, targetAddress, requiredResource);
             } else {
                 // exit loop early; we won't find a matching slot for this requirement
@@ -560,15 +583,18 @@ public class DeclarativeSlotManager implements SlotManager {
 
         final TaskExecutorConnection taskExecutorConnection =
                 taskManagerSlot.getTaskManagerConnection();
+
+        // 拿到 TaskExecutorGateway 通知 从节点
         final TaskExecutorGateway gateway = taskExecutorConnection.getTaskExecutorGateway();
 
         final AllocationID allocationId = new AllocationID();
 
         slotTracker.notifyAllocationStart(slotId, jobId);
-        taskExecutorManager.markUsed(instanceId);
-        pendingSlotAllocations.put(slotId, allocationId);
+        taskExecutorManager.markUsed(instanceId); // 打标记 续约
+        pendingSlotAllocations.put(slotId, allocationId); // pendingSlotAllocations 维护正在进行分配的 slot
 
         // RPC call to the task manager
+        // 最终会由 从节点 的 TaskExecutor 的 TaskSlotTableImpl 对象 来分配slot
         CompletableFuture<Acknowledge> requestFuture =
                 gateway.requestSlot(
                         slotId,
@@ -581,6 +607,7 @@ public class DeclarativeSlotManager implements SlotManager {
 
         CompletableFuture<Void> slotAllocationResponseProcessingFuture =
                 requestFuture.handleAsync(
+                        //
                         (Acknowledge acknowledge, Throwable throwable) -> {
                             final AllocationID currentAllocationForSlot =
                                     pendingSlotAllocations.get(slotId);

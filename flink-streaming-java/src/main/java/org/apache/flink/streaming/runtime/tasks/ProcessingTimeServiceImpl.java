@@ -32,13 +32,14 @@ class ProcessingTimeServiceImpl implements ProcessingTimeService {
     private final TimerService timerService;
 
     private final Function<ProcessingTimeCallback, ProcessingTimeCallback>
-            processingTimeCallbackWrapper;
+            processingTimeCallbackWrapper; // callback -> deferCallbackToMailbox(mailboxExecutor,
+    // callback)
 
     private final AtomicInteger numRunningTimers;
 
     private final CompletableFuture<Void> quiesceCompletedFuture;
 
-    private volatile boolean quiesced;
+    private volatile boolean quiesced; // 是否静止
 
     ProcessingTimeServiceImpl(
             TimerService timerService,
@@ -64,7 +65,13 @@ class ProcessingTimeServiceImpl implements ProcessingTimeService {
                     ProcessingTimeServiceUtil.getProcessingTimeDelay(
                             timestamp, getCurrentProcessingTime()));
         }
+        // 内部会用 jdk 的 ScheduledThreadPoolExecutor 对象 的 schedule 方法来定时
+        // TimestampsAndWatermarksOperator 实现了  ProcessingTimeCallback接口
 
+        // processingTimeCallbackWrapper 的匿名函数形式是  callback ->
+        // deferCallbackToMailbox(mailboxExecutor, callback)
+        // addQuiesceProcessingToCallback 的 入参 化简为  deferCallbackToMailbox(mailboxExecutor,
+        // timestampsAndWatermarksOperator)
         return timerService.registerTimer(
                 timestamp,
                 addQuiesceProcessingToCallback(processingTimeCallbackWrapper.apply(target)));

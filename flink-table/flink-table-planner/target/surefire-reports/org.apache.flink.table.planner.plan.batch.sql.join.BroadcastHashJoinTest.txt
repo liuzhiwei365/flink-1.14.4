@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.sql.join.BroadcastHashJoinTest
--------------------------------------------------------------------------------
-Tests run: 32, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.458 s - in org.apache.flink.table.planner.plan.batch.sql.join.BroadcastHashJoinTest

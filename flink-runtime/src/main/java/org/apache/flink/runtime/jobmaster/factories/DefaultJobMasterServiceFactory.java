@@ -91,10 +91,13 @@ public class DefaultJobMasterServiceFactory implements JobMasterServiceFactory {
 
         return CompletableFuture.supplyAsync(
                 FunctionUtils.uncheckedSupplier(
+                        // 核心
                         () -> internalCreateJobMasterService(leaderSessionId, onCompletionActions)),
                 executor);
     }
 
+    // 创建 JobMaster 并且启动
+    // JobMaster 的 onStart  方法中开始 Job的执行
     private JobMasterService internalCreateJobMasterService(
             UUID leaderSessionId, OnCompletionActions onCompletionActions) throws Exception {
 
@@ -116,7 +119,9 @@ public class DefaultJobMasterServiceFactory implements JobMasterServiceFactory {
                         shuffleMaster,
                         lookup ->
                                 new JobMasterPartitionTrackerImpl(
-                                        jobGraph.getJobID(), shuffleMaster, lookup), //相当于 spark的mapOutputTrakcer
+                                        jobGraph.getJobID(),
+                                        shuffleMaster,
+                                        lookup), // 相当于 spark的mapOutputTrakcer
                         new DefaultExecutionDeploymentTracker(),
                         DefaultExecutionDeploymentReconciler::new,
                         initializationTimestamp);

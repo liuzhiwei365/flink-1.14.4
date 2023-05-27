@@ -76,6 +76,13 @@ import java.util.Map;
  *
  * @param <T> The type represented by this type information.
  */
+//StringDataTypeInfo 与 StringData 对应
+//TypeInformation的众多子类中，  **TypeInfo 都与 **对应
+
+/*
+TypeInformation是Flink类型系统的核心，是生成序列化/反序列化工具和Comparator的工具类。
+同时它还是连接schema和编程语言内部类型系统的桥梁
+ */
 @Public
 public abstract class TypeInformation<T> implements Serializable {
 
@@ -104,6 +111,7 @@ public abstract class TypeInformation<T> implements Serializable {
      *
      * @return Gets the number of fields in this type without nesting.
      */
+    // 没有嵌套的字段数
     @PublicEvolving
     public abstract int getArity();
 

@@ -100,12 +100,12 @@ public class HeapKeyedStateBackendBuilder<K> extends AbstractKeyedStateBackendBu
         HeapSnapshotStrategy<K> snapshotStrategy =
                 initSnapshotStrategy(registeredKVStates, registeredPQStates);
 
-        //InternalKeyContext 中包含了本算子的keyedstate 的 key的信息
+        // InternalKeyContext 中包含了本算子的keyedstate 的 key的信息
         InternalKeyContext<K> keyContext =
                 new InternalKeyContextImpl<>(keyGroupRange, numberOfKeyGroups);
 
         final StateTableFactory<K> stateTableFactory;
-        if (asynchronousSnapshots) {//如果支持异步 snapshot
+        if (asynchronousSnapshots) { // 如果支持异步 snapshot
             stateTableFactory = CopyOnWriteStateTable::new;
         } else {
             stateTableFactory = NestedMapsStateTable::new;

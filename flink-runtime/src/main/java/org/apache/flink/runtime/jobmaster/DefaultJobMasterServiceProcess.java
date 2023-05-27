@@ -88,12 +88,16 @@ public class DefaultJobMasterServiceProcess
             Function<Throwable, ArchivedExecutionGraph> failedArchivedExecutionGraphFactory) {
         this.jobId = jobId;
         this.leaderSessionId = leaderSessionId;
+
+        // 创建 jobMasterServiceFuture
+        // 内部会创建 JobMaster ,并且启动
         this.jobMasterServiceFuture =
                 jobMasterServiceFactory.createJobMasterService(leaderSessionId, this);
 
         jobMasterServiceFuture.whenComplete(
                 (jobMasterService, throwable) -> {
                     if (throwable != null) {
+                        // 如果异常
                         final JobInitializationException jobInitializationException =
                                 new JobInitializationException(
                                         jobId, "Could not start the JobMaster.", throwable);
@@ -111,6 +115,7 @@ public class DefaultJobMasterServiceProcess
                                                         jobInitializationException)),
                                         jobInitializationException));
                     } else {
+                        // 如果正常
                         registerJobMasterServiceFutures(jobMasterService);
                     }
                 });

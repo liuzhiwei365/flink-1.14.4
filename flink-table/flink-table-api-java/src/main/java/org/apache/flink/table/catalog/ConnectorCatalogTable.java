@@ -47,12 +47,16 @@ import java.util.stream.Collectors;
  * @param <T1> type of the produced elements by the {@link TableSource}
  * @param <T2> type of the expected elements by the {@link TableSink}
  */
+
+
 @Internal
 public class ConnectorCatalogTable<T1, T2> extends AbstractCatalogTable {
     private final TableSource<T1> tableSource;
     private final TableSink<T2> tableSink;
     private final boolean isBatch;
 
+    // 如果通过 TableSource 注册一张表,首先会通过 TableSourceValidation.validateTableSource() 验证表结构、
+    // 时间属性等信息,然后会被封装为 ConnectorCatalogTable,在这里会完成 TableSchema 的更新：
     public static <T1> ConnectorCatalogTable<T1, ?> source(
             TableSource<T1> source, boolean isBatch) {
         final TableSchema tableSchema = calculateSourceSchema(source, isBatch);
@@ -129,13 +133,21 @@ public class ConnectorCatalogTable<T1, T2> extends AbstractCatalogTable {
 
         DataType[] types =
                 Arrays.copyOf(tableSchema.getFieldDataTypes(), tableSchema.getFieldCount());
+
         String[] fieldNames = tableSchema.getFieldNames();
+        /*
+        如果要在 TableSource 中定义时间属性，则需要 TableSource 实现 DefinedProctimeAttribute 或者
+        DefinedRowAttributes 接口，并且引用的时间属性必须出现在 TableSchema 中，类型为 timestamp 类型。
+        如果要同时使用处理时间和事件时间，对应的 TableSource 需要同时实现这两个接口
+         */
         if (source instanceof DefinedRowtimeAttributes) {
+            //更新事件时间的时间类型为 java.sql.Timestamp.class类型
             updateRowtimeIndicators((DefinedRowtimeAttributes) source, fieldNames, types);
         }
         if (source instanceof DefinedProctimeAttribute) {
             updateProctimeIndicator((DefinedProctimeAttribute) source, fieldNames, types);
         }
+        //经过更新后的 TableSchema，时间属性列的 LogicalType 就是用特殊 TimestampKind 表征的 TimestampType
         return TableSchema.builder().fields(fieldNames, types).build();
     }
 

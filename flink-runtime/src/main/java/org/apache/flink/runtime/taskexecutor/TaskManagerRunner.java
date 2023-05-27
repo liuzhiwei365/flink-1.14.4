@@ -141,13 +141,18 @@ public class TaskManagerRunner implements FatalErrorHandler {
 
         rpcSystem = RpcSystem.load(configuration);
 
+        // akka.ask.timeout
         timeout = Time.fromDuration(configuration.get(AkkaOptions.ASK_TIMEOUT_DURATION));
 
+        //  TaskManager 内部线程池,用来处理从节点内部各个组件的Io的线程池
+        //  线程池大小为当前节点的cpu核心数
         this.executor =
                 java.util.concurrent.Executors.newScheduledThreadPool(
                         Hardware.getNumberCPUCores(),
                         new ExecutorThreadFactory("taskmanager-future"));
 
+        //  高可用服务  ; 如果是zk模式 , 内部会启动zk客户端 ,注意该客户端 会与zk服务器保持长连接,以监听指定的目录
+        //  ZooKeeperHaServices 是zk 的实现类
         highAvailabilityServices =
                 HighAvailabilityServicesUtils.createHighAvailabilityServices(
                         configuration,
@@ -156,14 +161,18 @@ public class TaskManagerRunner implements FatalErrorHandler {
                         rpcSystem,
                         this);
 
+        // jmx.server.port   JMX服务,提供监控信息
         JMXService.startInstance(configuration.getString(JMXServerOptions.JMX_SERVER_PORT));
 
+        // 启动RPC服务,内部为Akka模型的ActorSystem
         rpcService = createRpcService(configuration, highAvailabilityServices, rpcSystem);
 
+        // 为TaskManager生成了一个ResourceID
         this.resourceId =
                 getTaskManagerResourceID(
                         configuration, rpcService.getAddress(), rpcService.getPort());
 
+        // 初始化心跳服务,主要是初始化心跳间隔和心跳超时参数配置
         HeartbeatServices heartbeatServices = HeartbeatServices.fromConfiguration(configuration);
 
         metricRegistry =
@@ -178,6 +187,8 @@ public class TaskManagerRunner implements FatalErrorHandler {
                         configuration, rpcService.getAddress(), rpcSystem);
         metricRegistry.startQueryService(metricQueryServiceRpcService, resourceId);
 
+        //  在主节点启动的时候,事实上已经启动了有个BolbServer,
+        //  从节点启动的时候,会启动一个BlobCacheService,做文件缓存的服务
         blobCacheService =
                 new BlobCacheService(
                         configuration, highAvailabilityServices.createBlobStore(), null);
@@ -186,6 +197,7 @@ public class TaskManagerRunner implements FatalErrorHandler {
                 ExternalResourceUtils.createStaticExternalResourceInfoProviderFromConfig(
                         configuration, pluginManager);
 
+        // 创建得到一个TaskExecutorService,内部封装了TaskExecutor,同时TaskExecutor的构建也在内部完成
         taskExecutorService =
                 taskExecutorServiceFactory.createTaskExecutor(
                         this.configuration,
@@ -349,6 +361,21 @@ public class TaskManagerRunner implements FatalErrorHandler {
     //  Static entry point
     // --------------------------------------------------------------------------------------------
 
+    /**
+     * TaskManagerRuner TaskExecutorService TaskExecutorToServiceAdapter TaskExecutor extends
+     * RpcEndpoint
+     *
+     * <p>user 调用脚本 -> main runTaskManagerProcessSecurely(String[] args)
+     * runTaskManagerProcessSecurely(Configuration configuration)
+     * SecurityUtils.getInstalledContext().runSecured() runTaskManager(configuration, pluginManager)
+     * start() --------------------------------------------------> start() --------------> start()
+     * ---------------------> start()
+     *
+     * <p>TaskExecutor extends RpcEndpoint ,所以 TaskExecutor对象也会调用 onStart 方法 , onStart方法中会让 启动
+     * TaskExecutor 对象内部的服务
+     *
+     * <p>总共包括 LeaderRetrievalService TaskSlotTable JobLeaderService FileCache 这四个服务
+     */
     public static void main(String[] args) throws Exception {
         // startup checks and logging
         EnvironmentInformation.logEnvironmentInfo(LOG, "TaskManager", args);
@@ -376,11 +403,13 @@ public class TaskManagerRunner implements FatalErrorHandler {
         final TaskManagerRunner taskManagerRunner;
 
         try {
+            // TaskManagerRunner 的构造函数 中 有许多组件需要构建
             taskManagerRunner =
                     new TaskManagerRunner(
                             configuration,
                             pluginManager,
                             TaskManagerRunner::createTaskExecutorService);
+
             taskManagerRunner.start();
         } catch (Exception exception) {
             throw new FlinkException("Failed to start the TaskManagerRunner.", exception);
@@ -409,9 +438,11 @@ public class TaskManagerRunner implements FatalErrorHandler {
     }
 
     public static void runTaskManagerProcessSecurely(Configuration configuration) {
+
         FlinkSecurityManager.setFromConfiguration(configuration);
         final PluginManager pluginManager =
                 PluginUtils.createPluginManagerFromRootFolder(configuration);
+
         FileSystem.initialize(configuration, pluginManager);
 
         StateChangelogStorageLoader.initialize(pluginManager);
@@ -470,6 +501,8 @@ public class TaskManagerRunner implements FatalErrorHandler {
                         externalResourceInfoProvider,
                         fatalErrorHandler);
 
+        //  TaskExecutor 是TaskExecutorToServiceAdapter 的成员变量
+        //  TaskExecutorToServiceAdapter 是TaskManagerRunner 的成员变量
         return TaskExecutorToServiceAdapter.createFor(taskExecutor);
     }
 

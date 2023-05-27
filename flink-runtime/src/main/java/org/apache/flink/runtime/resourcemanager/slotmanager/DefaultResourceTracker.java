@@ -38,6 +38,7 @@ public class DefaultResourceTracker implements ResourceTracker {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultResourceTracker.class);
 
+    // 每个job 都有自己单独的 job tracker
     private final Map<JobID, JobScopedResourceTracker> trackers = new HashMap<>();
 
     @Override
@@ -49,6 +50,8 @@ public class DefaultResourceTracker implements ResourceTracker {
                 "Received notification for job {} having new resource requirements {}.",
                 jobId,
                 resourceRequirements);
+
+        // 通知 指定的 job tracker   资源需求的集合
         getOrCreateTracker(jobId).notifyResourceRequirements(resourceRequirements);
 
         if (resourceRequirements.isEmpty()) {
@@ -115,9 +118,12 @@ public class DefaultResourceTracker implements ResourceTracker {
     @Override
     public Map<JobID, Collection<ResourceRequirement>> getMissingResources() {
         Map<JobID, Collection<ResourceRequirement>> allMissingResources = new HashMap<>();
+
         for (Map.Entry<JobID, JobScopedResourceTracker> tracker : trackers.entrySet()) {
+
             Collection<ResourceRequirement> missingResources =
                     tracker.getValue().getMissingResources();
+
             if (!missingResources.isEmpty()) {
                 allMissingResources.put(tracker.getKey(), missingResources);
             }

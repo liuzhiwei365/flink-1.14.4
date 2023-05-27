@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.sql.agg.DistinctAggregateTest
--------------------------------------------------------------------------------
-Tests run: 26, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 24.383 s - in org.apache.flink.table.planner.plan.batch.sql.agg.DistinctAggregateTest

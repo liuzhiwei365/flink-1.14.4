@@ -478,7 +478,7 @@ public final class LogicalTypeCasts {
 
     // --------------------------------------------------------------------------------------------
 
-    /** Checks if a source type can safely be interpreted as the target type. */
+    // 检查 source的类型能否安全地转化翻译成 target 类型
     private static class CastAvoidanceChecker extends LogicalTypeDefaultVisitor<Boolean> {
 
         private final LogicalType sourceType;
@@ -492,7 +492,7 @@ public final class LogicalTypeCasts {
             if (sourceType.isNullable() && !targetType.isNullable()) {
                 return false;
             }
-            // CHAR and VARCHAR are very compatible within bounds
+            // 如果source 有根类型 CHAR 或者 VARCHAR, 且不大于 target
             if ((hasRoot(sourceType, LogicalTypeRoot.CHAR)
                             || hasRoot(sourceType, LogicalTypeRoot.VARCHAR))
                     && getLength(sourceType) <= targetType.getLength()) {
@@ -506,7 +506,7 @@ public final class LogicalTypeCasts {
             if (sourceType.isNullable() && !targetType.isNullable()) {
                 return false;
             }
-            // BINARY and VARBINARY are very compatible within bounds
+            // 如果source 有根类型 BINARY 或者 VARBINARY , 且不大于 target
             if ((hasRoot(sourceType, LogicalTypeRoot.BINARY)
                             || hasRoot(sourceType, LogicalTypeRoot.VARBINARY))
                     && getLength(sourceType) <= targetType.getLength()) {
@@ -564,10 +564,10 @@ public final class LogicalTypeCasts {
             final List<LogicalType> sourceChildren = sourceType.getChildren();
             final List<LogicalType> targetChildren = targetType.getChildren();
             if (sourceChildren.isEmpty()) {
-                // handles all types that are not of family CONSTRUCTED or USER DEFINED
+                // 允许 target 的 isNullable 成员为true
                 return sourceType.equals(targetType) || sourceType.copy(true).equals(targetType);
             } else {
-                // handles all types of CONSTRUCTED family as well as distinct types
+                // 处理source 和 target 的所有孩子的类型
                 return supportsAvoidingCast(sourceChildren, targetChildren);
             }
         }

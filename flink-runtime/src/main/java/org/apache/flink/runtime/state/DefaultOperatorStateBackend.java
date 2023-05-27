@@ -79,9 +79,9 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
      *
      * @see <a href="https://issues.apache.org/jira/browse/FLINK-6849">FLINK-6849</a>
      */
-    //用来存储用户的 ListState 和 UnionListState
+    // 用来存储用户的 ListState 和 UnionListState
     private final Map<String, PartitionableListState<?>> accessedStatesByName;
-    //用户存储用户的 BroadcastState
+    // 用户存储用户的 BroadcastState
     private final Map<String, BackendWritableBroadcastState<?, ?>> accessedBroadcastStatesByName;
 
     private final SnapshotStrategyRunner<OperatorStateHandle, ?> snapshotStrategyRunner;
@@ -206,7 +206,7 @@ public class DefaultOperatorStateBackend implements OperatorStateBackend {
         return broadcastState;
     }
 
-    //从用户的角度来讲OperatorState 包括三种类型ListState,UnionState 和BroadcastState
+    // 从用户的角度来讲OperatorState 包括三种类型ListState,UnionState 和BroadcastState
     @Override
     public <S> ListState<S> getListState(ListStateDescriptor<S> stateDescriptor) throws Exception {
         return getListState(stateDescriptor, OperatorStateHandle.Mode.SPLIT_DISTRIBUTE);

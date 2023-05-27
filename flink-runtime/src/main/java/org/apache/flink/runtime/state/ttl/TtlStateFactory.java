@@ -117,7 +117,8 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
                                 (SupplierWithException<IS, Exception>) this::createReducingState),
                         Tuple2.of(
                                 StateDescriptor.Type.AGGREGATING,
-                                (SupplierWithException<IS, Exception>) this::createAggregatingState))
+                                (SupplierWithException<IS, Exception>)
+                                        this::createAggregatingState))
                 .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
     }
 
@@ -136,7 +137,7 @@ public class TtlStateFactory<K, N, SV, TTLSV, S extends State, IS extends S> {
         if (incrementalCleanup != null) {
             incrementalCleanup.setTtlState((AbstractTtlState<K, N, ?, TTLSV, ?>) state);
         }
-        //返回的state 是ValueState, ListState, MapState, ReducingState, AggregatingState 5类的其中一类的对象
+        // 返回的state 是ValueState, ListState, MapState, ReducingState, AggregatingState 5类的其中一类的对象
         return state;
     }
 

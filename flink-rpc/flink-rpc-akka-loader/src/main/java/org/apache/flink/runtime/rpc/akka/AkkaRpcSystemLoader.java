@@ -71,13 +71,17 @@ public class AkkaRpcSystemLoader implements RpcSystemLoader {
                                 HINT_USAGE));
             }
 
+            // 利用 flink-rpc-akka.jar 拷贝一份  flink-rpc-akka_" + UUID.randomUUID() + ".jar
             IOUtils.copyBytes(resourceStream, Files.newOutputStream(tempFile));
 
+            // 用新copy 的  flink-rpc-akka_" + UUID.randomUUID() + ".jar  来创建类加载器
             final SubmoduleClassLoader submoduleClassLoader =
                     new SubmoduleClassLoader(
                             new URL[] {tempFile.toUri().toURL()}, flinkClassLoader);
 
             return new CleanupOnCloseRpcSystem(
+                    // spi 创建 flink-rpc-akka_" + UUID.randomUUID() + ".jar 中 的 RpcSystem 接口插件,具体实现是
+                    // AkkaRpcSystem
                     ServiceLoader.load(RpcSystem.class, submoduleClassLoader).iterator().next(),
                     submoduleClassLoader,
                     tempFile);

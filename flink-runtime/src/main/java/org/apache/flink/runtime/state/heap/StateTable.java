@@ -91,7 +91,7 @@ public abstract class StateTable<K, N, S>
         this.keyGroupRange = keyContext.getKeyGroupRange();
 
         @SuppressWarnings("unchecked")
-        //每个KeyGroup 对应 一个 StateMap
+        // 每个KeyGroup 对应 一个 StateMap
         StateMap<K, N, S>[] state =
                 (StateMap<K, N, S>[])
                         new StateMap[keyContext.getKeyGroupRange().getNumberOfKeyGroups()];

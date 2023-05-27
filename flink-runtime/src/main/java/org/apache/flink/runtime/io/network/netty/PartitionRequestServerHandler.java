@@ -88,13 +88,13 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
                             new CreditBasedSequenceNumberingViewReader(
                                     request.receiverId, request.credit, outboundQueue);
 
-                    //创建指定 subPartition 的 ResultSubpartitionView对象(读视图),并赋值给 reader 的成员变量
+                    // 创建指定 subPartition 的 ResultSubpartitionView对象(读视图),并赋值给 reader 的成员变量
                     reader.requestSubpartitionView(
                             partitionProvider, request.partitionId, request.queueIndex);
 
-                    //一个InputChannel 对应一个NetworkSequenceViewReader, 交给outboundQueue维护
+                    // 一个InputChannel 对应一个NetworkSequenceViewReader, 交给outboundQueue维护
 
-                    //也就是说下游的task 给我们发送PartitionRequest后,我们会一一创建并维护相应的reader, 用于后续的缓存的数据消费
+                    // 也就是说下游的task 给我们发送PartitionRequest后,我们会一一创建并维护相应的reader, 用于后续的缓存的数据消费
                     outboundQueue.notifyReaderCreated(reader);
                 } catch (PartitionNotFoundException notFound) {
                     respondWithError(ctx, notFound, request.receiverId);
@@ -104,29 +104,30 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
             // Task events
             // ----------------------------------------------------------------
             else if (msgClazz == TaskEventRequest.class) {
-                //用于迭代计算的场景
+                // 用于迭代计算的场景
                 TaskEventRequest request = (TaskEventRequest) msg;
 
                 if (!taskEventPublisher.publish(request.partitionId, request.event)) {
                     respondWithError(
                             ctx,
                             new IllegalArgumentException("Task event receiver not found."),
-                            request.receiverId);//receiverId 就是 inputChannel
+                            request.receiverId); // receiverId 就是 inputChannel
                 }
             } else if (msgClazz == CancelPartitionRequest.class) {
-                //把相应的reader 从 outboundQueue 的维护中去除
+                // 把相应的reader 从 outboundQueue 的维护中去除
                 CancelPartitionRequest request = (CancelPartitionRequest) msg;
 
                 outboundQueue.cancel(request.receiverId);
             } else if (msgClazz == CloseRequest.class) {
-                //释放所有的reader
+                // 释放所有的reader
                 outboundQueue.close();
             } else if (msgClazz == AddCredit.class) {
-                //ResultPartition 接收并处理AddCredit请求的过程
+                // ResultPartition 接收并处理AddCredit请求的过程
                 AddCredit request = (AddCredit) msg;
 
-                //reader.addCredit 最终 增加 CreditBasedSequenceNumberingViewReader对象的 numCreditsAvailable 成员变量
-                //然后 重新让 reader 去排队
+                // reader.addCredit 最终 增加 CreditBasedSequenceNumberingViewReader对象的
+                // numCreditsAvailable 成员变量
+                // 然后 重新让 reader 去排队
                 outboundQueue.addCreditOrResumeConsumption(
                         request.receiverId, reader -> reader.addCredit(request.credit));
             } else if (msgClazz == ResumeConsumption.class) {
@@ -135,7 +136,7 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
                 outboundQueue.addCreditOrResumeConsumption(
                         request.receiverId, NetworkSequenceViewReader::resumeConsumption);
             } else if (msgClazz == AckAllUserRecordsProcessed.class) {
-                //所有用户 数据被处理完了
+                // 所有用户 数据被处理完了
                 AckAllUserRecordsProcessed request = (AckAllUserRecordsProcessed) msg;
 
                 outboundQueue.acknowledgeAllRecordsProcessed(request.receiverId);

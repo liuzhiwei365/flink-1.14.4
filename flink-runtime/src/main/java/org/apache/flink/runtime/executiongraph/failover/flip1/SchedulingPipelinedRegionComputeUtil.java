@@ -66,6 +66,7 @@ public final class SchedulingPipelinedRegionComputeUtil {
      * Tarjan's strongly connected components algorithm</a>. For more details please see <a
      * href="https://issues.apache.org/jira/browse/FLINK-17330">FLINK-17330</a>.
      */
+    // 利用强联通分量 算法,合并region
     private static Set<Set<SchedulingExecutionVertex>> mergeRegionsOnCycles(
             final Map<SchedulingExecutionVertex, Set<SchedulingExecutionVertex>> vertexToRegion,
             final Function<ExecutionVertexID, ? extends SchedulingExecutionVertex>
@@ -73,14 +74,21 @@ public final class SchedulingPipelinedRegionComputeUtil {
 
         final List<Set<SchedulingExecutionVertex>> regionList =
                 new ArrayList<>(uniqueRegions(vertexToRegion));
+
+        // outEdges 和  regionList 的最外层list 的顺序保持一致 ,
+        // 所以 outEdges 的最外层的List 的 第一个元素一定是 region值为一的
+        // 这点对后续的计算联通分量很重要
         final List<List<Integer>> outEdges =
                 buildOutEdgesDesc(vertexToRegion, regionList, executionVertexRetriever);
+
         final Set<Set<Integer>> sccs =
                 StronglyConnectedComponentsComputeUtils.computeStronglyConnectedComponents(
                         outEdges.size(), outEdges);
 
         final Set<Set<SchedulingExecutionVertex>> mergedRegions =
                 Collections.newSetFromMap(new IdentityHashMap<>());
+
+        // 将一个强连通分量的所有region 合并为一个
         for (Set<Integer> scc : sccs) {
             checkState(scc.size() > 0);
 
@@ -102,21 +110,33 @@ public final class SchedulingPipelinedRegionComputeUtil {
                     executionVertexRetriever) {
 
         final Map<Set<SchedulingExecutionVertex>, Integer> regionIndices = new IdentityHashMap<>();
+
+        // 强制给每个region 一个编号
         for (int i = 0; i < regionList.size(); i++) {
             regionIndices.put(regionList.get(i), i);
         }
 
         final List<List<Integer>> outEdges = new ArrayList<>(regionList.size());
+
+        // 一个region 由Set<SchedulingExecutionVertex> 组成
         for (Set<SchedulingExecutionVertex> currentRegion : regionList) {
+            // 用来保存当前所有的 currentRegionOutEdges ,其实这里保存的不是出边,保存的也是 region 的编号
             final List<Integer> currentRegionOutEdges = new ArrayList<>();
+
             for (SchedulingExecutionVertex vertex : currentRegion) {
+                // 只需要考虑 输出结果侧
                 for (SchedulingResultPartition producedResult : vertex.getProducedResults()) {
                     if (!producedResult.getResultType().isReconnectable()) {
                         continue;
                     }
                     for (ConsumerVertexGroup consumerVertexGroup :
-                            producedResult.getConsumerVertexGroups()) {
+                            producedResult
+                                    .getConsumerVertexGroups()) { // 一个SchedulingResultPartition
+                        // 可能对应 (下游)多个consumerVertexGroup组
+                        // (分流情况)
                         for (ExecutionVertexID consumerVertexId : consumerVertexGroup) {
+
+                            // 一个consumerVertexGroup组 对应于 下游一个 SchedulingExecutionVertex调度执行节点
                             SchedulingExecutionVertex consumerVertex =
                                     executionVertexRetriever.apply(consumerVertexId);
                             // Skip the ConsumerVertexGroup if its vertices are outside current
@@ -125,6 +145,7 @@ public final class SchedulingPipelinedRegionComputeUtil {
                                 break;
                             }
                             if (!currentRegion.contains(consumerVertex)) {
+                                // 实际上这里加的是region 编号
                                 currentRegionOutEdges.add(
                                         regionIndices.get(vertexToRegion.get(consumerVertex)));
                             }

@@ -59,7 +59,6 @@ import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.tasks.CheckpointCoordinatorConfiguration;
-import org.apache.flink.runtime.operators.coordination.OperatorCoordinatorHolder;
 import org.apache.flink.runtime.query.KvStateLocationRegistry;
 import org.apache.flink.runtime.scheduler.InternalFailuresListener;
 import org.apache.flink.runtime.scheduler.VertexParallelismInformation;
@@ -439,7 +438,7 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                 new CheckpointCoordinator(
                         jobInformation.getJobId(),
                         chkConfig,
-                        operatorCoordinators,//CheckpointCoordinator 会维护 算子协调者
+                        operatorCoordinators, // CheckpointCoordinator 会维护 算子协调者
                         checkpointIDCounter,
                         checkpointStore,
                         checkpointStorage,
@@ -515,7 +514,7 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
             buildOpCoordinatorCheckpointContexts() {
         final ArrayList<OperatorCoordinatorCheckpointContext> contexts = new ArrayList<>();
         for (final ExecutionJobVertex vertex : verticesInCreationOrder) {
-            //OperatorCoordinatorHolder 是 OperatorCoordinatorCheckpointContext 的子类
+            // OperatorCoordinatorHolder 是 OperatorCoordinatorCheckpointContext 的子类
             contexts.addAll(vertex.getOperatorCoordinators());
         }
         contexts.trimToSize();
@@ -776,15 +775,16 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
         for (JobVertex jobVertex : topologicallySorted) {
 
             if (jobVertex.isInputVertex() && !jobVertex.isStoppable()) {
+                // 如果自己是数据源头的JobVerx ,则设置为不可停
                 this.isStoppable = false;
             }
 
-            // 保存了并行度  最大并行度  并行度能否扩大 等信息
+            // parallelismStore 内部有一个map 保存了并行度  最大并行度  并行度能否扩大 等信息
             VertexParallelismInformation parallelismInfo =
                     parallelismStore.getParallelismInfo(jobVertex.getID());
 
             // create the execution job vertex and attach it to the graph
-            //实例化执行图节点，根据每⼀个job vertex，创建对应的 ExecutionJobVertex
+            // 实例化执行图节点，根据每⼀个job vertex，创建对应的 ExecutionJobVertex
             ExecutionJobVertex ejv =
                     new ExecutionJobVertex(
                             this,
@@ -795,10 +795,10 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                             parallelismInfo,
                             initialAttemptCounts.getAttemptCounts(jobVertex.getID()));
 
-            //将创建的ExecutionJobVertex与前置的IntermediateResult连接起来 (让上下游的相关组件相互维护对方的信息)
+            // 将创建的ExecutionJobVertex与前置的IntermediateResult连接起来 (让上下游的相关组件相互维护对方的信息 * 重要)
             ejv.connectToPredecessors(this.intermediateResults);
 
-            //Map<JobVertexID, ExecutionJobVertex> tasks ,将新建的 ejv对象 给 tasks 维护
+            // Map<JobVertexID, ExecutionJobVertex> tasks ,将新建的 ejv对象 给 tasks 维护
             ExecutionJobVertex previousTask = this.tasks.putIfAbsent(jobVertex.getID(), ejv);
 
             if (previousTask != null) {
@@ -823,7 +823,9 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
                 }
             }
             // verticesInCreationOrder 维护了按照 创建先后 排序的所有 ExecutionJobVertex 对象
+            // 因为遍历的集合 topologicallySorted 是有顺序的
             this.verticesInCreationOrder.add(ejv);
+
             this.numVerticesTotal += ejv.getParallelism();
         }
 
@@ -1485,6 +1487,7 @@ public class DefaultExecutionGraph implements ExecutionGraph, InternalExecutionG
         internalTaskFailuresListener.notifyTaskFailure(attemptId, t, cancelTask, releasePartitions);
     }
 
+    // 会调用 blobServer 的 deletePermanent 方法来删除
     @Override
     public void deleteBlobs(List<PermanentBlobKey> blobKeys) {
         CompletableFuture.runAsync(

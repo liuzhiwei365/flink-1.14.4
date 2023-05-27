@@ -98,9 +98,9 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
      */
     @Override
     public void requestSubpartition(
-            final ResultPartitionID partitionId,//Partition编号
-            final int subpartitionIndex,        //SubPartition编号
-            final RemoteInputChannel inputChannel,//inputChannel自己
+            final ResultPartitionID partitionId, // Partition编号
+            final int subpartitionIndex, // SubPartition编号
+            final RemoteInputChannel inputChannel, // inputChannel自己
             int delayMs)
             throws IOException {
 
@@ -114,8 +114,8 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
 
         clientHandler.addInputChannel(inputChannel);
 
-        //PartitionRequest  继承了NettyMessage,可以基于Netty实现的tcp网络中作为传输的消息
-        //其中,该消息内部含有 InitialCredit(部分体现了数据的消费能力)
+        // PartitionRequest  继承了NettyMessage,可以基于Netty实现的tcp网络中作为传输的消息
+        // 其中,该消息内部含有 InitialCredit(部分体现了数据的消费能力)
         final PartitionRequest request =
                 new PartitionRequest(
                         partitionId,
@@ -141,7 +141,7 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
                     }
                 };
 
-        //将创建好的 PartitionRequest 立即或者延迟 发送数据到 生产端所在的task 的节点,
+        // 将创建好的 PartitionRequest 立即或者延迟 发送数据到 生产端所在的task 的节点,
         if (delayMs == 0) {
             ChannelFuture f = tcpChannel.writeAndFlush(request);
             f.addListener(listener);
@@ -219,11 +219,13 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
     private void sendToChannel(ClientOutboundMessage message) {
         /**
          * org.apache.flink.shaded.netty4.io.netty.channel.DefaultChannelPipeline#fireUserEventTriggered(java.lang.Object)
-         * org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext#invokeUserEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext, java.lang.Object)
+         * org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext#invokeUserEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext,
+         * java.lang.Object)
          * org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext#invokeUserEventTriggered(java.lang.Object)
-         * org.apache.flink.runtime.io.network.netty.CreditBasedPartitionRequestClientHandler#userEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext, java.lang.Object)
+         * org.apache.flink.runtime.io.network.netty.CreditBasedPartitionRequestClientHandler#userEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext,
+         * java.lang.Object)
          *
-         * CreditBasedPartitionRequestClientHandler的userEventTriggered会得到响应,调用处理notifyCreditAvailable逻辑
+         * <p>CreditBasedPartitionRequestClientHandler的userEventTriggered会得到响应,调用处理notifyCreditAvailable逻辑
          */
         tcpChannel.eventLoop().execute(() -> tcpChannel.pipeline().fireUserEventTriggered(message));
     }
@@ -264,7 +266,7 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
 
         @Override
         Object buildMessage() {
-            //获得UnannouncedCredit 指标
+            // 获得UnannouncedCredit 指标
             int credits = inputChannel.getAndResetUnannouncedCredit();
             return credits > 0
                     ? new NettyMessage.AddCredit(credits, inputChannel.getInputChannelId())

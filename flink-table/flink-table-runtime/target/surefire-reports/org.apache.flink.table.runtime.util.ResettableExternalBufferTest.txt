@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.runtime.util.ResettableExternalBufferTest
--------------------------------------------------------------------------------
-Tests run: 29, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 24.37 s - in org.apache.flink.table.runtime.util.ResettableExternalBufferTest

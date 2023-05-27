@@ -52,6 +52,7 @@ public class StreamOperatorFactoryUtil {
                     Output<StreamRecord<OUT>> output,
                     OperatorEventDispatcher operatorEventDispatcher) {
 
+        // 构造 信箱执行器
         MailboxExecutor mailboxExecutor =
                 containingTask
                         .getMailboxExecutorFactory()
@@ -61,6 +62,8 @@ public class StreamOperatorFactoryUtil {
             ((YieldingOperatorFactory<?>) operatorFactory).setMailboxExecutor(mailboxExecutor);
         }
 
+        // 构造 定时服务
+        // StreamTask 构造的时候 创建的成员变量 timeService 会被 封装进入 ProcessingTimeServiceImpl对象, 然后返回
         final Supplier<ProcessingTimeService> processingTimeServiceFactory =
                 () ->
                         containingTask
@@ -68,8 +71,20 @@ public class StreamOperatorFactoryUtil {
                                 .createProcessingTimeService(mailboxExecutor);
 
         final ProcessingTimeService processingTimeService;
+        // operatorFactory工厂 是否实现了 ProcessingTimeServiceAware 可感知接口
+        // 如果没有  就不把 定时服务设置给该工厂了
+
+        //  WatermarkAssignerOperatorFactory 和 SourceOperatorFactory 都
+        // 实现了ProcessingTimeServiceAware该接口
+        //  所以会将 上面创建的 processingTimeServiceFactory 设置给 该算子
+        //  定时器工厂设置给算子工厂
+        //  算子工厂在 调用 createStreamOperator 方法的时候 会利用 最终来源于 StreamTask的 timeService 传递给该算子
+        //  于是我们在该算子中可以使用 定时器的功能了
+
         if (operatorFactory instanceof ProcessingTimeServiceAware) {
+
             processingTimeService = processingTimeServiceFactory.get();
+
             ((ProcessingTimeServiceAware) operatorFactory)
                     .setProcessingTimeService(processingTimeService);
         } else {
@@ -77,6 +92,7 @@ public class StreamOperatorFactoryUtil {
         }
 
         // TODO: what to do with ProcessingTimeServiceAware?
+        // 如果是 WatermarkAssignerOperatorFactory, 创建 WatermarkAssignerOperator 对象
         OP op =
                 operatorFactory.createStreamOperator(
                         new StreamOperatorParameters<>(

@@ -77,14 +77,15 @@ public class ExecutionFailureHandler {
      * @param timestamp of the task failure
      * @return result of the failure handling
      */
+    // 处理失败的task, 并得到结果
     public FailureHandlingResult getFailureHandlingResult(
             ExecutionVertexID failedTask, Throwable cause, long timestamp) {
         return handleFailure(
                 failedTask,
                 cause,
                 timestamp,
-                failoverStrategy.getTasksNeedingRestart(failedTask, cause),
-                false);
+                failoverStrategy.getTasksNeedingRestart(failedTask, cause),//得到需要重启的task
+                false);//不是全局失败
     }
 
     /**
@@ -96,16 +97,17 @@ public class ExecutionFailureHandler {
      * @param timestamp of the task failure
      * @return result of the failure handling
      */
+    // 处理全局调度拓扑的task, 并得到结果
     public FailureHandlingResult getGlobalFailureHandlingResult(
             final Throwable cause, long timestamp) {
         return handleFailure(
                 null,
                 cause,
                 timestamp,
-                IterableUtils.toStream(schedulingTopology.getVertices())
+                IterableUtils.toStream(schedulingTopology.getVertices())//得到调度拓扑中所有的task
                         .map(SchedulingExecutionVertex::getId)
                         .collect(Collectors.toSet()),
-                true);
+                true);//是全局失败
     }
 
     private FailureHandlingResult handleFailure(
@@ -114,7 +116,7 @@ public class ExecutionFailureHandler {
             long timestamp,
             final Set<ExecutionVertexID> verticesToRestart,
             final boolean globalFailure) {
-
+        //如果是不可恢复的错误
         if (isUnrecoverableError(cause)) {
             return FailureHandlingResult.unrecoverable(
                     failingExecutionVertexId,
@@ -122,11 +124,11 @@ public class ExecutionFailureHandler {
                     timestamp,
                     globalFailure);
         }
-
+        //重启延迟时间策略
         restartBackoffTimeStrategy.notifyFailure(cause);
         if (restartBackoffTimeStrategy.canRestart()) {
             numberOfRestarts++;
-
+            //可恢复, 返回 FailureHandlingResult 对象
             return FailureHandlingResult.restartable(
                     failingExecutionVertexId,
                     cause,
@@ -135,6 +137,7 @@ public class ExecutionFailureHandler {
                     restartBackoffTimeStrategy.getBackoffTime(),
                     globalFailure);
         } else {
+            //不可恢复, 也返回 FailureHandlingResult 对象
             return FailureHandlingResult.unrecoverable(
                     failingExecutionVertexId,
                     new JobException(

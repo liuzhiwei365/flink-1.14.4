@@ -1,0 +1,55 @@
+// ------------------------------------------------------------------
+// Transitive dependencies of this project determined from the
+// maven pom organized by organization.
+// ------------------------------------------------------------------
+
+Flink : Connectors : Pulsar
+
+
+From: 'an unknown organization'
+  - Bean Validation API (http://beanvalidation.org) javax.validation:validation-api:jar:1.1.0.Final
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - "Java Concurrency in Practice" book annotations (http://jcip.net/) net.jcip:jcip-annotations:jar:1.0
+
+  - Bouncy Castle PKIX, CMS, EAC, TSP, PKCS, OCSP, CMP, and CRMF APIs (http://www.bouncycastle.org/java.html) org.bouncycastle:bcpkix-jdk15on:jar:1.68
+    License: Bouncy Castle Licence  (http://www.bouncycastle.org/licence.html)
+  - Bouncy Castle Provider (https://www.bouncycastle.org/java.html) org.bouncycastle:bcprov-ext-jdk15on:jar:1.68
+    License: Bouncy Castle Licence  (https://www.bouncycastle.org/licence.html)
+  - Bouncy Castle Provider (http://www.bouncycastle.org/java.html) org.bouncycastle:bcprov-jdk15on:jar:1.68
+    License: Bouncy Castle Licence  (http://www.bouncycastle.org/licence.html)
+
+From: 'Apache Software Foundation' (http://www.apache.org/)
+  - Apache Pulsar :: Bouncy Castle :: BC (https://github.com/apache/pulsar/bouncy-castle-parent/bouncy-castle-bc) org.apache.pulsar:bouncy-castle-bc:jar:2.8.0
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Pulsar Client Admin :: API (https://github.com/apache/pulsar/pulsar-client-admin-api) org.apache.pulsar:pulsar-client-admin-api:jar:2.8.0
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Pulsar Client All (https://github.com/apache/pulsar/pulsar-client-all) org.apache.pulsar:pulsar-client-all:jar:2.8.0
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Pulsar Client :: API (https://github.com/apache/pulsar/pulsar-client-api) org.apache.pulsar:pulsar-client-api:jar:2.8.0
+    License: Apache License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'Eclipse Foundation' (https://www.eclipse.org/org/foundation/)
+  - jakarta.ws.rs-api (https://github.com/eclipse-ee4j/jaxrs-api) jakarta.ws.rs:jakarta.ws.rs-api:bundle:2.1.6
+    License: EPL 2.0  (http://www.eclipse.org/legal/epl-2.0)    License: GPL2 w/ CPE  (https://www.gnu.org/software/classpath/license.html)
+
+From: 'Oracle' (http://www.oracle.com)
+  - JavaBeans Activation Framework (http://java.net/all/javax.activation/) com.sun.activation:javax.activation:jar:1.2.0
+    License: CDDL/GPLv2+CE  (https://github.com/javaee/activation/blob/master/LICENSE.txt)
+
+From: 'Oracle Corporation' (http://www.oracle.com/)
+  - jaxb-api (https://github.com/javaee/jaxb-spec/jaxb-api) javax.xml.bind:jaxb-api:jar:2.3.1
+    License: CDDL 1.1  (https://oss.oracle.com/licenses/CDDL+GPL-1.1)    License: GPL2 w/ CPE  (https://oss.oracle.com/licenses/CDDL+GPL-1.1)
+
+From: 'QOS.ch' (http://www.qos.ch)
+  - JUL to SLF4J bridge (http://www.slf4j.org) org.slf4j:jul-to-slf4j:jar:1.7.25
+    License: MIT License  (http://www.opensource.org/licenses/mit-license.php)
+
+From: 'The Apache Software Foundation' (https://www.apache.org/)
+  - Flink : Connectors : Base (https://flink.apache.org/flink-connectors/flink-connector-base) org.apache.flink:flink-connector-base:jar:1.14.4
+    License: The Apache Software License, Version 2.0  (https://www.apache.org/licenses/LICENSE-2.0.txt)
+  - flink-shaded-force-shading (http://flink.apache.org/flink-shaded-force-shading) org.apache.flink:flink-shaded-force-shading:jar:14.0
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+
+
+

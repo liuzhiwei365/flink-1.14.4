@@ -36,6 +36,7 @@ import java.util.Set;
  */
 public final class ResourceCounter {
 
+    // 每个ResourceProfile 的个数
     private final Map<ResourceProfile, Integer> resources;
 
     private ResourceCounter(Map<ResourceProfile, Integer> resources) {
@@ -89,8 +90,17 @@ public final class ResourceCounter {
      * @param increment increment is the number by which to increase the resourceProfile
      * @return new ResourceCounter containing the result of the addition
      */
+
+    /*
+       resourceProfile 代表            申请 的 cpu 和 各个内存 信息
+       increment 代表                  申请 的 slot信息
+    */
+
+    // 资源计算器
     public ResourceCounter add(ResourceProfile resourceProfile, int increment) {
+
         final Map<ResourceProfile, Integer> newValues = new HashMap<>(resources);
+
         final int newValue = resources.getOrDefault(resourceProfile, 0) + increment;
 
         updateNewValue(newValues, resourceProfile, newValue);

@@ -100,7 +100,7 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
             // init的时候 会创建一个具有checkpoint功能的inputGate
             CheckpointedInputGate inputGate = createCheckpointedInputGate();
 
-            Counter numRecordsIn = setupNumRecordsInCounter(mainOperator);//计数器
+            Counter numRecordsIn = setupNumRecordsInCounter(mainOperator); // 计数器
 
             DataOutput<IN> output = createDataOutput(numRecordsIn);
 
@@ -121,6 +121,11 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
                     .getMetricGroup()
                     .getIOMetricGroup()
                     .reuseRecordsInputCounter(numRecordsIn);
+
+            // StreamInputProcessor 用于对输入数据进行处理 和输出
+            // StreamOneInputProcessor内部含有 StreamTaskInput DataOutput 和 OperatorChain
+            // StreamInputProcessor 的另外一个子类 StreamMultipleInputProcessor 内部含有多个
+            // StreamOneInputProcessor
 
             inputProcessor = new StreamOneInputProcessor<>(input, output, operatorChain);
         }

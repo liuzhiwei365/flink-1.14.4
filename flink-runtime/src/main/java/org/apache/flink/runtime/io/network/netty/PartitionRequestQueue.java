@@ -109,7 +109,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
             int backlog = availabilityWithBacklog.getBacklog();
             // 当上游有挤压, 而下游的credit 消耗完了.
             if (backlog > 0 && reader.needAnnounceBacklog()) {
-                //向下游发送有数据挤压的消息
+                // 向下游发送有数据挤压的消息
                 announceBacklog(reader, backlog);
             }
             return;
@@ -119,11 +119,11 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
         // we try trigger the actual write. Otherwise this will be handled by
         // the writeAndFlushNextMessageIfPossible calls.
         boolean triggerWrite = availableReaders.isEmpty();
-        //向队列注册读取器
+        // 向队列注册读取器
         registerAvailableReader(reader);
 
         if (triggerWrite) {
-            //写数据的时候,要从队列poll读取器,如果poll为null,直接返回,不做其他处理
+            // 写数据的时候,要从队列poll读取器,如果poll为null,直接返回,不做其他处理
             writeAndFlushNextMessageIfPossible(ctx.channel());
         }
     }
@@ -163,7 +163,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
      * @param receiverId The input channel id to identify the consumer.
      * @param operation The operation to be performed (add credit or resume data consumption).
      */
-    //添加信用值,并且恢复消费
+    // 添加信用值,并且恢复消费
     void addCreditOrResumeConsumption(
             InputChannelID receiverId, Consumer<NetworkSequenceViewReader> operation)
             throws Exception {
@@ -218,7 +218,8 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
         checkArgument(backlog > 0, "Backlog must be positive.");
 
         NettyMessage.BacklogAnnouncement announcement =
-                new NettyMessage.BacklogAnnouncement(backlog, reader.getReceiverId()); //参数中的receiverId 就是 inputChannel
+                new NettyMessage.BacklogAnnouncement(
+                        backlog, reader.getReceiverId()); // 参数中的receiverId 就是 inputChannel
         ctx.channel()
                 .writeAndFlush(announcement)
                 .addListener(
@@ -261,7 +262,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
 
     private void writeAndFlushNextMessageIfPossible(final Channel channel) throws IOException {
         if (fatalError || !channel.isWritable()) {
-            //有错误,或者改channel不可写,直接返回
+            // 有错误,或者改channel不可写,直接返回
             return;
         }
 
@@ -283,7 +284,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
 
                 next = reader.getNextBuffer();
                 if (next == null) {
-                    //如果next为null 写出 ErrorResponse 消息
+                    // 如果next为null 写出 ErrorResponse 消息
                     if (!reader.isReleased()) {
                         continue;
                     }
@@ -300,10 +301,10 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
                     // This channel was now removed from the available reader queue.
                     // We re-add it into the queue if it is still available
                     if (next.moreAvailable()) {
-                        //如果还有数据,把这个reader 重新排队,有利于均匀的处理每个subResultPartition
+                        // 如果还有数据,把这个reader 重新排队,有利于均匀的处理每个subResultPartition
                         registerAvailableReader(reader);
                     }
-                    //BufferResponse 是 NettyMessage对象
+                    // BufferResponse 是 NettyMessage对象
                     BufferResponse msg =
                             new BufferResponse(
                                     next.buffer(),
@@ -336,7 +337,7 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
     private NetworkSequenceViewReader pollAvailableReader() {
         NetworkSequenceViewReader reader = availableReaders.poll();
         if (reader != null) {
-            //该元素已经从队列中拿出,将isRegisteredAvailable 成员变量设置为false,表明没在排队
+            // 该元素已经从队列中拿出,将isRegisteredAvailable 成员变量设置为false,表明没在排队
             reader.setRegisteredAsAvailable(false);
         }
         return reader;

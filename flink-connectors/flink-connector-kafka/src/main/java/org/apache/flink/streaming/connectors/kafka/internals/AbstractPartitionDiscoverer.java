@@ -126,8 +126,8 @@ public abstract class AbstractPartitionDiscoverer {
             try {
                 List<KafkaTopicPartition> newDiscoveredPartitions;
 
-                // (1) get all possible partitions, based on whether we are subscribed to fixed
-                // topics or a topic pattern
+                // 1 拿到所有topic下所有的分区
+                // 2 这些topic 的提供方式有两种,一种是 fixed topics ,一种是 pattern topics
                 if (topicsDescriptor.isFixedTopics()) {
                     newDiscoveredPartitions =
                             getAllPartitionsForTopics(topicsDescriptor.getFixedTopics());
@@ -161,6 +161,7 @@ public abstract class AbstractPartitionDiscoverer {
                     KafkaTopicPartition nextPartition;
                     while (iter.hasNext()) {
                         nextPartition = iter.next();
+                        // 该方法返回true , 才不会删除
                         if (!setAndCheckDiscoveredPartition(nextPartition)) {
                             iter.remove();
                         }
@@ -199,7 +200,7 @@ public abstract class AbstractPartitionDiscoverer {
     public boolean setAndCheckDiscoveredPartition(KafkaTopicPartition partition) {
         if (isUndiscoveredPartition(partition)) {
             discoveredPartitions.add(partition);
-
+            //说白了,这里
             return KafkaTopicPartitionAssigner.assign(partition, numParallelSubtasks)
                     == indexOfThisSubtask;
         }

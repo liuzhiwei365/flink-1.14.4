@@ -169,7 +169,8 @@ public class LocalExecutor implements Executor {
 
         List<Operation> operations;
         try {
-            // 从环境中拿到解析器 ParserImpl ， 去解析 去掉了 ； 号的 sql语句
+            // 从环境中拿到解析器 ParserImpl , 去解析 去掉了 ； 号的 sql语句
+            // parser 有两个实现  HiveParser  和  ParserImpl
             operations = context.wrapClassLoader(() -> parser.parse(statement));
         } catch (Exception e) {
             throw new SqlExecutionException("Failed to parse statement: " + statement, e);

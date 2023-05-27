@@ -56,8 +56,9 @@ import java.util.Set;
 public abstract class LogicalType implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    //  该类型是否可以是null
     private final boolean isNullable;
-
+    //  与sql 标准对应的基础类型
     private final LogicalTypeRoot typeRoot;
 
     public LogicalType(boolean isNullable, LogicalTypeRoot typeRoot) {

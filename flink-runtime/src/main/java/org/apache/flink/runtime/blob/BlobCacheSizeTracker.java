@@ -60,9 +60,11 @@ public class BlobCacheSizeTracker {
     @GuardedBy("lock")
     private long total;
 
+    // 维护每个blob 的大小
     @GuardedBy("lock")
     private final LinkedHashMap<Tuple2<JobID, BlobKey>, Long> caches;
 
+    // 一个jobId, 有多个 blob 二进制对象 （可以是jar 包 ,可以是配置文件 等 ）
     @GuardedBy("lock")
     private final HashMap<JobID, Set<BlobKey>> blobKeyByJob;
 

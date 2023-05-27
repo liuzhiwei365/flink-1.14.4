@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.runtime.blob.BlobCacheSizeTrackerTest
--------------------------------------------------------------------------------
-Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.561 s - in org.apache.flink.runtime.blob.BlobCacheSizeTrackerTest

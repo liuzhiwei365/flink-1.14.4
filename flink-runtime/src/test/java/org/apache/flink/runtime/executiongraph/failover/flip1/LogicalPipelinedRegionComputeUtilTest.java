@@ -199,8 +199,10 @@ public class LogicalPipelinedRegionComputeUtilTest {
     }
 
     private static Set<Set<LogicalVertex>> computePipelinedRegions(JobVertex... vertices) {
+
         DefaultLogicalTopology topology =
                 DefaultLogicalTopology.fromTopologicallySortedJobVertices(Arrays.asList(vertices));
+
         return LogicalPipelinedRegionComputeUtil.computePipelinedRegions(topology.getVertices());
     }
 

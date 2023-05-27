@@ -101,13 +101,11 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 // 细粒度滑动窗口会造成维护的定时器增多，内存负担加重。
 
 /**
- *  滑动窗口的替代方案:
+ * 滑动窗口的替代方案:
  *
- *  我们一般使用  ((  滚动窗口+在线存储+读时聚合  ))  的思路作为workaround。 简单来讲就是：
- * ·弃用滑动窗口，用长度等于原滑动窗口步长的滚动窗口代替；
+ * <p>我们一般使用 (( 滚动窗口+在线存储+读时聚合 )) 的思路作为workaround。 简单来讲就是： ·弃用滑动窗口，用长度等于原滑动窗口步长的滚动窗口代替；
  * ·每个滚动窗口将其周期内的数据做聚合，打入外部在线存储（内存数据库如Redis，LSM-based NoSQL存储如HBase）；
  * ·扫描在线存储中对应时间区间（可以灵活指定）的所有行，并将计算结果返回给前端展示
- *
  */
 @Internal
 public class WindowOperator<K, IN, ACC, OUT, W extends Window>
@@ -127,7 +125,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
     private final Trigger<? super IN, ? super W> trigger;
 
     // 见 WindowOperatorBuilder 的 apply,aggregate,reduce 方法
-    // 可知,成员windowStateDescriptor 一定是  ListStateDescriptor, AggregatingStateDescriptor或者 ReducingStateDescriptor类型
+    // 可知,成员windowStateDescriptor 一定是  ListStateDescriptor, AggregatingStateDescriptor或者
+    // ReducingStateDescriptor类型
     private final StateDescriptor<? extends AppendingState<IN, ACC>, ?> windowStateDescriptor;
 
     /** For serializing the key in checkpoints. */
@@ -152,7 +151,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
      * window.maxTimestamp + allowedLateness} is smaller than the current watermark will be emitted
      * to this.
      */
-    protected final OutputTag<IN> lateDataOutputTag;//侧输出流的tag
+    protected final OutputTag<IN> lateDataOutputTag; // 侧输出流的tag
 
     private static final String LATE_ELEMENTS_DROPPED_METRIC_NAME = "numLateRecordsDropped";
 
@@ -163,7 +162,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
     // ------------------------------------------------------------------------
 
     /** The state in which the window contents is stored. Each window is a namespace */
-    //窗口里的所有数据被存储在windowState里
+    // 窗口里的所有数据被存储在windowState里
     private transient InternalAppendingState<K, W, IN, ACC, ACC> windowState;
 
     /**
@@ -307,7 +306,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
-        //为每个元素分配窗口, windowAssinger的不同实现类有不同的(一个数据可能分配到多个窗口)
+        // 为每个元素分配窗口, windowAssinger的不同实现类有不同的(一个数据可能分配到多个窗口)
         final Collection<W> elementWindows =
                 windowAssigner.assignWindows(
                         element.getValue(), element.getTimestamp(), windowAssignerContext);
@@ -328,7 +327,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
                 // is the merged window and we work with that. If we don't merge then
                 // actualWindow == window
                 W actualWindow =
-                        //方法调用之后，mergeResult返回合并的结果
+                        // 方法调用之后，mergeResult返回合并的结果
                         mergingWindows.addWindow(
                                 window,
                                 new MergingWindowSet.MergeFunction<W>() {
@@ -445,38 +444,37 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
                 TriggerResult triggerResult = triggerContext.onElement(element);
 
-                if (triggerResult.isFire()) {//是否触发
+                if (triggerResult.isFire()) { // 是否触发
                     ACC contents = windowState.get();
                     if (contents == null) {
                         continue;
                     }
-                    //发送数据到我们定义的function里面 触发窗口的计算逻辑
+                    // 发送数据到我们定义的function里面 触发窗口的计算逻辑
                     emitWindowContents(window, contents);
                 }
 
-                if (triggerResult.isPurge()) {//是否清除
+                if (triggerResult.isPurge()) { // 是否清除
                     // 如果是purge就清除窗口状态的数据
                     windowState.clear();
                 }
 
-                //注册定时器,在窗口彻底过期后,清除窗口状态
+                // 注册定时器,在窗口彻底过期后,清除窗口状态
                 registerCleanupTimer(window);
             }
         }
-
 
         // 设置了晚到时间 并且在晚到时间内数据达到 如果定义了测流输出就把数据用测流输出
         if (isSkippedElement && isElementLate(element)) {
             if (lateDataOutputTag != null) {
                 sideOutput(element);
             } else {
-                //没有侧输出流的话,简单的记录一下 丢弃数据的条数
+                // 没有侧输出流的话,简单的记录一下 丢弃数据的条数
                 this.numLateRecordsDropped.inc();
             }
         }
     }
 
-    //watermark 推动的
+    // watermark 推动的
     @Override
     public void onEventTime(InternalTimer<K, W> timer) throws Exception {
         triggerContext.key = timer.getKey();
@@ -505,7 +503,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
         if (triggerResult.isFire()) {
             ACC contents = windowState.get();
             if (contents != null) {
-                //用户代码的window 计算
+                // 用户代码的window 计算
                 emitWindowContents(triggerContext.window, contents);
             }
         }
@@ -628,7 +626,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
      * Returns {@code true} if the watermark is after the end timestamp plus the allowed lateness of
      * the given window.
      */
-    //window.maxTimestamp() + allowedLateness <= internalTimerService.currentWatermark()
+    // window.maxTimestamp() + allowedLateness <= internalTimerService.currentWatermark()
     protected boolean isWindowLate(W window) {
         return (windowAssigner.isEventTime()
                 && (cleanupTime(window) <= internalTimerService.currentWatermark()));

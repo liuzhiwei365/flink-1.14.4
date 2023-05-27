@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.contrib.streaming.state.ttl.FullSnapshotRocksDbTtlStateTest
--------------------------------------------------------------------------------
-Tests run: 144, Failures: 0, Errors: 0, Skipped: 20, Time elapsed: 17.044 s - in org.apache.flink.contrib.streaming.state.ttl.FullSnapshotRocksDbTtlStateTest

@@ -43,10 +43,13 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 @Internal
 public final class OperatorEventDispatcherImpl implements OperatorEventDispatcher {
 
+    //处理算子协调者发来的事件
+    //SourceOperatorFactory 和 CollectSinkOperatorFactory 都会调用 本类的registerEventHandler方法来想handlers 注册处理器
     private final Map<OperatorID, OperatorEventHandler> handlers;
 
     private final ClassLoader classLoader;
 
+    //发送算子事件给算子协调者
     private final TaskOperatorEventGateway toCoordinator;
 
     public OperatorEventDispatcherImpl(

@@ -79,8 +79,11 @@ public enum ClientUtils {
             SupplierWithException<BlobClient, IOException> clientSupplier)
             throws FlinkException {
         if (!userJars.isEmpty() || !userArtifacts.isEmpty()) {
+            // 利用 BlobClient 上传
             try (BlobClient client = clientSupplier.get()) {
+                // 上传所有的 指定的 jar 文件 , 并把相关的 blobKey 添加到 jobGraph对象的 userJarBlobKeys 成员中
                 uploadAndSetUserJars(jobGraph, userJars, client);
+                // 上传所有的 指定的 local path , 并把相关的 blobKey 添加到 jobGraph对象的 userArtifacts 成员中
                 uploadAndSetUserArtifacts(jobGraph, userArtifacts, client);
             } catch (IOException ioe) {
                 throw new FlinkException("Could not upload job files.", ioe);

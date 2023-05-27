@@ -118,7 +118,7 @@ public class StateBackendLoader {
         // by default the factory class is the backend name
         String factoryClassName = backendName;
 
-        switch (backendName.toLowerCase()) {//这种方式已经废弃了,注意127行 logger.warn 中的日志
+        switch (backendName.toLowerCase()) { // 这种方式已经废弃了,注意127行 logger.warn 中的日志
             case MEMORY_STATE_BACKEND_NAME:
                 MemoryStateBackend backend =
                         new MemoryStateBackendFactory().createFromConfig(config, classLoader);
@@ -133,7 +133,7 @@ public class StateBackendLoader {
                 }
 
                 return backend;
-            case FS_STATE_BACKEND_NAME://利用文件系统作为状态后端,会调转到default的情况
+            case FS_STATE_BACKEND_NAME: // 利用文件系统作为状态后端,会调转到default的情况
                 if (logger != null) {
                     logger.warn(
                             "{} state backend has been deprecated. Please use 'hashmap' state "
@@ -142,7 +142,7 @@ public class StateBackendLoader {
                 }
                 // fall through and use the HashMapStateBackend instead which
                 // utilizes the same HeapKeyedStateBackend runtime implementation.
-            case HASHMAP_STATE_BACKEND_NAME://利用hashmap 来作为状态后端
+            case HASHMAP_STATE_BACKEND_NAME: // 利用hashmap 来作为状态后端
                 HashMapStateBackend hashMapStateBackend =
                         new HashMapStateBackendFactory().createFromConfig(config, classLoader);
                 if (logger != null) {
@@ -150,7 +150,7 @@ public class StateBackendLoader {
                 }
                 return hashMapStateBackend;
 
-            case ROCKSDB_STATE_BACKEND_NAME://跳转到 default的情况
+            case ROCKSDB_STATE_BACKEND_NAME: // 跳转到 default的情况
                 factoryClassName = ROCKSDB_STATE_BACKEND_FACTORY;
 
                 // fall through to the 'default' case that uses reflection to load the backend
@@ -224,15 +224,15 @@ public class StateBackendLoader {
 
         final StateBackend backend;
 
-        //fromApplication 与 fromConfig的区别:
+        // fromApplication 与 fromConfig的区别:
 
-        //fromApplication  针对的是用户硬编码定义的 backend ;
+        // fromApplication  针对的是用户硬编码定义的 backend ;
         // fromConfig    针对的是配置文件定义
 
         // (1) the application defined state backend has precedence
         if (fromApplication != null) {
 
-            //如果是可配置的状态后端,则配置后返回,否则直接返回
+            // 如果是可配置的状态后端,则配置后返回,否则直接返回
             if (fromApplication instanceof ConfigurableStateBackend) {
                 // needs to pick up configuration
                 if (logger != null) {
@@ -308,11 +308,13 @@ public class StateBackendLoader {
                 TernaryBoolean.TRUE.equals(isChangelogStateBackendEnableFromApplication)
                         || (TernaryBoolean.UNDEFINED.equals(
                                         isChangelogStateBackendEnableFromApplication)
-                                && config.get(CheckpointingOptions.ENABLE_STATE_CHANGE_LOG));//state.backend.changelog.enabled
+                                && config.get(
+                                        CheckpointingOptions
+                                                .ENABLE_STATE_CHANGE_LOG)); // state.backend.changelog.enabled
 
         StateBackend backend;
         if (enableChangeLog) {
-            //ChangelogStateBackend 是对普通状态后端的包装,增加了 (状态更改转发到状态更改日志) 的功能
+            // ChangelogStateBackend 是对普通状态后端的包装,增加了 (状态更改转发到状态更改日志) 的功能
             backend = loadChangelogStateBackend(rootBackend, classLoader);
             LOG.info(
                     "State backend loader loads {} to delegate {}",
@@ -365,7 +367,6 @@ public class StateBackendLoader {
         // (3) use the default MemoryStateBackend
         return false;
     }
-
 
     private static StateBackend loadChangelogStateBackend(
             StateBackend backend, ClassLoader classLoader) throws DynamicCodeLoadingException {

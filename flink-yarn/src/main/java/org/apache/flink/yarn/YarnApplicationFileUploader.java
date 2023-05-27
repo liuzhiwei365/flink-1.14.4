@@ -236,6 +236,7 @@ class YarnApplicationFileUploader implements AutoCloseable {
 
         final List<Path> localPaths = new ArrayList<>();
         final List<Path> relativePaths = new ArrayList<>();
+
         for (Path shipFile : shipFiles) {
             if (Utils.isRemotePath(shipFile.toString())) {
                 if (fileSystem.isDirectory(shipFile)) {
@@ -278,8 +279,8 @@ class YarnApplicationFileUploader implements AutoCloseable {
             relativePaths.add(new Path(localResourcesDirectory, shipFile.getName()));
         }
 
-        final Set<String> archives = new HashSet<>();
-        final Set<String> resources = new HashSet<>();
+        final Set<String> archives = new HashSet<>(); // jar包
+        final Set<String> resources = new HashSet<>(); // 配置文件
         for (int i = 0; i < localPaths.size(); i++) {
             final Path localPath = localPaths.get(i);
             final Path relativePath = relativePaths.get(i);
@@ -307,8 +308,8 @@ class YarnApplicationFileUploader implements AutoCloseable {
         // construct classpath, we always want resource directories to go first, we also sort
         // both resources and archives in order to make classpath deterministic
         final ArrayList<String> classPaths = new ArrayList<>();
-        resources.stream().sorted().forEach(classPaths::add);
-        archives.stream().sorted().forEach(classPaths::add);
+        resources.stream().sorted().forEach(classPaths::add); // 配置文件
+        archives.stream().sorted().forEach(classPaths::add); // jar包
         return classPaths;
     }
 

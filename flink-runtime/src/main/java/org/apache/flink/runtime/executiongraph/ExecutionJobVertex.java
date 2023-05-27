@@ -89,12 +89,13 @@ public class ExecutionJobVertex
 
     private final JobVertex jobVertex;
 
+    // 一个ExecutionJobVerx 包含 并行度个 ExecutionVertex
     private final ExecutionVertex[] taskVertices;
 
-    //与 JobGraph中 的 IntermediateDataSet 一一对应
+    // 与 JobGraph中 的 IntermediateDataSet 一一对应
     private final IntermediateResult[] producedDataSets;
 
-    private final List<IntermediateResult> inputs;//设计成list ,针对合并流
+    private final List<IntermediateResult> inputs; // 设计成list ,针对合并流
 
     private final VertexParallelismInformation parallelismInfo;
 
@@ -148,6 +149,7 @@ public class ExecutionJobVertex
                             this.parallelismInfo.getMaxParallelism()));
         }
 
+        // 设置资源
         this.resourceProfile =
                 ResourceProfile.fromResourceSpec(jobVertex.getMinResources(), MemorySize.ZERO);
 
@@ -162,7 +164,8 @@ public class ExecutionJobVertex
         // create the intermediate results
         this.producedDataSets =
                 new IntermediateResult[jobVertex.getNumberOfProducedIntermediateDataSets()];
-        //producedDataSets的 size 和 下游并行度 对应
+
+        // 数据集的个数 （注意不是并行度,不是分区, 例如一个流分流成两个流, 那么数据集就变成了 2 ）
         for (int i = 0; i < jobVertex.getProducedDataSets().size(); i++) {
             final IntermediateDataSet result = jobVertex.getProducedDataSets().get(i);
 
@@ -174,7 +177,7 @@ public class ExecutionJobVertex
                             result.getResultType());
         }
 
-        // create all task vertices
+        // 创建本 ExecutionJobVerx  的 并行度个 ExecutionVertex 对象
         for (int i = 0; i < this.parallelismInfo.getParallelism(); i++) {
             ExecutionVertex vertex =
                     new ExecutionVertex(
@@ -198,7 +201,8 @@ public class ExecutionJobVertex
             }
         }
 
-        //拿到本JobVertex 的所有 OperatorCoordinator.Provider,用于创建出所有的OperatorCoordinator
+        // 拿到本JobVertex 的所有 OperatorCoordinator.Provider,用于创建出所有的OperatorCoordinator
+        // SerializedValue 中封装了 OperatorCoordinator.Provider 的序列化对象
         final List<SerializedValue<OperatorCoordinator.Provider>> coordinatorProviders =
                 getJobVertex().getOperatorCoordinators();
         if (coordinatorProviders.isEmpty()) {
@@ -210,6 +214,7 @@ public class ExecutionJobVertex
                 for (final SerializedValue<OperatorCoordinator.Provider> provider :
                         coordinatorProviders) {
                     coordinators.add(
+                            // 内部会反序列化 provider   （与算子协调者相关）
                             OperatorCoordinatorHolder.create(
                                     provider, this, graph.getUserClassLoader()));
                 }
@@ -372,11 +377,12 @@ public class ExecutionJobVertex
 
     // ---------------------------------------------------------------------------------------------
 
-    //与先驱连接在一起
+    // 与所有先驱连接在一起, 这里的先驱是  前面的JobEdge层面的
     public void connectToPredecessors(
             Map<IntermediateDataSetID, IntermediateResult> intermediateDataSets)
             throws JobException {
 
+        // 一个jobVertex 有多个JobEdge的情况 (是双流join)
         List<JobEdge> inputs = jobVertex.getInputs();
 
         if (LOG.isDebugEnabled()) {
@@ -410,9 +416,7 @@ public class ExecutionJobVertex
                 }
             }
 
-            // fetch the intermediate result via ID. if it does not exist, then it either has not
-            // been created, or the order
-            // in which this method is called for the job vertices is not a topological order
+            // fetch the intermediate result via ID.
             IntermediateResult ires = intermediateDataSets.get(edge.getSourceId());
             if (ires == null) {
                 throw new JobException(
@@ -422,6 +426,9 @@ public class ExecutionJobVertex
 
             this.inputs.add(ires);
 
+            // JobEdge 的 DistributionPattern 只有 all-to-all 和 pointwise 两种
+            //  将ExecutionJobVertex  下面的所有 ExecutionVertex
+            //  和 IntermediateResult 下面的所有 IntermediateResultPartition 以某种方式相连接
             EdgeManagerBuildUtil.connectVertexToResult(this, ires, edge.getDistributionPattern());
         }
     }

@@ -47,6 +47,8 @@ public enum JobGraphUtils {
             try {
                 java.nio.file.Path tmpDir =
                         Files.createTempDirectory("flink-distributed-cache-" + jobId);
+
+                // 遍历所有用户的 jar 的文件地址
                 for (Map.Entry<String, DistributedCache.DistributedCacheEntry> originalEntry :
                         userArtifacts.entrySet()) {
                     Path filePath = new Path(originalEntry.getValue().filePath);

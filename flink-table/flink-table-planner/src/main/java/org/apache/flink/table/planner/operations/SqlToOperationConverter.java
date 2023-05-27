@@ -210,7 +210,7 @@ public class SqlToOperationConverter {
      * @param sqlNode SqlNode to execute on
      */
 
-    // 所有的sql操作都列在下面 sqlNode 转化为Operation 的入口
+    // 所有的sql操作都列在下面 sqlNode 转化为 Operation 的入口
     public static Optional<Operation> convert(
             FlinkPlannerImpl flinkPlanner, CatalogManager catalogManager, SqlNode sqlNode) {
         // validate the query
@@ -301,6 +301,8 @@ public class SqlToOperationConverter {
         } else if (validated instanceof SqlReset) {
             return Optional.of(converter.convertReset((SqlReset) validated));
         } else if (validated.getKind().belongsTo(SqlKind.QUERY)) {
+            //  sql 查询语句 装换成 operation的入口
+            //  SqlToRelConverter
             return Optional.of(converter.convertSqlQuery(validated));
         } else {
             return Optional.empty();

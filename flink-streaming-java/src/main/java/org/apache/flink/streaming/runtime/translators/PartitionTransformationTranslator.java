@@ -70,13 +70,15 @@ public class PartitionTransformationTranslator<OUT>
 
         List<Integer> resultIds = new ArrayList<>();
 
+        // 拿到所有已经被 转换的 所有父 StreamNode ,但是这里必定只有一个 父 StreamNode
         for (Integer inputId : context.getStreamNodeIds(input)) {
+
             final int virtualId = Transformation.getNewNodeId();
             streamGraph.addVirtualPartitionNode(
                     inputId,
                     virtualId,
-                    transformation.getPartitioner(),
-                    transformation.getExchangeMode());
+                    transformation.getPartitioner(), // 分区器
+                    transformation.getExchangeMode()); // 流模式 批模式
             resultIds.add(virtualId);
         }
         return resultIds;

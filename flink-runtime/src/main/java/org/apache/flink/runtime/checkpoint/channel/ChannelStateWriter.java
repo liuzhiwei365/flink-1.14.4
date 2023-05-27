@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 /** Writes channel state during checkpoint/savepoint. */
-
 @Internal
 public interface ChannelStateWriter extends Closeable {
 

@@ -91,6 +91,7 @@ public interface RpcSystem extends RpcSystemUtils, AutoCloseable {
      * @return loaded RpcSystem
      */
     static RpcSystem load(Configuration config) {
+        // spi 加载 flink-rpc-akka-loader 模块下的RpcSystemLoader 插件 ,插件实现是 AkkaRpcSystemLoader
         final Iterator<RpcSystemLoader> iterator =
                 ServiceLoader.load(RpcSystemLoader.class).iterator();
 

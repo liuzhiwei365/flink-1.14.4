@@ -55,7 +55,7 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 
     private static final Logger LOG = LoggerFactory.getLogger(RecordWriter.class);
 
-    protected final ResultPartitionWriter targetPartition;//提供了将数据元素写入ResultPartition的方法
+    protected final ResultPartitionWriter targetPartition; // 提供了将数据元素写入ResultPartition的方法
 
     protected final int numberOfChannels;
 
@@ -102,7 +102,7 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 
     protected void emit(T record, int targetSubpartition) throws IOException {
         checkErroneous();
-        //写入指定partition编号
+        // 写入指定partition编号
         targetPartition.emitRecord(serializeRecord(serializer, record), targetSubpartition);
 
         if (flushAlways) {

@@ -81,6 +81,7 @@ public class YarnSessionClusterEntrypoint extends SessionClusterEntrypoint {
                         args,
                         new DynamicParametersConfigurationParserFactory(),
                         YarnSessionClusterEntrypoint.class);
+
         final Configuration configuration =
                 YarnEntrypointUtils.loadConfiguration(workingDirectory, dynamicParameters, env);
 

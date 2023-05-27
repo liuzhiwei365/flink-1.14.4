@@ -47,8 +47,7 @@ import static org.apache.flink.util.Preconditions.checkState;
 // EXACTLY_ONCE: SingleCheckpointBarrierHandler (支持对齐与非对齐)
 // AT_LEAST_ONCE: CheckpointBarrierTracker (不支持非对齐) ,可以同时追踪多个pendingCheckpoints
 
-
-//注意 查看InputProcessorUtil 的 createCheckpointBarrierHandler 方法
+// 注意 查看InputProcessorUtil 的 createCheckpointBarrierHandler 方法
 
 public abstract class CheckpointBarrierHandler implements Closeable {
     private static final long OUTSIDE_OF_ALIGNMENT = Long.MIN_VALUE;
@@ -145,7 +144,7 @@ public abstract class CheckpointBarrierHandler implements Closeable {
                             .setBytesProcessedDuringAlignment(latestBytesProcessedDuringAlignment)
                             .setCheckpointStartDelayNanos(latestCheckpointStartDelayNanos);
         } else {
-            //第一次
+            // 第一次
             checkpointMetrics =
                     new CheckpointMetricsBuilder()
                             .setAlignmentDurationNanos(0L)

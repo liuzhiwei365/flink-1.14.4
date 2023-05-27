@@ -172,6 +172,7 @@ final class AggregateOperationFactory {
                 groupings.stream()
                         .map(expr -> extractName(expr).orElseGet(expr::toString))
                         .toArray(String[]::new);
+
         String[] fieldNames =
                 concat(
                                 Stream.of(groupNames),
@@ -219,8 +220,14 @@ final class AggregateOperationFactory {
      * may return multi output names when the composite return type is flattened. If the result type
      * is not a composite type, the result name should not conflict with the group names.
      */
+    /*
+        提取聚合或表聚合表达式的名称。对于表聚合,当复合返回类型被展平时,它可能返回多个输出名称
+        如果结果类型不是复合类型,则结果名称不应与组名称冲突
+     */
+    // 传入的 expression参数 是聚合表达式, groupNames 是分组名列表
     private Stream<String> extractAggregateNames(
             ResolvedExpression expression, List<String> groupNames) {
+
         if (isFunctionOfKind(expression, TABLE_AGGREGATE)) {
             final DataType outputDataType = expression.getOutputDataType();
             final LogicalType outputType = expression.getOutputDataType().getLogicalType();
@@ -228,6 +235,7 @@ final class AggregateOperationFactory {
             if (outputType instanceof LegacyTypeInformationType) {
                 final TypeInformation<?> legacyInfo =
                         TypeConversions.fromDataTypeToLegacyInfo(expression.getOutputDataType());
+
                 return Arrays.stream(FieldInfoUtils.getFieldNames(legacyInfo, groupNames));
             }
             return DataTypeUtils.flattenToNames(outputDataType, groupNames).stream();

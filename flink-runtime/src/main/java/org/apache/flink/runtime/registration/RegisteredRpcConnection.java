@@ -105,6 +105,8 @@ public abstract class RegisteredRpcConnection<
         final RetryingRegistration<F, G, S, R> newRegistration = createNewRegistration();
 
         if (REGISTRATION_UPDATER.compareAndSet(this, null, newRegistration)) {
+            // RetryingRegistration.startRegistration
+            // 会用 rpcService 去连接
             newRegistration.startRegistration();
         } else {
             // concurrent start operation
@@ -264,6 +266,7 @@ public abstract class RegisteredRpcConnection<
                     } else {
                         if (result.isSuccess()) {
                             targetGateway = result.getGateway();
+                            // 会调用  establishResourceManagerConnection
                             onRegistrationSuccess(result.getSuccess());
                         } else if (result.isRejection()) {
                             onRegistrationRejection(result.getRejection());

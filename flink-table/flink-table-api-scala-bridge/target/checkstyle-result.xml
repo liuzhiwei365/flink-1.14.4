@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="8.14">
-<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-table-api-scala-bridge/src/main/java/org/apache/flink/table/operations/ScalaDataStreamQueryOperation.java">
-</file>
-<file name="/Users/liuzhiwei/ideapro/flink-1.14.4/flink-table/flink-table-api-scala-bridge/src/main/java/org/apache/flink/table/operations/ScalaExternalQueryOperation.java">
-</file>
-</checkstyle>

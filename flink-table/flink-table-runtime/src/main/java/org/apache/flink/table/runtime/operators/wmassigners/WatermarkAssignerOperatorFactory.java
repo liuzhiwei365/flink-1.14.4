@@ -49,6 +49,7 @@ public class WatermarkAssignerOperatorFactory extends AbstractStreamOperatorFact
 
     @SuppressWarnings("unchecked")
     @Override
+    // 创建 WatermarkAssignerOperator 对象
     public StreamOperator createStreamOperator(StreamOperatorParameters initializer) {
         WatermarkGenerator watermarkGenerator =
                 generatedWatermarkGenerator.newInstance(

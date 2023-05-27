@@ -260,6 +260,7 @@ class FlinkTypeFactory(typeSystem: RelDataTypeSystem)
     * FlinkTypeFactory. Table row type is table schema for Calcite RelNode. See getRowType of
     * [[RelNode]]. Use FULLY_QUALIFIED to let each field must be referenced explicitly.
     */
+    // 根据RowType 构建 RelDataType
   def buildRelNodeRowType(rowType: RowType): RelDataType = {
     val fields = rowType.getFields
     buildStructType(fields.map(_.getName), fields.map(_.getType), StructKind.FULLY_QUALIFIED)
@@ -289,7 +290,7 @@ class FlinkTypeFactory(typeSystem: RelDataTypeSystem)
       structKind: StructKind): RelDataType = {
     val b = builder
     b.kind(structKind)
-    val fields = fieldNames.zip(fieldTypes)
+    val fields = fieldNames.zip(fieldTypes) // zip 是scala api
     fields foreach {
       case (fieldName, fieldType) =>
         val fieldRelDataType = createFieldTypeFromLogicalType(fieldType)
@@ -521,6 +522,7 @@ object FlinkTypeFactory {
     case _ => false
   }
 
+  // 将原生的sql 数据类型 转为  逻辑类型
   def toLogicalType(relDataType: RelDataType): LogicalType = {
     val logicalType = relDataType.getSqlTypeName match {
       case BOOLEAN => new BooleanType()

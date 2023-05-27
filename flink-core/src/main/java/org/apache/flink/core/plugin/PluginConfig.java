@@ -58,6 +58,7 @@ public class PluginConfig {
     }
 
     public static Optional<File> getPluginsDir() {
+        // FLINK_PLUGINS_DIR  plugins
         String pluginsDir =
                 System.getenv()
                         .getOrDefault(

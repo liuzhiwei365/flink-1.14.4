@@ -81,6 +81,8 @@ public class ResourceManagerRuntimeServices {
             SlotManagerMetricGroup slotManagerMetricGroup) {
         final SlotManagerConfiguration slotManagerConfiguration =
                 configuration.getSlotManagerConfiguration();
+
+        // cluster.fine-grained-resource-management.enabled 是否开启细粒度的 资源管理器
         if (configuration.isEnableFineGrainedResourceManagement()) {
             return new FineGrainedSlotManager(
                     scheduledExecutor,

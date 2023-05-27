@@ -77,8 +77,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- *  这个类专门针对 DynamicTableSink 的, HoodieTableSink 也属于DynamicTableSink
- *  还有HbaseTableSink、HiveTableSink 等等
+ * 这个类专门针对 DynamicTableSink 的, HoodieTableSink 也属于DynamicTableSink 还有HbaseTableSink、HiveTableSink 等等
  * Base {@link ExecNode} to write data to an external sink defined by a {@link DynamicTableSink}.
  */
 public abstract class CommonExecSink extends ExecNodeBase<Object>

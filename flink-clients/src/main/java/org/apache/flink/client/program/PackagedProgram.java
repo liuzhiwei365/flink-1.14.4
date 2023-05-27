@@ -155,7 +155,7 @@ public class PackagedProgram implements AutoCloseable {
                         // the manifest
                         entryPointClassName != null
                                 ? entryPointClassName
-                                : getEntryPointClassNameFromJar(this.jarFile),
+                                : getEntryPointClassNameFromJar(this.jarFile), // 拿到用户代码的主类
                         userCodeClassLoader);
 
         if (!hasMainMethod(mainClass)) {
@@ -352,6 +352,7 @@ public class PackagedProgram implements AutoCloseable {
         }
 
         try {
+            // 反射调用 用户的 main
             mainMethod.invoke(null, (Object) args);
         } catch (IllegalArgumentException e) {
             throw new ProgramInvocationException(
@@ -386,6 +387,8 @@ public class PackagedProgram implements AutoCloseable {
         String className;
 
         // Open jar file
+
+        // 注意jdk 的JarFile api 的使用
         try {
             jar = new JarFile(new File(jarFile.toURI()));
         } catch (URISyntaxException use) {
@@ -402,7 +405,7 @@ public class PackagedProgram implements AutoCloseable {
 
         // jar file must be closed at the end
         try {
-            // Read from jar manifest
+            // Read from jar manifest , mainfest 包含了所有的 main class 信息
             try {
                 manifest = jar.getManifest();
             } catch (IOException ioex) {

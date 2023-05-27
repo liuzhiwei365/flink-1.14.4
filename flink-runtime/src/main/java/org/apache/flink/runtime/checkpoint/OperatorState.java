@@ -147,7 +147,8 @@ public class OperatorState implements CompositeStateHandle {
 
         for (Map.Entry<Integer, OperatorSubtaskState> originalSubtaskStateEntry :
                 operatorSubtaskStates.entrySet()) {
-            // OperatorSubtaskState 中 内部总共有8种状态 ,我们把其中的  ResultSubpartitionState 和 InputChannelState 设置为空
+            // OperatorSubtaskState 中 内部总共有8种状态 ,我们把其中的  ResultSubpartitionState 和 InputChannelState
+            // 设置为空
 
             newState.putState(
                     originalSubtaskStateEntry.getKey(),

@@ -31,7 +31,7 @@ public interface OperatorStateHandle extends StreamStateHandle {
 
     /** Returns a map of meta data for all contained states by their name. */
 
-    //容量为 unionState.size(), broadcastState.size() 或者 nameToDistributeState.size()
+    // 容量为 unionState.size(), broadcastState.size() 或者 nameToDistributeState.size()
     Map<String, StateMetaInfo> getStateNameToPartitionOffsets();
 
     /** Returns an input stream to read the operator state information. */

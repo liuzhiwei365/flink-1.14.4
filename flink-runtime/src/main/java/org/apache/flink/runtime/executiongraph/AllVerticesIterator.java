@@ -30,6 +30,7 @@ class AllVerticesIterator<EV extends AccessExecutionVertex, EJV extends AccessEx
 
     private int currPos;
 
+    // 该迭代器传入的泛型是 EJV ,输出的泛型是 EV ( 内部相当于有 flat map 的功效 )
     public AllVerticesIterator(Iterator<EJV> jobVertices) {
         this.jobVertices = jobVertices;
     }

@@ -30,11 +30,11 @@ public class ConsumerVertexGroup implements Iterable<ExecutionVertexID> {
         this.vertices = vertices;
     }
 
-    //工厂方法
+    // 工厂方法
     public static ConsumerVertexGroup fromMultipleVertices(List<ExecutionVertexID> vertices) {
         return new ConsumerVertexGroup(vertices);
     }
-    //工厂方法
+    // 工厂方法
     public static ConsumerVertexGroup fromSingleVertex(ExecutionVertexID vertex) {
         return new ConsumerVertexGroup(Collections.singletonList(vertex));
     }

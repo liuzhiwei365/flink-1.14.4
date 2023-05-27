@@ -68,10 +68,11 @@ public class DefaultExecutor implements Executor {
         executionEnvironment.configure(tableConfiguration);
 
         // create stream graph
+        // execution.runtime-mode
         final RuntimeExecutionMode mode = getConfiguration().get(ExecutionOptions.RUNTIME_MODE);
         switch (mode) {
             case BATCH:
-                configureBatchSpecificProperties();
+                configureBatchSpecificProperties(); // 批模式 开启对象重用
                 break;
             case STREAMING:
                 break;

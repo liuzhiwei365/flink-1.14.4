@@ -187,6 +187,7 @@ public class IntermediateResult {
                 this.shuffleDescriptorCache.remove(consumedPartitionGroup);
         if (cache instanceof Offloaded) {
             PermanentBlobKey blobKey = ((Offloaded<ShuffleDescriptor[]>) cache).serializedValueKey;
+            // 会调用  DefaultExecutionGraph 的 deleteBlobs 方法来删除 文件缓存信息(临时文件)
             this.producer.getGraph().deleteBlobs(Collections.singletonList(blobKey));
         }
     }

@@ -64,6 +64,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Implementation of {@link SlotManager} supporting fine-grained resource management. */
+
+// 细粒度 的 slot manager
 public class FineGrainedSlotManager implements SlotManager {
     private static final Logger LOG = LoggerFactory.getLogger(FineGrainedSlotManager.class);
 
@@ -192,6 +194,7 @@ public class FineGrainedSlotManager implements SlotManager {
 
         started = true;
 
+        // 周期性检查 TaskManager ,如果空闲 且超时没续约 ,则注销 相关 task mannager
         taskManagerTimeoutsCheck =
                 scheduledExecutor.scheduleWithFixedDelay(
                         () -> mainThreadExecutor.execute(this::checkTaskManagerTimeouts),
@@ -258,6 +261,7 @@ public class FineGrainedSlotManager implements SlotManager {
         resourceTracker.notifyResourceRequirements(jobId, Collections.emptyList());
     }
 
+    // 处理 资源申请
     @Override
     public void processResourceRequirements(ResourceRequirements resourceRequirements) {
         checkInit();
@@ -279,8 +283,13 @@ public class FineGrainedSlotManager implements SlotManager {
             jobMasterTargetAddresses.put(
                     resourceRequirements.getJobId(), resourceRequirements.getTargetAddress());
         }
+
+        // 通知 resourceTracker 有资源需求集合来了
+        // resourceRequirements 封装了 一个Job 所需的所有资源  和 该Job 的 JobMaster 连接地址
         resourceTracker.notifyResourceRequirements(
                 resourceRequirements.getJobId(), resourceRequirements.getResourceRequirements());
+
+        // 随后 检查 资源需求的集合
         checkResourceRequirementsWithDelay();
     }
 
@@ -307,7 +316,17 @@ public class FineGrainedSlotManager implements SlotManager {
                 taskExecutorConnection.getResourceID(),
                 taskExecutorConnection.getInstanceID());
 
-        // we identify task managers by their instance id
+        // SlotManager 用 taskManagerTracker 来 追踪 taskManager 的资源
+        /*
+            ①checkInit
+                检查slotManager是否启动
+            ②reportSlotStatus
+                我们通过tm的实例id来标识它们，已经连接过, 直接报告slot的状态
+            ③ArrayList<SlotID> reportedSlots
+                没有连接过，第一次注册TaskManager
+            ④registerSlot
+                开始注册slot
+        */
         if (taskManagerTracker
                 .getRegisteredTaskManager(taskExecutorConnection.getInstanceID())
                 .isPresent()) {
@@ -318,7 +337,7 @@ public class FineGrainedSlotManager implements SlotManager {
             return false;
         } else {
             Optional<PendingTaskManagerId> matchedPendingTaskManagerOptional =
-                    initialSlotReport.hasAllocatedSlot()
+                    initialSlotReport.hasAllocatedSlot() // 如果存在一个被分配,就返回true
                             ? Optional.empty()
                             : findMatchingPendingTaskManager(
                                     totalResourceProfile, defaultSlotResourceProfile);
@@ -371,6 +390,8 @@ public class FineGrainedSlotManager implements SlotManager {
 
     private Optional<PendingTaskManagerId> findMatchingPendingTaskManager(
             ResourceProfile totalResourceProfile, ResourceProfile defaultSlotResourceProfile) {
+
+        // 找到 总资源为 totalResourceProfile ,单个slot资源为 defaultSlotResourceProfile 的 挂起的 所有TaskManager
         Collection<PendingTaskManager> matchedPendingTaskManagers =
                 taskManagerTracker.getPendingTaskManagersByTotalAndDefaultSlotResourceProfile(
                         totalResourceProfile, defaultSlotResourceProfile);
@@ -497,7 +518,7 @@ public class FineGrainedSlotManager implements SlotManager {
                                         Preconditions.checkNotNull(requirementsCheckFuture)
                                                 .complete(null);
                                     }),
-                    requirementsCheckDelay.toMilliseconds(),
+                    requirementsCheckDelay.toMilliseconds(), // 默认50 ms
                     TimeUnit.MILLISECONDS);
         }
     }
@@ -530,6 +551,7 @@ public class FineGrainedSlotManager implements SlotManager {
         allocateSlotsAccordingTo(result.getAllocationsOnRegisteredResources());
 
         // Allocate task managers according to the result
+        // 只有Yarn、K8S这样的动态扩展TaskManager的资源管理器才支持
         final Set<PendingTaskManagerId> failAllocations =
                 allocateTaskManagersAccordingTo(result.getPendingTaskManagersToAllocate());
 
@@ -538,6 +560,8 @@ public class FineGrainedSlotManager implements SlotManager {
                 pendingResourceAllocationResult =
                         new HashMap<>(result.getAllocationsOnPendingResources());
         pendingResourceAllocationResult.keySet().removeAll(failAllocations);
+
+        //
         taskManagerTracker.replaceAllPendingAllocations(pendingResourceAllocationResult);
 
         unfulfillableJobs.clear();
@@ -670,8 +694,11 @@ public class FineGrainedSlotManager implements SlotManager {
     // ---------------------------------------------------------------------------------------------
 
     private void checkTaskManagerTimeouts() {
+        // 遍历所有超时的 需要续约的 TaskManager,
         for (TaskManagerInfo timeoutTaskManager : getTimeOutTaskManagers()) {
+
             if (waitResultConsumedBeforeRelease) {
+                // 如果配置了数据结果被消费完,才能够释放资源
                 releaseIdleTaskExecutorIfPossible(timeoutTaskManager);
             } else {
                 releaseIdleTaskExecutor(timeoutTaskManager.getInstanceId());
@@ -691,13 +718,17 @@ public class FineGrainedSlotManager implements SlotManager {
     }
 
     private void releaseIdleTaskExecutorIfPossible(TaskManagerInfo taskManagerInfo) {
+
+        // 拿到过期时 的时间点
         final long idleSince = taskManagerInfo.getIdleSince();
         taskManagerInfo
                 .getTaskExecutorConnection()
                 .getTaskExecutorGateway()
-                .canBeReleased()
+                .canBeReleased() // 内部用了同步锁
                 .thenAcceptAsync(
                         canBeReleased -> {
+                            // 如果 idleSince没有被更新过 , 即没有其他线程来续约
+                            // 且 相关 ResultPartition集合 为空 ,则 释放 TaskExecutor 资源
                             boolean stillIdle = idleSince == taskManagerInfo.getIdleSince();
                             if (stillIdle && canBeReleased) {
                                 releaseIdleTaskExecutor(taskManagerInfo.getInstanceId());
@@ -708,11 +739,14 @@ public class FineGrainedSlotManager implements SlotManager {
 
     private void releaseIdleTaskExecutor(InstanceID timedOutTaskManagerId) {
         final FlinkException cause = new FlinkException("TaskManager exceeded the idle timeout.");
+        // 交给 resource Manager 来释放资源
         resourceActions.releaseResource(timedOutTaskManagerId, cause);
     }
 
+    // taskManager 不足, 增加分配 一个 task Manager
     private boolean allocateResource(PendingTaskManager pendingTaskManager) {
         if (isMaxTotalResourceExceededAfterAdding(pendingTaskManager.getTotalResourceProfile())) {
+            //  超过最大配置的限制,则不分配
             LOG.info(
                     "Could not allocate {}. Max total resource limitation <{}, {}> is reached.",
                     pendingTaskManager,
@@ -721,7 +755,7 @@ public class FineGrainedSlotManager implements SlotManager {
             return false;
         }
 
-        if (!resourceActions.allocateResource(
+        if (!resourceActions.allocateResource( // 分配
                 WorkerResourceSpec.fromTotalResourceProfile(
                         pendingTaskManager.getTotalResourceProfile(),
                         pendingTaskManager.getNumSlots()))) {
@@ -729,6 +763,7 @@ public class FineGrainedSlotManager implements SlotManager {
             return false;
         }
 
+        // 分配成功后 ,加入到taskManagerTracker 维护
         taskManagerTracker.addPendingTaskManager(pendingTaskManager);
         return true;
     }
@@ -752,6 +787,8 @@ public class FineGrainedSlotManager implements SlotManager {
         Preconditions.checkNotNull(resourceActions);
     }
 
+    // 是否超过了 用户的最大总资源设置
+    // maxTotalCpu 和 maxTotalMem 有一个被超过就返回 true
     private boolean isMaxTotalResourceExceededAfterAdding(ResourceProfile newResource) {
         final ResourceProfile totalResourceAfterAdding =
                 newResource

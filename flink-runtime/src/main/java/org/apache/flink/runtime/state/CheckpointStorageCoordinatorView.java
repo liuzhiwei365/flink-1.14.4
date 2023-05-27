@@ -37,7 +37,7 @@ public interface CheckpointStorageCoordinatorView {
      * settings, which makes them suitable for zero-config prototyping, but not for actual
      * production setups.
      */
-    //是否支持高可用存储
+    // 是否支持高可用存储
     boolean supportsHighlyAvailableStorage();
 
     /** Checks whether the storage has a default savepoint location configured. */

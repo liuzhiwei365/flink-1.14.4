@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.connector.datagen.table.types.DecimalDataRandomGeneratorTest
--------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.235 s - in org.apache.flink.connector.datagen.table.types.DecimalDataRandomGeneratorTest

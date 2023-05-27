@@ -41,6 +41,7 @@ public enum JobDispatcherFactory implements DispatcherFactory {
             DispatcherBootstrapFactory dispatcherBootstrapFactory,
             PartialDispatcherServicesWithJobGraphStore partialDispatcherServicesWithJobGraphStore)
             throws Exception {
+        // 由于是per job 模式 这里的 recoveredJobs 必定只有一个
         final JobGraph jobGraph = Iterables.getOnlyElement(recoveredJobs);
 
         final Configuration configuration =

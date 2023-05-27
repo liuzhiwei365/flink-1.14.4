@@ -67,7 +67,7 @@ public class TimeEvictor<W extends Window> implements Evictor<Object, W> {
     }
 
     private void evict(Iterable<TimestampedValue<Object>> elements, int size, EvictorContext ctx) {
-        //窗口计算时,只保留最近n 时间内的元素
+        // 窗口计算时,只保留最近n 时间内的元素
         if (!hasTimestamp(elements)) {
             return;
         }
@@ -78,7 +78,7 @@ public class TimeEvictor<W extends Window> implements Evictor<Object, W> {
         for (Iterator<TimestampedValue<Object>> iterator = elements.iterator();
                 iterator.hasNext(); ) {
             TimestampedValue<Object> record = iterator.next();
-            if (record.getTimestamp() <= evictCutoff) {//说明 不在窗口区间 (evictCutoff,currentTime] 内都移除
+            if (record.getTimestamp() <= evictCutoff) { // 说明 不在窗口区间 (evictCutoff,currentTime] 内都移除
                 iterator.remove();
             }
         }

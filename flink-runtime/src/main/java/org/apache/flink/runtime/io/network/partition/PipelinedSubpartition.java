@@ -173,7 +173,7 @@ public class PipelinedSubpartition extends ResultSubpartition
         final boolean notifyDataAvailable;
         int prioritySequenceNumber = -1;
         int newBufferSize;
-        synchronized (buffers) { //获取buffer锁对象，判断当前SubPartition是否已经释放
+        synchronized (buffers) { // 获取buffer锁对象，判断当前SubPartition是否已经释放
             if (isFinished || isReleased) {
                 bufferConsumer.close();
                 return -1;
@@ -183,9 +183,9 @@ public class PipelinedSubpartition extends ResultSubpartition
             if (addBuffer(bufferConsumer, partialRecordLength)) {
                 prioritySequenceNumber = sequenceNumber;
             }
-            //更新buffer统计指标
+            // 更新buffer统计指标
             updateStatistics(bufferConsumer);
-            //更新Backlog挤压指标
+            // 更新Backlog挤压指标
             increaseBuffersInBacklog(bufferConsumer);
             notifyDataAvailable = finish || shouldNotifyDataAvailable();
 

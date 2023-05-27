@@ -41,15 +41,10 @@ import java.util.Collection;
  * users.
  */
 
-
 // Flink支持 MemoryStatebackend, FsStateBackend, RocksDBStateBackend 三种类型的 状态存储后端,
 // 三者的主要区别在于创建的 KeyedStateBackend 及CheckpointStorge不同.
 // 例如:  MemoryStatebackend 和 FsStateBackend 创建的是HeapkeyedStateBackend
 //       RocksDBStateBackend 创建的是 RocksDBKeyedStateBackend
-
-
-
-
 
 @PublicEvolving
 public abstract class AbstractStateBackend implements StateBackend, java.io.Serializable {

@@ -353,6 +353,8 @@ public final class ApiExpressionUtils {
      * @return true if the expression is function call of given type, false otherwise
      */
     public static boolean isFunctionOfKind(Expression expression, FunctionKind kind) {
+
+        //检查 表达式内部 的 函数定义成员  是否是指定的 类型
         if (expression instanceof UnresolvedCallExpression) {
             return ((UnresolvedCallExpression) expression).getFunctionDefinition().getKind()
                     == kind;

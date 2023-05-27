@@ -78,11 +78,11 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
         logCompletedInternal(LOG_SYNC_COMPLETED_TEMPLATE, streamFactory, startTime);
 
         // 核心逻辑
-        //DefaultOperatorStateBackendSnapshotstrategy (org.apache.flink.runtime.state)
-        //HeapSnapshotstrategy (org.apache.flink.runtime.state.heap)
-        //RocksFullSnapshotStrategy (org.apache.flink.contrib.streaming.state.snapshot)
-        //RocksIncrementalSnapshotstrategy (org.apache.flink.contrib.streaming.state.snapshot)
-        //SavepointSnapshotStrategy (org.apache.flink.runtime.state)
+        // DefaultOperatorStateBackendSnapshotstrategy (org.apache.flink.runtime.state)
+        // HeapSnapshotstrategy (org.apache.flink.runtime.state.heap)
+        // RocksFullSnapshotStrategy (org.apache.flink.contrib.streaming.state.snapshot)
+        // RocksIncrementalSnapshotstrategy (org.apache.flink.contrib.streaming.state.snapshot)
+        // SavepointSnapshotStrategy (org.apache.flink.runtime.state)
 
         // 策略模式, 根据不同的策略,做不同的快照
         SnapshotStrategy.SnapshotResultSupplier<T> asyncSnapshot =
@@ -121,7 +121,7 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
         return asyncSnapshotTask;
     }
 
-    //只有日志的作用
+    // 只有日志的作用
     private void logCompletedInternal(
             @Nonnull String template, @Nonnull Object checkpointOutDescription, long startTime) {
 

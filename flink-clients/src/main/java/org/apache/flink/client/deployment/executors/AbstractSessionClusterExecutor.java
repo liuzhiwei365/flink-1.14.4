@@ -75,6 +75,8 @@ public class AbstractSessionClusterExecutor<
                     clusterDescriptor.retrieve(clusterID);
             ClusterClient<ClusterID> clusterClient = clusterClientProvider.getClusterClient();
             return clusterClient
+                    /* 与其他实现  最大的不同 是 利用rest client 向已有的 flink集群 提交任务  */
+                    // 十分重要
                     .submitJob(jobGraph)
                     .thenApplyAsync(
                             FunctionUtils.uncheckedFunction(

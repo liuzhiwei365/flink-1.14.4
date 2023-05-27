@@ -82,6 +82,7 @@ public class HighAvailabilityServicesUtils {
         }
     }
 
+    // 高可以服务 会与外部服务 保持长连接,以达到监听的目的
     public static HighAvailabilityServices createHighAvailabilityServices(
             Configuration configuration,
             Executor executor,
@@ -121,6 +122,7 @@ public class HighAvailabilityServicesUtils {
                         BlobUtils.createBlobStoreFromConfig(configuration);
 
                 return new ZooKeeperHaServices(
+                        // 内部会启动zk客户端 ,注意该客户端 会与zk服务器保持长连接,以监听指定的目录
                         ZooKeeperUtils.startCuratorFramework(configuration, fatalErrorHandler),
                         executor,
                         configuration,

@@ -58,6 +58,8 @@ class DefaultDispatcherGatewayServiceFactory
 
         final Dispatcher dispatcher;
         try {
+            // JobDispatcherFactory    MiniDispatcher
+            // SessionDispatcherFactory   StandaloneDispatcher
             dispatcher =
                     dispatcherFactory.createDispatcher(
                             rpcService,
@@ -71,6 +73,7 @@ class DefaultDispatcherGatewayServiceFactory
             throw new FlinkRuntimeException("Could not create the Dispatcher rpc endpoint.", e);
         }
 
+        //
         dispatcher.start();
 
         return DefaultDispatcherGatewayService.from(dispatcher);

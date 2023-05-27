@@ -221,14 +221,14 @@ public class UnionInputGate extends InputGate {
             boolean blocking) throws IOException, InterruptedException {
         while (true) {
             synchronized (inputGatesWithData) {
-                //UnionInputGate 会维护 这样的结构: PrioritizedDeque<IndexedInputGate> inputGatesWithData
+                // UnionInputGate 会维护 这样的结构: PrioritizedDeque<IndexedInputGate> inputGatesWithData
                 Optional<IndexedInputGate> inputGateOpt = getInputGate(blocking);
                 if (!inputGateOpt.isPresent()) {
                     return Optional.empty();
                 }
                 final IndexedInputGate inputGate = inputGateOpt.get();
 
-                //如果是UnionInputGate的情况,最终还是会路由到inputGate 的逻辑
+                // 如果是UnionInputGate的情况,最终还是会路由到inputGate 的逻辑
                 Optional<BufferOrEvent> nextOpt = inputGate.pollNext();
 
                 if (!nextOpt.isPresent()) {
@@ -397,7 +397,7 @@ public class UnionInputGate extends InputGate {
             }
         }
 
-        //inputGatesWithData 的结构: PrioritizedDeque<IndexedInputGate> ,它是一个优先队列
+        // inputGatesWithData 的结构: PrioritizedDeque<IndexedInputGate> ,它是一个优先队列
         return Optional.of(inputGatesWithData.poll());
     }
 

@@ -84,25 +84,25 @@ public class RoundRobinOperatorStateRepartitioner
             // Initialize
             mergeMapList = initMergeMapList(previousParallelSubtaskStates);
 
-            //单独处理UnionState
+            // 单独处理UnionState
             repartitionUnionState(unionStates, mergeMapList);
 
-            //单独处理BroadcastState
+            // 单独处理BroadcastState
             repartitionBroadcastState(partlyFinishedBroadcastStates, mergeMapList);
 
         } else {
-            //当新旧并行度不一样的时候
+            // 当新旧并行度不一样的时候
 
-            //GroupByStateNameResults 可以看成是不同并行度情况下的中间适配
+            // GroupByStateNameResults 可以看成是不同并行度情况下的中间适配
             GroupByStateNameResults nameToStateByMode =
                     groupByStateMode(previousParallelSubtaskStates);
 
-            //集合gc 回收
+            // 集合gc 回收
             if (OPTIMIZE_MEMORY_USE) {
                 previousParallelSubtaskStates.clear();
             }
 
-            //拿着中间适配的结构 GroupByStateNameResults的对象,来做真正的状态重新分区逻辑
+            // 拿着中间适配的结构 GroupByStateNameResults的对象,来做真正的状态重新分区逻辑
             mergeMapList = repartition(nameToStateByMode, newParallelism);
         }
 
@@ -178,24 +178,30 @@ public class RoundRobinOperatorStateRepartitioner
                                 operatorStateHandle.getStateNameToPartitionOffsets().entrySet();
 
                 partitionOffsetEntries.stream()
-                        .filter(entry -> entry.getValue().getDistributionMode().equals(mode))  //过滤出想要的模式
+                        .filter(
+                                entry ->
+                                        entry.getValue()
+                                                .getDistributionMode()
+                                                .equals(mode)) // 过滤出想要的模式
                         .forEach(
                                 entry -> {
                                     StateEntry stateEntry =
                                             states.computeIfAbsent(
-                                                    entry.getKey(),//状态名
+                                                    entry.getKey(), // 状态名
                                                     k ->
                                                             new StateEntry(
-                                                                    parallelSubtaskStates.size() //旧的并行度
-                                                                            * partitionOffsetEntries.size(),//每个OperatorStateHandle 分区偏移量的条目数
+                                                                    parallelSubtaskStates
+                                                                                    .size() // 旧的并行度
+                                                                            * partitionOffsetEntries
+                                                                                    .size(), // 每个OperatorStateHandle 分区偏移量的条目数
                                                                     parallelSubtaskStates.size()));
                                     stateEntry.addEntry(
                                             subtaskIndex,
                                             Tuple2.of(
                                                     operatorStateHandle.getDelegateStateHandle(),
-                                                    entry.getValue()));//value的类型为 OperatorStateHandle.StateMetaInfo
+                                                    entry.getValue())); // value的类型为
+                                    // OperatorStateHandle.StateMetaInfo
                                 });
-
             }
         }
 
@@ -207,78 +213,91 @@ public class RoundRobinOperatorStateRepartitioner
     private GroupByStateNameResults groupByStateMode(
             List<List<OperatorStateHandle>> previousParallelSubtaskStates) {
 
-        //存储方法结果
-        EnumMap<OperatorStateHandle.Mode,
-                Map<String,
-                        List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>
-                        >
-                >
+        // 存储方法结果
+        EnumMap<
+                        OperatorStateHandle.Mode,
+                        Map<
+                                String,
+                                List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>>
                 nameToStateByMode = new EnumMap<>(OperatorStateHandle.Mode.class);
 
-        //初始化
+        // 初始化
         for (OperatorStateHandle.Mode mode : OperatorStateHandle.Mode.values()) {
             nameToStateByMode.put(mode, new HashMap<>());
         }
 
-
         // List<List<OperatorStateHandle>>
-        for (List<OperatorStateHandle> previousParallelSubtaskState :previousParallelSubtaskStates) { //算子旧并行度
+        for (List<OperatorStateHandle> previousParallelSubtaskState :
+                previousParallelSubtaskStates) { // 算子旧并行度
 
-            for (OperatorStateHandle operatorStateHandle : previousParallelSubtaskState) { //算子状态句柄( 该for循环肯定只 遍历一次; previousParallelSubtaskState的容量一定是一)
+            for (OperatorStateHandle operatorStateHandle :
+                    previousParallelSubtaskState) { // 算子状态句柄( 该for循环肯定只 遍历一次;
+                // previousParallelSubtaskState的容量一定是一)
 
                 if (operatorStateHandle == null) {
                     continue;
                 }
 
                 final Set<Map.Entry<String, OperatorStateHandle.StateMetaInfo>>
-                        partitionOffsetEntries = operatorStateHandle.getStateNameToPartitionOffsets().entrySet();
+                        partitionOffsetEntries =
+                                operatorStateHandle.getStateNameToPartitionOffsets().entrySet();
 
                 // 泛型中的String代表单个状态的名字 ,StateMetaInfo主要维护偏移量;因为多个状态存储的在一起,必须通过偏移量切分
-                for (Map.Entry<String, OperatorStateHandle.StateMetaInfo> e : partitionOffsetEntries) { // 单个状态 ( 一个算子状态句柄可能有多个状态,用户可以写多个)
+                for (Map.Entry<String, OperatorStateHandle.StateMetaInfo> e :
+                        partitionOffsetEntries) { // 单个状态 ( 一个算子状态句柄可能有多个状态,用户可以写多个)
 
                     // 3 层 循环 遍历 单个状态
 
                     OperatorStateHandle.StateMetaInfo metaInfo = e.getValue();
 
-                    //nameToState的总容量为  (旧并行度 * 状态的个数 * 状态的个数)
+                    // nameToState的总容量为  (旧并行度 * 状态的个数 * 状态的个数)
                     Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
                             nameToState = nameToStateByMode.get(metaInfo.getDistributionMode());
 
-                    List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>> stateLocations =
-                                    nameToState.computeIfAbsent( //get  方法的加强版
-                                            e.getKey(),//单个状态的名字
+                    List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>
+                            stateLocations =
+                                    nameToState.computeIfAbsent( // get  方法的加强版
+                                            e.getKey(), // 单个状态的名字
 
-                                            // 1 该ArrayList的容量为什么这样设置得好好思考一下, 因为三层for循环的第二层一定 的遍历次数一定是一
-                                            // 2 对于每个name来说 , 一般情况下容量使用都不会超过并行实例数; 但这里再乘以状态个数;猜想是为了解决union类型的状态合并
-                                            k ->  new ArrayList<>(
-                                                    previousParallelSubtaskStates.size() // 旧并行度
-                                                                    * partitionOffsetEntries.size())); //单个并行实例中 状态的个数
+                                            // 1 该ArrayList的容量为什么这样设置得好好思考一下, 因为三层for循环的第二层一定
+                                            // 的遍历次数一定是一
+                                            // 2 对于每个name来说 , 一般情况下容量使用都不会超过并行实例数;
+                                            // 但这里再乘以状态个数;猜想是为了解决union类型的状态合并
+                                            k ->
+                                                    new ArrayList<>(
+                                                            previousParallelSubtaskStates
+                                                                            .size() // 旧并行度
+                                                                    * partitionOffsetEntries
+                                                                            .size())); // 单个并行实例中
+                    // 状态的个数
 
                     stateLocations.add(
-                            Tuple2.of(operatorStateHandle.getDelegateStateHandle(), e.getValue()) );
+                            Tuple2.of(operatorStateHandle.getDelegateStateHandle(), e.getValue()));
                 }
             }
         }
-
 
         return new GroupByStateNameResults(nameToStateByMode);
     }
 
     /** Repartition all named states. */
-    //该方法是针对单个 operator id 的
+    // 该方法是针对单个 operator id 的
     private List<Map<StreamStateHandle, OperatorStateHandle>> repartition(
             GroupByStateNameResults nameToStateByMode, int newParallelism) {
 
-        //用来存储方法返回结果
+        // 用来存储方法返回结果
         List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList =
                 new ArrayList<>(newParallelism);
 
-        //初始化结构对象,放入一些空的 map
-        for (int i = 0; i < newParallelism; ++i) {mergeMapList.add(new HashMap<>());}
+        // 初始化结构对象,放入一些空的 map
+        for (int i = 0; i < newParallelism; ++i) {
+            mergeMapList.add(new HashMap<>());
+        }
 
-        //处理 SPLIT_DISTRIBUTE 类型
+        // 处理 SPLIT_DISTRIBUTE 类型
         Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
-                nameToDistributeState = nameToStateByMode.getByMode(OperatorStateHandle.Mode.SPLIT_DISTRIBUTE);
+                nameToDistributeState =
+                        nameToStateByMode.getByMode(OperatorStateHandle.Mode.SPLIT_DISTRIBUTE);
 
         repartitionSplitState(nameToDistributeState, newParallelism, mergeMapList);
 
@@ -290,7 +309,8 @@ public class RoundRobinOperatorStateRepartitioner
 
         // 处理 BROADCAST 类型
         Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
-                nameToBroadcastState = nameToStateByMode.getByMode(OperatorStateHandle.Mode.BROADCAST);
+                nameToBroadcastState =
+                        nameToStateByMode.getByMode(OperatorStateHandle.Mode.BROADCAST);
 
         repartitionBroadcastState(nameToBroadcastState, mergeMapList);
 
@@ -307,9 +327,9 @@ public class RoundRobinOperatorStateRepartitioner
         int startParallelOp = 0;
         // Iterate all named states and repartition one named state at a time per iteration
         for (Map.Entry<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
-                e : nameToDistributeState.entrySet()) { //针对任一 name
+                e : nameToDistributeState.entrySet()) { // 针对任一 name
 
-            List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>> current =//旧并行度
+            List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>> current = // 旧并行度
                     e.getValue();
 
             // Determine actual number of partitions for this named state
@@ -394,7 +414,6 @@ public class RoundRobinOperatorStateRepartitioner
                                     new OperatorStateHandle.StateMetaInfo(
                                             offs, OperatorStateHandle.Mode.SPLIT_DISTRIBUTE));
                 }
-
             }
             startParallelOp = newStartParallelOp;
             e.setValue(null);
@@ -407,15 +426,16 @@ public class RoundRobinOperatorStateRepartitioner
                     unionState,
             List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList) {
 
-        for (Map<StreamStateHandle, OperatorStateHandle> mergeMap : mergeMapList) { //新并行度
+        for (Map<StreamStateHandle, OperatorStateHandle> mergeMap : mergeMapList) { // 新并行度
             for (Map.Entry<
                             String,
                             List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
-                    e : unionState.entrySet()) { //所有union类型的 状态个数
+                    e : unionState.entrySet()) { // 所有union类型的 状态个数
 
-                for (Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>handleWithMetaInfo : e.getValue()) { //旧并行度
+                for (Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>
+                        handleWithMetaInfo : e.getValue()) { // 旧并行度
 
-                    //针对单个name,将旧的并行度中每一个分区的信息 都全部汇总  给新的任一分区(新的并行度)中
+                    // 针对单个name,将旧的并行度中每一个分区的信息 都全部汇总  给新的任一分区(新的并行度)中
                     OperatorStateHandle operatorStateHandle = mergeMap.get(handleWithMetaInfo.f0);
                     if (operatorStateHandle == null) {
                         operatorStateHandle =
@@ -448,16 +468,17 @@ public class RoundRobinOperatorStateRepartitioner
                             List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
                     e : broadcastState.entrySet()) { // 旧的分区信息
 
-                int previousParallelism = e.getValue().size();//旧并行度
+                int previousParallelism = e.getValue().size(); // 旧并行度
 
                 Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo> handleWithMetaInfo =
-                        e.getValue().get(i % previousParallelism);//不用取模也可以,随便拿一份就行 ;在子任务中获取一份旧的信息
+                        e.getValue().get(i % previousParallelism); // 不用取模也可以,随便拿一份就行 ;在子任务中获取一份旧的信息
 
-                //把旧的信息重组,再分配给新的
+                // 把旧的信息重组,再分配给新的
                 OperatorStateHandle operatorStateHandle = mergeMap.get(handleWithMetaInfo.f0);
                 if (operatorStateHandle == null) {
                     operatorStateHandle =
-                            new OperatorStreamStateHandle(  new HashMap<>(broadcastState.size()),    handleWithMetaInfo.f0  );
+                            new OperatorStreamStateHandle(
+                                    new HashMap<>(broadcastState.size()), handleWithMetaInfo.f0);
 
                     mergeMap.put(handleWithMetaInfo.f0, operatorStateHandle);
                 }
@@ -469,19 +490,22 @@ public class RoundRobinOperatorStateRepartitioner
     }
 
     private static final class GroupByStateNameResults {
-        private final EnumMap<OperatorStateHandle.Mode,
-                              Map<String,
-                                  List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>
-                                 >
-                             >
+        private final EnumMap<
+                        OperatorStateHandle.Mode,
+                        Map<
+                                String,
+                                List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>>
                 byMode;
 
         GroupByStateNameResults(
-                EnumMap<OperatorStateHandle.Mode,
-                        Map<String,
-                                List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>
-                                >
-                        >
+                EnumMap<
+                                OperatorStateHandle.Mode,
+                                Map<
+                                        String,
+                                        List<
+                                                Tuple2<
+                                                        StreamStateHandle,
+                                                        OperatorStateHandle.StateMetaInfo>>>>
                         byMode) {
             this.byMode = Preconditions.checkNotNull(byMode);
         }
@@ -505,12 +529,12 @@ public class RoundRobinOperatorStateRepartitioner
                 int subtaskIndex,
                 Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo> entry) {
             this.entries.add(entry);
-            //set() 方法将指定索引处的位设置为 true
+            // set() 方法将指定索引处的位设置为 true
             reportedSubtaskIndices.set(subtaskIndex);
         }
 
         boolean isPartiallyReported() {
-            //cardinality() 方法返回此 BitSet 中设置为 true 的位数
+            // cardinality() 方法返回此 BitSet 中设置为 true 的位数
             return reportedSubtaskIndices.cardinality() > 0
                     && reportedSubtaskIndices.cardinality() < reportedSubtaskIndices.size();
         }

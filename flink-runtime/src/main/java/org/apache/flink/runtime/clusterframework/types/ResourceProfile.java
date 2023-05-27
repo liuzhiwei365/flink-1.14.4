@@ -60,6 +60,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *
  * The extended resources are compared ordered by the resource names.
  */
+
+// 用来描述资源
 public class ResourceProfile implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -265,14 +267,17 @@ public class ResourceProfile implements Serializable {
         throwUnsupportedOperationExceptionIfUnknown();
 
         if (this.equals(ANY)) {
+            // this 对象 是最大值 ,肯定能满足要求
             return true;
         }
 
         if (this.equals(required)) {
+            // this 对象 与需求 一致, 也能满足要求
             return true;
         }
 
         if (required.equals(UNKNOWN)) {
+            // 需求不明确,也满足要求
             return true;
         }
 

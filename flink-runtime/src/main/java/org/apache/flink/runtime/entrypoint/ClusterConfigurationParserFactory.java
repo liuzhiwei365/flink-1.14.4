@@ -52,6 +52,7 @@ public class ClusterConfigurationParserFactory
 
     @Override
     public ClusterConfiguration createResult(@Nonnull CommandLine commandLine) {
+        // configDir  由  -c 指定
         final String configDir = commandLine.getOptionValue(CONFIG_DIR_OPTION.getOpt());
 
         final Properties dynamicProperties =

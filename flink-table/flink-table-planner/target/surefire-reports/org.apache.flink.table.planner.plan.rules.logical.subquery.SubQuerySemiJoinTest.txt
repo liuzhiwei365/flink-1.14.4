@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.rules.logical.subquery.SubQuerySemiJoinTest
--------------------------------------------------------------------------------
-Tests run: 205, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.953 s - in org.apache.flink.table.planner.plan.rules.logical.subquery.SubQuerySemiJoinTest

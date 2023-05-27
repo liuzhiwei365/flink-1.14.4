@@ -80,12 +80,12 @@ public class NettyProtocol {
                 new PartitionRequestServerHandler(
                         partitionProvider, taskEventPublisher, queueOfPartitionQueues);
 
-        //入站:
-        //1 客户端的请求数据 通过Socket.read 方法接入后,经过NettyMessageDecoder解码变成NettyMessage对象
-        //2 然后交给PartitionRequestServerHandler 处理,这也是主业务逻辑,得到更加具体的NettyMessage的子类对象
-        //3 然后子类对象放入 PartitionRequestQueue 内部的ArrayDeque中排队
-        //出站:
-        //1 NettyMessageEncoder 编码
+        // 入站:
+        // 1 客户端的请求数据 通过Socket.read 方法接入后,经过NettyMessageDecoder解码变成NettyMessage对象
+        // 2 然后交给PartitionRequestServerHandler 处理,这也是主业务逻辑,得到更加具体的NettyMessage的子类对象
+        // 3 然后子类对象放入 PartitionRequestQueue 内部的ArrayDeque中排队
+        // 出站:
+        // 1 NettyMessageEncoder 编码
         return new ChannelHandler[] {
             messageEncoder,
             new NettyMessage.NettyMessageDecoder(),
@@ -129,7 +129,7 @@ public class NettyProtocol {
     public ChannelHandler[] getClientChannelHandlers() {
         NetworkClientHandler networkClientHandler = new CreditBasedPartitionRequestClientHandler();
 
-        //CreditBasedPartitionRequestClientHandler 实现客户端的主要逻辑
+        // CreditBasedPartitionRequestClientHandler 实现客户端的主要逻辑
         // 编码 解码 和服务端一样
         return new ChannelHandler[] {
             messageEncoder,

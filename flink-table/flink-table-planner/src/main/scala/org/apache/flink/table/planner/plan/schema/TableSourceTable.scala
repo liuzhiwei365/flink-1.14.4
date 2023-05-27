@@ -44,6 +44,8 @@ import java.util
  * @param extraDigests The extra digests which will be added into `getQualifiedName`
  *                     as a part of table digest
  */
+
+// 维护了 ， 将calcite中的RelOptTable 转化为 flink 特有的 DynamicTableSource 的过程中 所需要的 众多对象
 class TableSourceTable(
     relOptSchema: RelOptSchema,
     val tableIdentifier: ObjectIdentifier,

@@ -265,6 +265,7 @@ public class DeclarativeSlotPoolService implements SlotPoolService {
 
         resourceRequirementServiceConnectionManager.connect(
                 resourceRequirements ->
+                        // 利用 gateway 向 RM 申请资源集合
                         resourceManagerGateway.declareRequiredResources(
                                 jobMasterId, resourceRequirements, rpcTimeout));
 

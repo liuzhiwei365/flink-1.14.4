@@ -108,6 +108,7 @@ object PreValidateReWriter {
     * <blockquote><pre>
     * insert into A
     * select a, b, cast(null as tpeC) from B
+    *
     * </pre></blockquote>
     * Where the "tpeC" is data type of column c for target table A.
     *
@@ -117,6 +118,10 @@ object PreValidateReWriter {
     * @param source               Source to rewrite
     * @param partitions           Static partition statements
     */
+
+    /*
+      将省略的partition 字段补全 , 将省略的null 字段补全
+     */
   def appendPartitionAndNullsProjects(sqlInsert: RichSqlInsert,
       validator: FlinkCalciteSqlValidator,
       typeFactory: RelDataTypeFactory,
@@ -178,7 +183,7 @@ object PreValidateReWriter {
       for (targetField <- targetRowType.getFieldList) {
         if (!partitionColumns.contains(targetField)) {
           if (!targetColumns.contains(targetField)) {
-            // padding null
+            // padding null ,将省略的null 字段补全
             val id = new SqlIdentifier(targetField.getName, SqlParserPos.ZERO)
             if (!targetField.getType.isNullable) {
               throw newValidationError(id, RESOURCE.columnNotNullable(targetField.getName))
@@ -349,6 +354,7 @@ object PreValidateReWriter {
   private def createTargetRowType(
       typeFactory: RelDataTypeFactory,
       table: SqlValidatorTable): RelDataType = {
+
     table.unwrap(classOf[FlinkPreparingTableBase]) match {
       case t: CatalogSourceTable =>
         val schema = t.getCatalogTable.getSchema

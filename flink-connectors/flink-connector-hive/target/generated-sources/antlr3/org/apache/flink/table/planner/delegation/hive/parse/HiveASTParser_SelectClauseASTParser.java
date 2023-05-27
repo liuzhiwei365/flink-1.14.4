@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 SelectClauseASTParser.g 2022-06-10 20:27:39
+// $ANTLR 3.5.2 SelectClauseASTParser.g 2023-03-06 17:56:58
 
 package org.apache.flink.table.planner.delegation.hive.parse;
 
@@ -969,7 +969,7 @@ public class HiveASTParser_SelectClauseASTParser extends Parser {
 					}
 
 					// AST REWRITE
-					// elements: selectList, QUERY_HINT, QUERY_HINT, QUERY_HINT, selectTrfmClause, selectList
+					// elements: selectList, QUERY_HINT, selectTrfmClause, QUERY_HINT, QUERY_HINT, selectList
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 
@@ -1490,7 +1490,7 @@ public class HiveASTParser_SelectClauseASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_recordReader.add(outRec.getTree());
 			// AST REWRITE
-			// elements: outRec, aliasList, inRec, StringLiteral, selectExpressionList, inSerde, outSerde, columnNameTypeList
+			// elements: selectExpressionList, outSerde, StringLiteral, inSerde, inRec, aliasList, columnNameTypeList, outRec
 			// token labels: 
 			// rule labels: inRec, outRec, inSerde, outSerde, retval
 			// token list labels: 
@@ -2110,7 +2110,7 @@ public class HiveASTParser_SelectClauseASTParser extends Parser {
 			if (state.failed) return retval;
 			if ( state.backtracking==0 ) stream_recordReader.add(outRec.getTree());
 			// AST REWRITE
-			// elements: selectExpressionList, outSerde, inRec, aliasList, inSerde, StringLiteral, outRec, columnNameTypeList
+			// elements: StringLiteral, inSerde, outRec, inRec, aliasList, columnNameTypeList, selectExpressionList, outSerde
 			// token labels: 
 			// rule labels: inRec, outRec, inSerde, outSerde, retval
 			// token list labels: 
@@ -2943,7 +2943,7 @@ public class HiveASTParser_SelectClauseASTParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: identifier, window_frame, partitioningSpec
+			// elements: partitioningSpec, identifier, window_frame
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 
@@ -3233,7 +3233,7 @@ public class HiveASTParser_SelectClauseASTParser extends Parser {
 					if (state.failed) return retval;
 					if ( state.backtracking==0 ) stream_window_frame_boundary.add(end.getTree());
 					// AST REWRITE
-					// elements: end, s
+					// elements: s, end
 					// token labels: 
 					// rule labels: s, end, retval
 					// token list labels: 
@@ -3549,7 +3549,7 @@ public class HiveASTParser_SelectClauseASTParser extends Parser {
 					if ( state.backtracking==0 ) stream_KW_PRECEDING.add(KW_PRECEDING74);
 
 					// AST REWRITE
-					// elements: KW_UNBOUNDED, KW_PRECEDING
+					// elements: KW_PRECEDING, KW_UNBOUNDED
 					// token labels: 
 					// rule labels: retval
 					// token list labels: 

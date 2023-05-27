@@ -33,9 +33,13 @@ public class DefaultRequirementMatcher implements RequirementMatcher {
     public Optional<ResourceProfile> match(
             ResourceProfile resourceProfile,
             ResourceCounter totalRequirements,
-            Function<ResourceProfile, Integer> numAssignedResourcesLookup) {
+            Function<ResourceProfile, Integer>
+                    numAssignedResourcesLookup) { // fulfilledResourceRequirements::getResourceCount
+
         // Short-cut for fine-grained resource management. If there is already exactly equal
         // requirement, we can directly match with it.
+
+        /* 如果totalRequirements 中 不包括该resourceProfile, 则为 0 ,不会走下面 if 的逻辑   */
         if (totalRequirements.getResourceCount(resourceProfile)
                 > numAssignedResourcesLookup.apply(resourceProfile)) {
             return Optional.of(resourceProfile);
@@ -45,9 +49,7 @@ public class DefaultRequirementMatcher implements RequirementMatcher {
                 totalRequirements.getResourcesWithCount()) {
             ResourceProfile requirementProfile = requirementCandidate.getKey();
 
-            // beware the order when matching resources to requirements, because
-            // ResourceProfile.UNKNOWN (which only
-            // occurs as a requirement) does not match any resource!
+            // cpu, 各内存满足要求 ;
             if (resourceProfile.isMatching(requirementProfile)
                     && requirementCandidate.getValue()
                             > numAssignedResourcesLookup.apply(requirementProfile)) {

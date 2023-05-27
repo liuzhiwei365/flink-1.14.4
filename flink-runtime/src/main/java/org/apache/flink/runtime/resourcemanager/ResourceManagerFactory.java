@@ -48,6 +48,7 @@ public abstract class ResourceManagerFactory<T extends ResourceIDRetrievable> {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
+    // 工厂创建 资源调度器环境 （粗粒度  细粒度）
     public ResourceManagerProcessContext createResourceManagerProcessContext(
             Configuration configuration,
             RpcService rpcService,

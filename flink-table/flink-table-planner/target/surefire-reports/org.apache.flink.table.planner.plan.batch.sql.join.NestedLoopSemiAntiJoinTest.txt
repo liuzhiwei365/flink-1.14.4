@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.sql.join.NestedLoopSemiAntiJoinTest
--------------------------------------------------------------------------------
-Tests run: 82, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 21.495 s - in org.apache.flink.table.planner.plan.batch.sql.join.NestedLoopSemiAntiJoinTest

@@ -41,17 +41,24 @@ public class EdgeManagerBuildUtil {
      * @param distributionPattern the {@link DistributionPattern} of the edge that connects the
      *     upstream {@link IntermediateResult} and the downstream {@link IntermediateResult}
      */
+
+    //  该方法
+    //  将ExecutionJobVertex  下面的所有 ExecutionVertex
+    //  和 IntermediateResult 下面的所有 IntermediateResultPartition 以某种方式相连接
     static void connectVertexToResult(
             ExecutionJobVertex vertex,
             IntermediateResult intermediateResult,
             DistributionPattern distributionPattern) {
 
+
+        // all to all  和 point wise 是flink的 两种基本上下游的连接方式
+
         switch (distributionPattern) {
-            // 下游 JobVertex 的输入 partition 算法，如果是 forward 或 rescale 的话为 POINTWISE
+                // 如果是 forward 或 rescale 的话为 POINTWISE
             case POINTWISE:
                 connectPointwise(vertex.getTaskVertices(), intermediateResult);
                 break;
-            // 每一个并行的ExecutionVertex节点都会链接到源节点产生的  所有中间结果IntermediateResultPartition
+                // 每一个并行的ExecutionVertex节点都会链接到源节点产生的  所有中间结果IntermediateResultPartition
             case ALL_TO_ALL:
                 connectAllToAll(vertex.getTaskVertices(), intermediateResult);
                 break;
@@ -83,19 +90,22 @@ public class EdgeManagerBuildUtil {
     }
 
     private static void connectAllToAll(
-            ExecutionVertex[] taskVertices, IntermediateResult intermediateResult) { //前置的IntermediateResult
+            ExecutionVertex[] taskVertices,
+            IntermediateResult intermediateResult) { // 前置的IntermediateResult
 
+        // 将所有的ExecutionVertex 与 所有的 IntermediateResultPartition 相连接
         List<IntermediateResultPartitionID> consumedPartitions =
                 Arrays.stream(intermediateResult.getPartitions())
                         .map(IntermediateResultPartition::getPartitionId)
                         .collect(Collectors.toList());
 
+        // ConsumedPartitionGroup 是对 List<IntermediateResultPartitionID> 的封装
         ConsumedPartitionGroup consumedPartitionGroup =
                 createAndRegisterConsumedPartitionGroupToEdgeManager(
                         consumedPartitions, intermediateResult);
 
         for (ExecutionVertex ev : taskVertices) {
-            //所有的上游 只构成一个  被消费分区组
+            // 所有的上游 只构成一个  被消费分区组
             ev.addConsumedPartitionGroup(consumedPartitionGroup);
         }
 
@@ -104,12 +114,12 @@ public class EdgeManagerBuildUtil {
                         .map(ExecutionVertex::getID)
                         .collect(Collectors.toList());
 
-        //调用工厂方法,创建ConsumerVertexGroup 对象
+        // 调用工厂方法,创建ConsumerVertexGroup 对象,ConsumerVertexGroup是对 List<ExecutionVertexID> 的封装
         ConsumerVertexGroup consumerVertexGroup =
                 ConsumerVertexGroup.fromMultipleVertices(consumerVertices);
 
         for (IntermediateResultPartition partition : intermediateResult.getPartitions()) {
-            //所有的下游 也只构成一个 消费顶点组
+            // 所有的下游 也只构成一个 消费顶点组
             partition.addConsumers(consumerVertexGroup);
         }
     }
@@ -117,20 +127,27 @@ public class EdgeManagerBuildUtil {
     private static void connectPointwise(
             ExecutionVertex[] taskVertices, IntermediateResult intermediateResult) {
 
+        //上游分区数
         final int sourceCount = intermediateResult.getPartitions().length;
+        //下游task数目
         final int targetCount = taskVertices.length;
 
         if (sourceCount == targetCount) {
             // caseA 一对一进行连接
+            // 这种情况 一个ExecutionVertex 就构成一个 ConsumerVertexGroup 组
+            //         一个IntermediateResultPartition 也就构成一个 ConsumedPartitionGroup 组
             for (int i = 0; i < sourceCount; i++) {
-                ExecutionVertex executionVertex = taskVertices[i];//下游
-                IntermediateResultPartition partition = intermediateResult.getPartitions()[i];//上游
+                ExecutionVertex executionVertex = taskVertices[i]; // 下游
+                IntermediateResultPartition partition = intermediateResult.getPartitions()[i]; // 上游
 
+                // 把下游的一个执行顶点就包装成一个 消费顶点组
                 ConsumerVertexGroup consumerVertexGroup =
                         ConsumerVertexGroup.fromSingleVertex(executionVertex.getID());
+
+                // 最终添加到 EdgeManager 的 partitionConsumers 成员中
                 partition.addConsumers(consumerVertexGroup);
 
-                //到EdgeManager中注册
+                // 到EdgeManager中注册
                 ConsumedPartitionGroup consumedPartitionGroup =
                         createAndRegisterConsumedPartitionGroupToEdgeManager(
                                 partition.getPartitionId(), intermediateResult);
@@ -138,23 +155,22 @@ public class EdgeManagerBuildUtil {
                 executionVertex.addConsumedPartitionGroup(consumedPartitionGroup);
             }
         } else if (sourceCount > targetCount) {
-            // caseB 源的并行度 大于 目标并行度
+            // caseB 源的并行度 大于 目标并行度 (从这里也可以看出,最好上下游是倍数关系)
             for (int index = 0; index < targetCount; index++) {
 
                 ExecutionVertex executionVertex = taskVertices[index];
-                //下游的vertex 不够用 , 一个vertex 就组成一个 消费顶点组
+                // 下游的vertex 不够用 , 一个vertex 就组成一个 消费顶点组
                 ConsumerVertexGroup consumerVertexGroup =
                         ConsumerVertexGroup.fromSingleVertex(executionVertex.getID());
                 /**
-                 *  假设 sourceCount = 8   targetCount = 5
+                 * 假设 sourceCount = 8 targetCount = 5
                  *
-                 *  当 index = 0 时, start = 0 ,end = 1 consumedPartitions 的容量为 1;
-                 *  当 index = 1 时, start = 1 ,end = 3 consumedPartitions 的容量为 2;
-                 *  当 index = 2 时, start = 3 ,end = 4 consumedPartitions 的容量为 1;
-                 *  当 index = 3 时, start = 4 ,end = 6 consumedPartitions 的容量为 2;
-                 *  当 index = 4 时, start = 6 ,end = 8 consumedPartitions 的容量为 2;
+                 * <p>当 index = 0 时, start = 0 ,end = 1 consumedPartitions 的容量为 1; 当 index = 1 时,
+                 * start = 1 ,end = 3 consumedPartitions 的容量为 2; 当 index = 2 时, start = 3 ,end = 4
+                 * consumedPartitions 的容量为 1; 当 index = 3 时, start = 4 ,end = 6 consumedPartitions
+                 * 的容量为 2; 当 index = 4 时, start = 6 ,end = 8 consumedPartitions 的容量为 2;
                  *
-                 *  其实这也算一种散列算法
+                 * <p>其实这也算一种散列算法
                  */
                 int start = index * sourceCount / targetCount;
                 int end = (index + 1) * sourceCount / targetCount;
@@ -165,17 +181,17 @@ public class EdgeManagerBuildUtil {
                 for (int i = start; i < end; i++) {
                     IntermediateResultPartition partition = intermediateResult.getPartitions()[i];
 
-                    //让上游的partition 维护下游的信息
+                    // 让上游的partition 维护下游的信息 （循环内的这几个partition 添加的都是同一个 consumerVertexGroup）
                     partition.addConsumers(consumerVertexGroup);
 
                     consumedPartitions.add(partition.getPartitionId());
                 }
 
-                //上游的 partition多了,多个partition组成一个 被消费分区组
+                // 上游的 partition多了,多个partition组成一个 被消费分区组
                 ConsumedPartitionGroup consumedPartitionGroup =
                         createAndRegisterConsumedPartitionGroupToEdgeManager(
                                 consumedPartitions, intermediateResult);
-                //让下游的vertex 维护 上游的信息
+                // 让下游的vertex 维护 上游的信息
                 executionVertex.addConsumedPartitionGroup(consumedPartitionGroup);
             }
         } else {
@@ -185,20 +201,19 @@ public class EdgeManagerBuildUtil {
                 IntermediateResultPartition partition =
                         intermediateResult.getPartitions()[partitionNum];
 
-                //上游的partition不够, 一个partition就组成一个 被消费的分区组
+                // 上游的partition不够, 一个partition就组成一个 被消费的分区组
                 ConsumedPartitionGroup consumedPartitionGroup =
                         createAndRegisterConsumedPartitionGroupToEdgeManager(
                                 partition.getPartitionId(), intermediateResult);
                 /**
-                 *  假设 sourceCount = 5   targetCount = 8
+                 * 假设 sourceCount = 5 targetCount = 8
                  *
-                 *  当 partitionNum = 0 时, start = 0 ,end = 2 consumers 的容量为 2;
-                 *  当 partitionNum = 1 时, start = 2 ,end = 4 consumers 的容量为 2;
-                 *  当 partitionNum = 2 时, start = 4 ,end = 5 consumers 的容量为 1;
-                 *  当 partitionNum = 3 时, start = 5 ,end = 7 consumers 的容量为 2;
-                 *  当 partitionNum = 4 时, start = 7 ,end = 8 consumers 的容量为 1;
+                 * <p>当 partitionNum = 0 时, start = 0 ,end = 2 consumers 的容量为 2; 当 partitionNum = 1
+                 * 时, start = 2 ,end = 4 consumers 的容量为 2; 当 partitionNum = 2 时, start = 4 ,end = 5
+                 * consumers 的容量为 1; 当 partitionNum = 3 时, start = 5 ,end = 7 consumers 的容量为 2; 当
+                 * partitionNum = 4 时, start = 7 ,end = 8 consumers 的容量为 1;
                  *
-                 *  其实这也可以认为是一种散列算法
+                 * <p>其实这也可以认为是一种散列算法
                  */
                 int start = (partitionNum * targetCount + sourceCount - 1) / sourceCount;
                 int end = ((partitionNum + 1) * targetCount + sourceCount - 1) / sourceCount;
@@ -207,19 +222,20 @@ public class EdgeManagerBuildUtil {
 
                 for (int i = start; i < end; i++) {
                     ExecutionVertex executionVertex = taskVertices[i];
-                    //让下游的vertex 维护 上游的信息
-                    //内部调用getEdgeManager().connectVertexWithConsumedPartitionGroup(executionVertexId, consumedPartitions);
-                    //更新 EdgeManager 的 vertexConsumedPartitions 成员变量
+                    // 让下游的vertex 维护 上游的信息
+                    // 内部调用getEdgeManager().connectVertexWithConsumedPartitionGroup(executionVertexId, consumedPartitions);
+                    // 更新 EdgeManager 的 vertexConsumedPartitions 成员变量
                     executionVertex.addConsumedPartitionGroup(consumedPartitionGroup);
 
                     consumers.add(executionVertex.getID());
                 }
-                //下游的target多了 , 多个target 组成一个消费顶点组 ,共享上游的一个partition
+                // 下游的target多了 , 多个target 组成一个消费顶点组 ,共享上游的一个partition
                 ConsumerVertexGroup consumerVertexGroup =
                         ConsumerVertexGroup.fromMultipleVertices(consumers);
-                //让上游的partition 维护下游的信息
-                //内部调用getEdgeManager().connectPartitionWithConsumerVertexGroup(partitionId, consumers);
-                //更新 EdgeManager 的 partitionConsumers 成员变量
+                // 让上游的partition 维护下游的信息
+                // 内部调用getEdgeManager().connectPartitionWithConsumerVertexGroup(partitionId,
+                // consumers);
+                // 更新 EdgeManager 的 partitionConsumers 成员变量
                 partition.addConsumers(consumerVertexGroup);
             }
         }
@@ -228,8 +244,8 @@ public class EdgeManagerBuildUtil {
     private static ConsumedPartitionGroup createAndRegisterConsumedPartitionGroupToEdgeManager(
             IntermediateResultPartitionID consumedPartitionId,
             IntermediateResult intermediateResult) {
-        //注意和下面的重载方法的不同
-        //唯一的不同是 要将第一个入参 包装成为一个集合 ; 这样就能和下面的方法适配了
+        // 注意和下面的重载方法的不同
+        // 唯一的不同是 要将第一个入参 包装成为一个集合 ; 这样就能和下面的方法适配了
         ConsumedPartitionGroup consumedPartitionGroup =
                 ConsumedPartitionGroup.fromSinglePartition(consumedPartitionId);
         registerConsumedPartitionGroupToEdgeManager(consumedPartitionGroup, intermediateResult);
@@ -239,7 +255,7 @@ public class EdgeManagerBuildUtil {
     private static ConsumedPartitionGroup createAndRegisterConsumedPartitionGroupToEdgeManager(
             List<IntermediateResultPartitionID> consumedPartitions,
             IntermediateResult intermediateResult) {
-        //注意和上面的重载方法的不同
+        // 注意和上面的重载方法的不同
         ConsumedPartitionGroup consumedPartitionGroup =
                 ConsumedPartitionGroup.fromMultiplePartitions(consumedPartitions);
         registerConsumedPartitionGroupToEdgeManager(consumedPartitionGroup, intermediateResult);

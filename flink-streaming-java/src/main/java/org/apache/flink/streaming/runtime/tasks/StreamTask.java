@@ -181,8 +181,7 @@ import static org.apache.flink.util.concurrent.FutureUtils.assertNoException;
 // 每个Task会对应一个InputGate（输入网关),InputGate包含多个InputChannel（输入通道）,个数由上游算子并行度决定
 // 每个Task也会对应一个ResultPartition,每个ResultPartition又由多个ResultSubPartition（结果子分区）组成,个数由下游算子并行度决定
 
-
-//当处于上下游的两个算子处于同一个算子链中(OperatorChain),在执行的时候就会被调度至同一个SubTask中。当上游算子（图中Source算子）
+// 当处于上下游的两个算子处于同一个算子链中(OperatorChain),在执行的时候就会被调度至同一个SubTask中。当上游算子（图中Source算子）
 // 在处理完数据后，会通过Collector接口调用下游算子的processElement()继续处理数据。
 // 同一个SubTask内的数据传输是直接通过Java的方法调用实现的,是在同一个线程内执行普通的Java方法,不需要数据序列化写入共享内存、
 // 下游读取数据再反序列化的过程,节省了线程切换的开销
@@ -277,9 +276,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     private final RecordWriterDelegate<SerializationDelegate<StreamRecord<OUT>>> recordWriter;
 
-    protected final MailboxProcessor mailboxProcessor;
+    protected final MailboxProcessor mailboxProcessor; // 信箱执行逻辑
 
-    final MailboxExecutor mainMailboxExecutor;
+    final MailboxExecutor mainMailboxExecutor; // 信箱执行资源
 
     /** TODO it might be replaced by the global IO executor on TaskManager level future. */
     private final ExecutorService channelIOExecutor;
@@ -382,11 +381,16 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             throws Exception {
         this.environment = environment;
         this.configuration = new StreamConfig(environment.getTaskConfiguration());
-        //RecordWriterDelegate 中有多个RecordWriter
+        // RecordWriterDelegate 中有多个RecordWriter ,RecordWriter 的个数和输出边一致
+        //  RecordWriter 负责将二进制数据写入网络
         this.recordWriter = createRecordWriterDelegate(configuration, environment);
+
         this.actionExecutor = Preconditions.checkNotNull(actionExecutor);
+
         this.mailboxProcessor = new MailboxProcessor(this::processInput, mailbox, actionExecutor);
+
         this.mainMailboxExecutor = mailboxProcessor.getMainMailboxExecutor();
+
         this.asyncExceptionHandler = new StreamTaskAsyncExceptionHandler(environment);
         this.asyncOperationsThreadPool =
                 Executors.newCachedThreadPool(
@@ -398,7 +402,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         this.stateBackend = createStateBackend();
         this.checkpointStorage = createCheckpointStorage(stateBackend);
 
-        //和CheckpointCoordinator不同的是，它只负责本篇Flink新特性的Unaligned checkpoint相关的协调工作
+        // 和CheckpointCoordinator不同的是，它只负责本篇Flink新特性的Unaligned checkpoint相关的协调工作
         this.subtaskCheckpointCoordinator =
                 new SubtaskCheckpointCoordinatorImpl(
                         checkpointStorage.createCheckpointStorage(environment.getJobID()),
@@ -418,12 +422,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
         // if the clock is not already set, then assign a default TimeServiceProvider
         if (timerService == null) {
+            // 创建一个 SystemProcessingTimeService对象  内部会有一个  ScheduledThreadPoolExecutor 成员变量
             this.timerService = createTimerService("Time Trigger for " + getName());
         } else {
             this.timerService = timerService;
         }
-
+        // systemTimerService 与 timerService 是用同样的方式创建的, 不同点是名字不一样, 还有,前者是用户级别的，后者是用户级别
         this.systemTimerService = createTimerService("System Time Trigger for " + getName());
+
         this.channelIOExecutor =
                 Executors.newSingleThreadExecutor(
                         new ExecutorThreadFactory("channel-state-unspilling"));
@@ -458,6 +464,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     private TimerService createTimerService(String timerThreadName) {
         ThreadFactory timerThreadFactory =
                 new DispatcherThreadFactory(TRIGGER_THREAD_GROUP, timerThreadName);
+        //  SystemProcessingTimeService对象  内部会有一个  ScheduledThreadPoolExecutor 对象 （ 是jdk 原生的定时器 ）
         return new SystemProcessingTimeService(this::handleTimerException, timerThreadFactory);
     }
 
@@ -519,7 +526,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 endData();
                 return;
             case END_OF_INPUT:
-                /**StreamTask#processInput收到DataInputStatus.END_OF_INPUT，则调用mailboxProcessor.suspend();*/
+                /**
+                 * StreamTask#processInput收到DataInputStatus.END_OF_INPUT，则调用mailboxProcessor.suspend();
+                 */
                 // Suspend the mailbox processor, it would be resumed in afterInvoke and finished
                 // after all records processed by the downstream tasks. We also suspend the default
                 // actions to avoid repeat executing the empty default operation (namely process
@@ -674,10 +683,12 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         closedOperators = false;
         LOG.debug("Initializing {}.", getName());
 
+        // 构造算子链
         operatorChain =
                 getEnvironment().getTaskStateManager().isTaskDeployedAsFinished()
-                        ? new FinishedOperatorChain<>(this, recordWriter) //批计算
-                        : new RegularOperatorChain<>(this, recordWriter); //实时计算
+                        ? new FinishedOperatorChain<>(this, recordWriter) // 批计算
+                        : new RegularOperatorChain<>(this, recordWriter); // 实时计算
+
         mainOperator = operatorChain.getMainOperator();
 
         getEnvironment()
@@ -685,7 +696,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 .getRestoreCheckpointId()
                 .ifPresent(restoreId -> latestReportCheckpointId = restoreId);
 
-        // task specific initialization
+        // 初始化 input output streamInputProcessor  等组件
         init();
 
         // save the work of reloading state, etc, if the task is already canceled
@@ -696,7 +707,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
         // we need to make sure that any triggers scheduled in open() cannot be
         // executed before all operators are opened
-
 
         // 恢复 算子状态,并打开算子
         //       在恢复算子状态的时候会创建和初始化 OperatorStateBackend 和 KeyedStateBackend
@@ -770,6 +780,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         // Allow invoking method 'invoke' without having to call 'restore' before it.
         if (!isRunning) {
             LOG.debug("Restoring during invoke will be called.");
+            // 初始化 input output operatorChain 等组件  ,算子状态恢复
             restoreInternal();
         }
 
@@ -1136,15 +1147,16 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                     try {
                         boolean noUnfinishedInputGates =
                                 Arrays.stream(getEnvironment().getAllInputGates())
-                                        .allMatch(InputGate::isFinished); //每个 inputGate 的 每个inputChannel都收到了 数据结束的事件
+                                        .allMatch(InputGate::isFinished); // 每个 inputGate 的
+                        // 每个inputChannel都收到了 数据结束的事件
 
                         if (noUnfinishedInputGates) {
-                            //针对批计算
+                            // 针对批计算
                             result.complete(
                                     triggerCheckpointAsyncInMailbox(
                                             checkpointMetaData, checkpointOptions));
                         } else {
-                            //针对流计算
+                            // 针对流计算
                             result.complete(
                                     triggerUnfinishedChannelsCheckpoint(
                                             checkpointMetaData, checkpointOptions));
@@ -1314,11 +1326,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         subtaskCheckpointCoordinator.abortCheckpointOnBarrier(checkpointId, cause, operatorChain);
     }
 
-    //Checkpoint 的触发过程分为两种情况:
+    // Checkpoint 的触发过程分为两种情况:
     // 一种是 CheckpointCoordinator  周期性地触发数据源节点中的checkpoint操作
     // 另一种是下游算子通过 CheckpointBarrier 事件触发checkpoint操作
 
-    //最终都是调用 performCheckpoint 做状态数据的持久化
+    // 最终都是调用 performCheckpoint 做状态数据的持久化
     private boolean performCheckpoint(
             CheckpointMetaData checkpointMetaData,
             CheckpointOptions checkpointOptions,
@@ -1355,7 +1367,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                             this.finalCheckpointMinId = checkpointMetaData.getCheckpointId();
                         }
 
-                        //对算子中的状态进行快照操作,此步骤是异步非阻塞操作
+                        // 对算子中的状态进行快照操作,此步骤是异步非阻塞操作
                         subtaskCheckpointCoordinator.checkpointState(
                                 checkpointMetaData,
                                 checkpointOptions,
@@ -1622,6 +1634,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             RecordWriterDelegate<SerializationDelegate<StreamRecord<OUT>>>
                     createRecordWriterDelegate(
                             StreamConfig configuration, Environment environment) {
+        // RecordWriter 的个数 等于 该 StreamTask的所有输出边 的个数
         List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> recordWrites =
                 createRecordWriters(configuration, environment);
         if (recordWrites.size() == 1) {
@@ -1638,14 +1651,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                     StreamConfig configuration, Environment environment) {
         List<RecordWriter<SerializationDelegate<StreamRecord<OUT>>>> recordWriters =
                 new ArrayList<>();
-        //从当前配置中获取outEdgeInOrder集合，即当前StreamTask的所有输出边
+        // 从当前配置中获取outEdgeInOrder集合，即当前StreamTask的所有输出边
         List<StreamEdge> outEdgesInOrder =
                 configuration.getOutEdgesInOrder(
                         environment.getUserCodeClassLoader().asClassLoader());
 
         for (int i = 0; i < outEdgesInOrder.size(); i++) {
             StreamEdge edge = outEdgesInOrder.get(i);
-            //所有输出边，分别创建RecordWriter, 输出边与之一一对应
+            // 所有输出边，分别创建RecordWriter, 输出边与之一一对应
             recordWriters.add(
                     createRecordWriter(
                             edge,
@@ -1693,7 +1706,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 ((ConfigurableStreamPartitioner) outputPartitioner).configure(numKeyGroups);
             }
         }
-        //分区器会被用来创建RecordWriter,RecordWriter负责将buffer中的数据写入指定的ResultPartition
+        // 分区器会被用来创建RecordWriter,RecordWriter负责将buffer中的数据写入指定的ResultPartition
         RecordWriter<SerializationDelegate<StreamRecord<OUT>>> output =
                 new RecordWriterBuilder<SerializationDelegate<StreamRecord<OUT>>>()
                         .setChannelSelector(outputPartitioner)

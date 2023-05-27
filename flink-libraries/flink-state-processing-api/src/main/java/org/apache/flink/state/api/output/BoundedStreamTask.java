@@ -80,6 +80,7 @@ class BoundedStreamTask<IN, OUT, OP extends OneInputStreamOperator<IN, OUT> & Bo
         // re-initialize the operator with the correct collector.
         StreamOperatorFactory<OUT> operatorFactory =
                 configuration.getStreamOperatorFactory(getUserCodeClassLoader());
+
         Tuple2<OP, Optional<ProcessingTimeService>> mainOperatorAndTimeService =
                 StreamOperatorFactoryUtil.createOperator(
                         operatorFactory,

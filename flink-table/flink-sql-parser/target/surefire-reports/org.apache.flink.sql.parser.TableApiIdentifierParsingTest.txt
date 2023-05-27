@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.sql.parser.TableApiIdentifierParsingTest
--------------------------------------------------------------------------------
-Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.569 s - in org.apache.flink.sql.parser.TableApiIdentifierParsingTest

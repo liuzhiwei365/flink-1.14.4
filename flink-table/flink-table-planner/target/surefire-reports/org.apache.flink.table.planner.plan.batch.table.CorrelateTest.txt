@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.table.CorrelateTest
--------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.931 s - in org.apache.flink.table.planner.plan.batch.table.CorrelateTest

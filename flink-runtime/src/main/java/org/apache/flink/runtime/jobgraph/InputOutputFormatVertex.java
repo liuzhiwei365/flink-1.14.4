@@ -83,7 +83,8 @@ public class InputOutputFormatVertex extends JobVertex {
                                     + t.getMessage(),
                             t);
                 }
-
+                // 现在处于JobVerx 的阶段, InputOutputFormatVertex 是其子类
+                // 把 输入格式 设置给 该 JobVertex
                 setInputSplitSource(inputFormat);
             }
 

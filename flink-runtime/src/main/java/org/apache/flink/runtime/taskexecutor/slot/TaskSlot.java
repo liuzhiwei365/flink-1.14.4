@@ -73,7 +73,7 @@ public class TaskSlot<T extends TaskSlotPayload> implements AutoCloseableAsync {
     /** Tasks running in this slot. */
     private final Map<ExecutionAttemptID, T> tasks;
 
-    private final MemoryManager memoryManager;//slot 的 内存管理器
+    private final MemoryManager memoryManager; // slot 的 内存管理器
 
     /** State of this slot. */
     private TaskSlotState state;
@@ -269,14 +269,14 @@ public class TaskSlot<T extends TaskSlotPayload> implements AutoCloseableAsync {
      *
      * @return The sot offer which this task slot can provide
      */
-    //TaskSlot 是对物理资源的封装
+    // TaskSlot 是对物理资源的封装
     public SlotOffer generateSlotOffer() {
         Preconditions.checkState(
                 TaskSlotState.ACTIVE == state || TaskSlotState.ALLOCATED == state,
                 "The task slot is not in state active or allocated.");
         Preconditions.checkState(allocationId != null, "The task slot are not allocated");
 
-        //SlotOffer是中间一个环节,与TaskSlot一一对应,TM 用它向JM提供slot
+        // SlotOffer是中间一个环节,与TaskSlot一一对应,TM 用它向JM提供slot
         return new SlotOffer(allocationId, index, resourceProfile);
     }
 

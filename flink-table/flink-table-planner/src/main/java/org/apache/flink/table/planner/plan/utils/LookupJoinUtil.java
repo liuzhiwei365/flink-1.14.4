@@ -164,15 +164,21 @@ public final class LookupJoinUtil {
                     IntStream.of(lookupKeyIndicesInOrder)
                             .mapToObj(i -> new int[] {i})
                             .toArray(int[][]::new);
+
             LookupTableSource tableSource =
                     (LookupTableSource) ((TableSourceTable) temporalTable).tableSource();
+
             LookupRuntimeProviderContext providerContext =
                     new LookupRuntimeProviderContext(indices);
+
+            // 目前flink 只有 jdbc hive hbase 有 lookup provide
             LookupTableSource.LookupRuntimeProvider provider =
                     tableSource.getLookupRuntimeProvider(providerContext);
+
             if (provider instanceof TableFunctionProvider) {
                 return ((TableFunctionProvider<?>) provider).createTableFunction();
             } else if (provider instanceof AsyncTableFunctionProvider) {
+                //目前 只有hbase 支持异步的provide
                 return ((AsyncTableFunctionProvider<?>) provider).createAsyncTableFunction();
             }
         }

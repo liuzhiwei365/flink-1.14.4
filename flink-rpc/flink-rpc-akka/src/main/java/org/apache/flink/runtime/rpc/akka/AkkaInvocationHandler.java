@@ -107,6 +107,8 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
         this.hostname = Preconditions.checkNotNull(hostname);
         this.rpcEndpoint = Preconditions.checkNotNull(rpcEndpoint);
         this.flinkClassLoader = Preconditions.checkNotNull(flinkClassLoader);
+
+        // isLocal 表示 本类的成员  ActorRef rpcEndpoint 所指向的actor 是否是 本地的
         this.isLocal = this.rpcEndpoint.path().address().hasLocalScope();
         this.timeout = Preconditions.checkNotNull(timeout);
         this.maximumFramesize = maximumFramesize;
@@ -120,6 +122,7 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
 
         Object result;
 
+        // 动态代理本地调用
         if (declaringClass.equals(AkkaBasedEndpoint.class)
                 || declaringClass.equals(Object.class)
                 || declaringClass.equals(RpcGateway.class)
@@ -135,6 +138,8 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
                             + "fencing token. Please use RpcService#connect(RpcService, F, Time) with F being the fencing token to "
                             + "retrieve a properly FencedRpcGateway.");
         } else {
+            // 动态代理远程调用
+            // 远程调用的话,会用到 ActorRef 对象 来发消息
             result = invokeRpc(method, args);
         }
 
@@ -158,6 +163,8 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
 
         if (isLocal) {
             long atTimeNanos = delayMillis == 0 ? 0 : System.nanoTime() + (delayMillis * 1_000_000);
+            // 内部 会调用 ActorRef rpcEndpoint 成员 的 tell 方法
+            //
             tell(new RunAsync(runnable, atTimeNanos));
         } else {
             throw new RuntimeException(
@@ -213,6 +220,10 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         Time futureTimeout = extractRpcTimeout(parameterAnnotations, args, timeout);
 
+        // 该方法中 会判断是否是本地actor，如果是本地actor，创建LocalRpcInvocation
+        // 否则创建RemoteRpcInvocation. LocalRpcInvocation 不需要做序列化
+        // 例如：Dispatcher 和 ResourceManager 在同一个进程中，创建LocalRpcInvocation
+
         final RpcInvocation rpcInvocation =
                 createRpcInvocationMessage(
                         method.getDeclaringClass().getSimpleName(),
@@ -223,12 +234,14 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
         Class<?> returnType = method.getReturnType();
 
         final Object result;
-
+        // 如果方法没有返回值
         if (Objects.equals(returnType, Void.TYPE)) {
             tell(rpcInvocation);
 
             result = null;
         } else {
+            // 如果方法有返回值,则异步调用,并返回结果
+
             // Capture the call stack. It is significantly faster to do that via an exception than
             // via Thread.getStackTrace(), because exceptions lazily initialize the stack trace,
             // initially only
@@ -236,7 +249,7 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
             // when needed.
             final Throwable callStackCapture = captureAskCallStack ? new Throwable() : null;
 
-            // execute an asynchronous call
+            // 向远程发送  rpcInvocation 消息
             final CompletableFuture<?> resultFuture =
                     ask(rpcInvocation, futureTimeout)
                             .thenApply(
@@ -245,7 +258,9 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
                                                     resultValue, method, flinkClassLoader));
 
             final CompletableFuture<Object> completableFuture = new CompletableFuture<>();
+
             resultFuture.whenComplete(
+                    // resultFuture  结束之后，再进行如下操作
                     (resultValue, failure) -> {
                         if (failure != null) {
                             completableFuture.completeExceptionally(
@@ -260,9 +275,11 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
                     });
 
             if (Objects.equals(returnType, CompletableFuture.class)) {
+                // 如果调用方法要求返回 comletableFuture对象
                 result = completableFuture;
             } else {
                 try {
+                    // 否则，直接拿出future对象后面的结果
                     result =
                             completableFuture.get(futureTimeout.getSize(), futureTimeout.getUnit());
                 } catch (ExecutionException ee) {
@@ -294,6 +311,7 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
             throws IOException {
         final RpcInvocation rpcInvocation;
 
+        // isLocal 表示 本类的成员  ActorRef rpcEndpoint 所指向的actor 是否是 本地的
         if (isLocal) {
             rpcInvocation =
                     new LocalRpcInvocation(declaringClassName, methodName, parameterTypes, args);
@@ -383,6 +401,7 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
      * @param message to send to the RPC endpoint.
      */
     protected void tell(Object message) {
+        // 消息发送后， 由 AkkaRpcActor 的 handleControlMessage方法 来处理
         rpcEndpoint.tell(message, ActorRef.noSender());
     }
 
@@ -420,6 +439,7 @@ class AkkaInvocationHandler implements InvocationHandler, AkkaBasedEndpoint, Rpc
             Object o, Method method, ClassLoader flinkClassLoader) {
         if (o instanceof AkkaRpcSerializedValue) {
             try {
+                // AkkaRpcSerializedValue 包括  byte[] serializedData 成员方法 ;
                 return ((AkkaRpcSerializedValue) o).deserializeValue(flinkClassLoader);
             } catch (IOException | ClassNotFoundException e) {
                 throw new CompletionException(

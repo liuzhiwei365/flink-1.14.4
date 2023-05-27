@@ -589,9 +589,10 @@ public class CliFrontendParser {
     }
 
     public static SavepointRestoreSettings createSavepointRestoreSettings(CommandLine commandLine) {
+        // -s
         if (commandLine.hasOption(SAVEPOINT_PATH_OPTION.getOpt())) {
             String savepointPath = commandLine.getOptionValue(SAVEPOINT_PATH_OPTION.getOpt());
-            boolean allowNonRestoredState =
+            boolean allowNonRestoredState = // -n
                     commandLine.hasOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION.getOpt());
             return SavepointRestoreSettings.forPath(savepointPath, allowNonRestoredState);
         } else {

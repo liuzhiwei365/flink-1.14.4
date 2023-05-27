@@ -718,10 +718,7 @@ public final class OperationTreeBuilder {
             Expression tableAggFunction,
             QueryOperation child) {
 
-        // Step1: add a default name to the call in the grouping expressions, e.g., groupBy(a % 5)
-        // to
-        // groupBy(a % 5 as TMP_0). We need a name for every column so that to perform alias for the
-        // table aggregate function in Step4.
+        // Step1: 将聚合操作中的 分组表达式,强制给一个别名
         List<Expression> newGroupingExpressions =
                 addAliasToTheCallInAggregate(
                         child.getResolvedSchema().getColumnNames(), groupingExpressions);
@@ -729,6 +726,7 @@ public final class OperationTreeBuilder {
         // Step2: resolve expressions
         ExpressionResolver resolver = getAggResolver(child, groupingExpressions);
         List<ResolvedExpression> resolvedGroupings = resolver.resolve(newGroupingExpressions);
+
         Tuple2<ResolvedExpression, List<String>> resolvedFunctionAndAlias =
                 aggregateOperationFactory.extractTableAggFunctionAndAliases(
                         resolveSingleExpression(tableAggFunction, resolver));
@@ -826,6 +824,7 @@ public final class OperationTreeBuilder {
      * Add a default name to the call in the grouping expressions, e.g., groupBy(a % 5) to groupBy(a
      * % 5 as TMP_0) or make aggregate a named aggregate.
      */
+    // 将聚合操作中的 分组表达式,强制给一个别名,比如 groupBy(a % 5) 会转换 为 groupBy(a % 5 as TMP_序号)
     private List<Expression> addAliasToTheCallInAggregate(
             List<String> inputFieldNames, List<Expression> expressions) {
 
@@ -835,8 +834,9 @@ public final class OperationTreeBuilder {
         List<Expression> result = new ArrayList<>();
         for (Expression groupingExpression : expressions) {
             if (groupingExpression instanceof UnresolvedCallExpression
-                    && !ApiExpressionUtils.isFunction(
+                    && !ApiExpressionUtils.isFunction(// 如果groupingExpression 表达式内部的函数定义不是 BuiltInFunctionDefinitions.AS
                             groupingExpression, BuiltInFunctionDefinitions.AS)) {
+                //防止与用户的 自己命名的别名 冲突
                 String tempName = getUniqueName("TMP_" + attrNameCntr, usedFieldNames);
                 attrNameCntr += 1;
                 usedFieldNames.add(tempName);

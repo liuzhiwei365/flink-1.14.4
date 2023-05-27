@@ -27,6 +27,9 @@ package org.apache.flink.runtime.topology;
  * @param <V> the type of the vertices
  * @param <R> the type of the result
  */
+
+// PipelinedRegion  一个管道区域 包括多个顶点
+
 public interface PipelinedRegion<
         VID extends VertexID,
         RID extends ResultID,

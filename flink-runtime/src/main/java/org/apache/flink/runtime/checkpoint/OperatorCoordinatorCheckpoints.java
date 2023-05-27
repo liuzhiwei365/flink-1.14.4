@@ -68,12 +68,12 @@ final class OperatorCoordinatorCheckpoints {
                 new ArrayList<>(coordinators.size());
 
         for (final OperatorCoordinatorCheckpointContext coordinator : coordinators) {
-            //构建单个算子协调者的checkpoint future对象
+            // 构建单个算子协调者的checkpoint future对象
             final CompletableFuture<CoordinatorSnapshot> checkpointFuture =
                     triggerCoordinatorCheckpoint(coordinator, checkpointId);
             individualSnapshots.add(checkpointFuture);
         }
-        //等所有算子协调者的future 对象的逻辑执行完, 然后
+        // 等所有算子协调者的future 对象的逻辑执行完, 然后
         return FutureUtils.combineAll(individualSnapshots).thenApply(AllCoordinatorSnapshots::new);
     }
 

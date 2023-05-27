@@ -28,8 +28,20 @@ import java.util.Set;
 
 /** A bi-directional mapping between required and acquired resources. */
 class BiDirectionalResourceToRequirementMapping {
+
+    /*
+        Map<ResourceProfile, ResourceCounter >
+                                   |
+                                   ∨
+                        Map<ResourceProfile, Integer>
+
+
+    */
+
     private final Map<ResourceProfile, ResourceCounter> requirementToFulfillingResources =
             new HashMap<>();
+
+    //
     private final Map<ResourceProfile, ResourceCounter> resourceToFulfilledRequirement =
             new HashMap<>();
 

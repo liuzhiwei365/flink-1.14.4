@@ -75,7 +75,8 @@ public class CheckpointStorageLoader {
         Preconditions.checkNotNull(config, "config");
         Preconditions.checkNotNull(classLoader, "classLoader");
 
-        final String storageName = config.get(CheckpointingOptions.CHECKPOINT_STORAGE);//state.checkpoint-storage
+        final String storageName =
+                config.get(CheckpointingOptions.CHECKPOINT_STORAGE); // state.checkpoint-storage
         if (storageName == null) {
             if (logger != null) {
                 logger.debug(
@@ -89,13 +90,13 @@ public class CheckpointStorageLoader {
             return Optional.empty();
         }
 
-        //storageName 是jobmanager 和 filesystem 的情况下,直接创建相应的CheckpointStorage
-        //否则, 利用反射创建相关的工厂类, 然后再利用工厂创建相应的CheckpointStorage
+        // storageName 是jobmanager 和 filesystem 的情况下,直接创建相应的CheckpointStorage
+        // 否则, 利用反射创建相关的工厂类, 然后再利用工厂创建相应的CheckpointStorage
         switch (storageName.toLowerCase()) {
-            case JOB_MANAGER_STORAGE_NAME://jobmanager
+            case JOB_MANAGER_STORAGE_NAME: // jobmanager
                 return Optional.of(createJobManagerCheckpointStorage(config, classLoader, logger));
 
-            case FILE_SYSTEM_STORAGE_NAME://filesystem
+            case FILE_SYSTEM_STORAGE_NAME: // filesystem
                 return Optional.of(createFileSystemCheckpointStorage(config, classLoader, logger));
 
             default:
@@ -187,7 +188,7 @@ public class CheckpointStorageLoader {
                                 .getDelegatedStateBackend()
                         : configuredStateBackend;
 
-        //如果状态后端本身就实现了CheckpointStorage接口, 强转后就返回
+        // 如果状态后端本身就实现了CheckpointStorage接口, 强转后就返回
         if (rootStateBackend instanceof CheckpointStorage) {
             if (logger != null) {
                 logger.info(
@@ -211,7 +212,7 @@ public class CheckpointStorageLoader {
         }
 
         if (fromApplication != null) {
-            //如果fromApplication 是可配置的CheckpointStorage,配置后返回,否则直接返回
+            // 如果fromApplication 是可配置的CheckpointStorage,配置后返回,否则直接返回
             if (fromApplication instanceof ConfigurableCheckpointStorage) {
                 if (logger != null) {
                     logger.info(
@@ -252,7 +253,7 @@ public class CheckpointStorageLoader {
      */
     private static CheckpointStorage createDefaultCheckpointStorage(
             ReadableConfig config, ClassLoader classLoader, @Nullable Logger logger) {
-        //state.checkpoints.dir
+        // state.checkpoints.dir
         if (config.getOptional(CheckpointingOptions.CHECKPOINTS_DIRECTORY).isPresent()) {
             return createFileSystemCheckpointStorage(config, classLoader, logger);
         }

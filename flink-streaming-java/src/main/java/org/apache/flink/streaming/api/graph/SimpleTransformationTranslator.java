@@ -39,12 +39,13 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public abstract class SimpleTransformationTranslator<OUT, T extends Transformation<OUT>>
         implements TransformationTranslator<OUT, T> {
 
+    // 是批模式的模版方法
     @Override
     public final Collection<Integer> translateForBatch(
             final T transformation, final Context context) {
         checkNotNull(transformation);
         checkNotNull(context);
-
+        // translateForbatchInternal 有很多子类实现
         final Collection<Integer> transformedIds =
                 translateForBatchInternal(transformation, context);
         configure(transformation, context);
@@ -52,12 +53,14 @@ public abstract class SimpleTransformationTranslator<OUT, T extends Transformati
         return transformedIds;
     }
 
+    // 是流模式的模版方法
     @Override
     public final Collection<Integer> translateForStreaming(
             final T transformation, final Context context) {
         checkNotNull(transformation);
         checkNotNull(context);
 
+        // translateForStreamingInternal 有很多子类实现
         final Collection<Integer> transformedIds =
                 translateForStreamingInternal(transformation, context);
         configure(transformation, context);

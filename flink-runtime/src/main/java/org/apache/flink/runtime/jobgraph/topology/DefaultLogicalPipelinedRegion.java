@@ -31,6 +31,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /** Set of {@link LogicalVertex} that are connected through pipelined {@link LogicalResult}. */
 public class DefaultLogicalPipelinedRegion implements LogicalPipelinedRegion {
 
+    // 保存了被划分成一个 PipelinedRegion 的所有LogicalVertex
     private final Map<JobVertexID, LogicalVertex> vertexById;
 
     public DefaultLogicalPipelinedRegion(final Set<? extends LogicalVertex> logicalVertices) {

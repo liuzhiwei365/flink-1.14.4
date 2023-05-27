@@ -187,7 +187,7 @@ public class RemoteInputChannel extends InputChannel {
                 throw new PartitionConnectionException(partitionId, e);
             }
 
-            //向ResultPartition中注册InitialCredit 信息
+            // 向ResultPartition中注册InitialCredit 信息
             partitionRequestClient.requestSubpartition(partitionId, subpartitionIndex, this, 0);
         }
     }
@@ -320,7 +320,7 @@ public class RemoteInputChannel extends InputChannel {
      * Enqueue this input channel in the pipeline for notifying the producer of unannounced credit.
      */
 
-    //上报UnAnnouncedCredit 指标到 ResultPartition
+    // 上报UnAnnouncedCredit 指标到 ResultPartition
     private void notifyCreditAvailable() throws IOException {
         checkPartitionRequestQueueInitialized();
 
@@ -397,7 +397,7 @@ public class RemoteInputChannel extends InputChannel {
 
         // notifies the producer that this channel is ready to
         // unblock from checkpoint and resume data consumption
-        //恢复消费 ,向指定的channel 发送恢复消费的消息
+        // 恢复消费 ,向指定的channel 发送恢复消费的消息
         partitionRequestClient.resumeConsumption(this);
     }
 

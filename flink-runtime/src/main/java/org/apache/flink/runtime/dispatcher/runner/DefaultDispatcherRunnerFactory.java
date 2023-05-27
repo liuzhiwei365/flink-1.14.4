@@ -50,6 +50,8 @@ public class DefaultDispatcherRunnerFactory implements DispatcherRunnerFactory {
             PartialDispatcherServices partialDispatcherServices)
             throws Exception {
 
+        // 这个 有 application  session 还有 per job 三种实现
+
         final DispatcherLeaderProcessFactory dispatcherLeaderProcessFactory =
                 dispatcherLeaderProcessFactoryFactory.createFactory(
                         jobGraphStoreFactory,

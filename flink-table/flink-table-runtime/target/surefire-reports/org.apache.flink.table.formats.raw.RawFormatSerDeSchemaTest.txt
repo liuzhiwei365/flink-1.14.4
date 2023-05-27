@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.formats.raw.RawFormatSerDeSchemaTest
--------------------------------------------------------------------------------
-Tests run: 33, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.045 s - in org.apache.flink.table.formats.raw.RawFormatSerDeSchemaTest

@@ -113,7 +113,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * a completed call is as expected, and trigger correcting actions if it is not. Many actions are
  * also idempotent (like canceling).
  */
-//代表一个task的一次执行
+// 代表一个task的一次执行
 public class Execution
         implements AccessExecution, Archiveable<ArchivedExecution>, LogicalSlot.Payload {
 
@@ -159,7 +159,7 @@ public class Execution
 
     private volatile ExecutionState state = CREATED;
 
-    private LogicalSlot assignedResource;//分配的逻辑槽位
+    private LogicalSlot assignedResource; // 分配的逻辑槽位
 
     private Optional<ErrorInfo> failureCause =
             Optional.empty(); // once an ErrorInfo is set, never changes
@@ -415,13 +415,16 @@ public class Execution
                         vertex, location, attemptId, notifyPartitionDataAvailable),
                 vertex.getExecutionGraphAccessor().getJobMasterMainThreadExecutor(),
 
-                // 1 下面的逻辑要么异步,要么同步,终归会执行; 2 producedPartitionCache  来自registerProducedPartitions 方法的执行结果
+                // 1 下面的逻辑要么异步,要么同步,终归会执行; 2 producedPartitionCache  来自registerProducedPartitions
+                // 方法的执行结果
                 producedPartitionsCache -> {
                     producedPartitions = producedPartitionsCache;
 
                     if (getState() == SCHEDULED) {
                         startTrackingPartitions(
-                                location.getResourceID(), producedPartitionsCache.values());//Collection<ResultPartitionDeploymentDescriptor>
+                                location.getResourceID(),
+                                producedPartitionsCache
+                                        .values()); // Collection<ResultPartitionDeploymentDescriptor>
                     } else {
                         LOG.info(
                                 "Discarding late registered partitions for {} task {}.",
@@ -464,7 +467,7 @@ public class Execution
             CompletableFuture<? extends ShuffleDescriptor> shuffleDescriptorFuture =
                     vertex.getExecutionGraphAccessor()
                             .getShuffleMaster()
-                            .registerPartitionWithProducer( //注册给 NettyShuffleMaster
+                            .registerPartitionWithProducer( // 注册给 NettyShuffleMaster
                                     vertex.getJobId(), partitionDescriptor, producerDescriptor);
 
             CompletableFuture<ResultPartitionDeploymentDescriptor> partitionRegistration =
@@ -477,7 +480,7 @@ public class Execution
                                             notifyPartitionDataAvailable));
             partitionRegistrations.add(partitionRegistration);
         }
-        //循环遍历结束后,partitionRegistration对象 就包含了所有 ResultPartition的信息
+        // 循环遍历结束后,partitionRegistration对象 就包含了所有 ResultPartition的信息
         return FutureUtils.combineAll(partitionRegistrations)
                 .thenApply(
                         rpdds -> {
@@ -487,7 +490,7 @@ public class Execution
                                     rpdd -> producedPartitions.put(rpdd.getPartitionId(), rpdd));
                             return producedPartitions;
                         });
-        //最后包装成为Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor> 返回
+        // 最后包装成为Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor> 返回
     }
 
     private static int getPartitionMaxParallelism(
@@ -854,12 +857,14 @@ public class Execution
         return triggerCheckpointHelper(checkpointId, timestamp, checkpointOptions);
     }
 
+    // triggerSynchronousSavepoint 和 triggerCheckpoint 都会调用  triggerCheckpointHelper方法
     private CompletableFuture<Acknowledge> triggerCheckpointHelper(
             long checkpointId, long timestamp, CheckpointOptions checkpointOptions) {
 
         final CheckpointType checkpointType = checkpointOptions.getCheckpointType();
         if (checkpointType.getPostCheckpointAction() == PostCheckpointAction.TERMINATE
                 && !(checkpointType.isSynchronous() && checkpointType.isSavepoint())) {
+            // 校验
             throw new IllegalArgumentException(
                     "Only synchronous savepoints are allowed to advance the watermark to MAX.");
         }
@@ -868,7 +873,8 @@ public class Execution
 
         if (slot != null) {
             final TaskManagerGateway taskManagerGateway = slot.getTaskManagerGateway();
-
+            // 从逻辑槽位中拿出 taskManagerGateway ,rpc 远程触发 checkpoint  (一次execution 与一个attemptId 一一对应)
+            // 会调用 TaskExecutor 的 triggerCheckpoint; 这时候逻辑就到 TaskManager端了
             return taskManagerGateway.triggerCheckpoint(
                     attemptId, getVertex().getJobId(), checkpointId, timestamp, checkpointOptions);
         }
@@ -1274,9 +1280,10 @@ public class Execution
             final ResourceID taskExecutorId,
             final Collection<ResultPartitionDeploymentDescriptor> partitions) {
         JobMasterPartitionTracker partitionTracker =
-                vertex.getExecutionGraphAccessor().getPartitionTracker();//JobMasterPartitionTracker
+                vertex.getExecutionGraphAccessor()
+                        .getPartitionTracker(); // JobMasterPartitionTracker
         for (ResultPartitionDeploymentDescriptor partition : partitions) {
-            //new JobMaster   的时候内部会new JobMasterPartitionTrackerImpl 作为其成员变量,
+            // new JobMaster   的时候内部会new JobMasterPartitionTrackerImpl 作为其成员变量,
             partitionTracker.startTrackingPartition(taskExecutorId, partition);
         }
     }

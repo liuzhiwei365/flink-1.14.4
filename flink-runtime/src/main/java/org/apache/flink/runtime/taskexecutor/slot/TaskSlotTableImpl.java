@@ -57,6 +57,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 /** Default implementation of {@link TaskSlotTable}. */
+// TaskSlotTableImpl 是 TaskSlotTable 接口的实现类. 负责TaskExecutor端的slot管理
 public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTable<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(TaskSlotTableImpl.class);
@@ -66,9 +67,12 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
      * index must within the range of [0, numberSlots). When generating slot report, we should
      * always generate slots with index in [0, numberSlots) even the slot does not exist.
      */
+    // 静态slot分配中的slot数
+    // 如果请求带索引的slot,则所请求的索引必须在[0,numberSlots）范围内
+    // 生成slot report时,即使该slot不存在,我们也应始终生成索引为[0,numberSlots）的广告位
     private final int numberSlots;
 
-    /** Slot resource profile for static slot allocation. */
+    // 用于静态slot分配时 的    单个slot资源描述
     private final ResourceProfile defaultSlotResourceProfile;
 
     /** Page size for memory manager. */
@@ -77,13 +81,13 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
     /** Timer service used to time out allocated slots. */
     private final TimerService<AllocationID> timerService;
 
-    /** The list of all task slots. */
+    // 缓存  index -> TaskSlot
     private final Map<Integer, TaskSlot<T>> taskSlots;
 
-    /** Mapping from allocation id to task slot. */
+    // 缓存 AllocationID -> TaskSlot
     private final Map<AllocationID, TaskSlot<T>> allocatedSlots;
 
-    /** Mapping from execution attempt id to task and task slot. */
+    // ExecutionAttemptID -> (task,taskSlot)
     private final Map<ExecutionAttemptID, TaskSlotMapping<T>> taskSlotMappings;
 
     /** Mapping from job id to allocated slots for a job. */
@@ -93,9 +97,11 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
     @Nullable private SlotActions slotActions;
 
     /** The table state. */
+    // 状态相关 : CREATED,RUNNING,CLOSING,CLOSED
     private volatile State state;
 
     /** Current index for dynamic slot, should always not less than numberSlots */
+    // 在分配槽位的时候  的游标
     private int dynamicSlotIndex;
 
     private final ResourceBudgetManager budgetManager;
@@ -277,16 +283,17 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
             int index, JobID jobId, AllocationID allocationId, Time slotTimeout) {
         return allocateSlot(index, jobId, allocationId, defaultSlotResourceProfile, slotTimeout);
     }
-
+    // 这两个 allocateSlot 是 本类最核心的逻辑
     @Override
     public boolean allocateSlot(
-            int requestedIndex,
+            int requestedIndex, // 槽位编号
             JobID jobId,
-            AllocationID allocationId,
+            AllocationID allocationId, // 物理槽位的唯一标识
             ResourceProfile resourceProfile,
             Time slotTimeout) {
         checkRunning();
 
+        // 如果 槽位数位 4 , 那么请求编号只能是  0 ,1, 2 ,3
         Preconditions.checkArgument(requestedIndex < numberSlots);
 
         // The negative requestIndex indicate that the SlotManager allocate a dynamic slot, we
@@ -299,8 +306,10 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
 
         TaskSlot<T> taskSlot = allocatedSlots.get(allocationId);
         if (taskSlot != null) {
+            // 该 物理槽位 已经被占
             return isDuplicatedSlot(taskSlot, jobId, effectiveResourceProfile, index);
         } else if (isIndexAlreadyTaken(index)) {
+            // 该槽位已经分配 ,直接返回false ,本次发配槽位的请求 失败
             LOG.info(
                     "The slot with index {} is already assigned to another allocation with id {}.",
                     index,
@@ -309,6 +318,7 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
         }
 
         if (!budgetManager.reserve(effectiveResourceProfile)) {
+            // 资源预算不够了  发配失败
             LOG.info(
                     "Cannot allocate the requested resources. Trying to allocate {}, "
                             + "while the currently remaining available resources are {}, total is {}.",
@@ -318,6 +328,7 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
             return false;
         }
 
+        // 创建 TaskSlot ,更新各类数据结构
         taskSlot =
                 new TaskSlot<>(
                         index,
@@ -326,12 +337,13 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
                         jobId,
                         allocationId,
                         memoryVerificationExecutor);
+
         taskSlots.put(index, taskSlot);
 
         // update the allocation id to task slot map
         allocatedSlots.put(allocationId, taskSlot);
 
-        // register a timeout for this slot since it's in state allocated
+        // 注册此插槽的超时,因为它处于已分配状态
         timerService.registerTimeout(allocationId, slotTimeout.getSize(), slotTimeout.getUnit());
 
         // add this slot to the set of job slots
@@ -430,6 +442,7 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
         }
     }
 
+    // 清理掉各种缓存然后调用task的shutdown方法关闭任务
     private CompletableFuture<Void> freeSlotInternal(TaskSlot<T> taskSlot, Throwable cause) {
         AllocationID allocationId = taskSlot.getAllocationId();
 
@@ -536,7 +549,7 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
 
         if (taskSlot != null) {
             if (taskSlot.isActive(task.getJobID(), task.getAllocationId())) {
-                //一个taskSlot中可以运行多个task
+                // 一个taskSlot中可以运行多个task , 把TaskSlot 分配给Task
                 if (taskSlot.add(task)) {
                     taskSlotMappings.put(
                             task.getExecutionId(), new TaskSlotMapping<>(task, taskSlot));

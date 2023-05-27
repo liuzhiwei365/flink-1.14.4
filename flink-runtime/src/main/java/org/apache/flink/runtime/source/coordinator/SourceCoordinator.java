@@ -200,6 +200,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
 
     @Override
     public void subtaskReset(int subtaskId, long checkpointId) {
+        // 用 SourceCoordinatorContext对象的 ScheduledExecutorService成员来执行
         runInEventLoop(
                 () -> {
                     LOG.info(
@@ -208,12 +209,14 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                             checkpointId,
                             operatorName);
 
+                    // 恢复指定checkpointId指定自任务 的 最新成功的 分片信息
                     final List<SplitT> splitsToAddBack =
                             context.getAndRemoveUncheckpointedAssignment(subtaskId, checkpointId);
                     LOG.debug(
                             "Adding splits back to the split enumerator of source {}: {}",
                             operatorName,
                             splitsToAddBack);
+                    // 把恢复的分片信息放回 分片枚举器
                     enumerator.addSplitsBack(splitsToAddBack, subtaskId);
                 },
                 "handling subtask %d recovery to checkpoint %d",

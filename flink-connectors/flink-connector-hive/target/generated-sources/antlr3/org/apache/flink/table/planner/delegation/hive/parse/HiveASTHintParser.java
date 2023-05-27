@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 org/apache/flink/table/planner/delegation/hive/parse/HiveASTHintParser.g 2022-06-10 20:27:37
+// $ANTLR 3.5.2 org/apache/flink/table/planner/delegation/hive/parse/HiveASTHintParser.g 2023-03-06 17:56:57
 
 package org.apache.flink.table.planner.delegation.hive.parse;
 
@@ -731,7 +731,7 @@ public class HiveASTHintParser extends Parser {
 			}
 
 			// AST REWRITE
-			// elements: hintName, hintArgs
+			// elements: hintArgs, hintName
 			// token labels: 
 			// rule labels: retval
 			// token list labels: 

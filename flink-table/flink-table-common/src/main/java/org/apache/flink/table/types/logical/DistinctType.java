@@ -49,6 +49,7 @@ public final class DistinctType extends UserDefinedType {
     private static final long serialVersionUID = 1L;
 
     /** A builder for a {@link DistinctType}. Intended for future extensibility. */
+    // 工厂类 或者 建造者类 作为本类的一个内部类, 方便管理和维护, 这种设计可以借鉴
     public static final class Builder {
 
         private final ObjectIdentifier objectIdentifier;

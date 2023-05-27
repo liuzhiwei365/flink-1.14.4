@@ -67,10 +67,15 @@ public class SideOutputTransformationTranslator<OUT>
                         + parentTransformations.size());
 
         final List<Integer> virtualResultIds = new ArrayList<>();
+
+        // 本子类 一定只有一个 父 transform
         final Transformation<?> parentTransformation = parentTransformations.get(0);
+
         for (int inputId : context.getStreamNodeIds(parentTransformation)) {
             final int virtualId = Transformation.getNewNodeId();
+
             streamGraph.addVirtualSideOutputNode(inputId, virtualId, transformation.getOutputTag());
+
             virtualResultIds.add(virtualId);
         }
         return virtualResultIds;

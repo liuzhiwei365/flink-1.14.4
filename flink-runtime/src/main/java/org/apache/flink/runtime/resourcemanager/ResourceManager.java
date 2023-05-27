@@ -111,7 +111,7 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
     /** Unique id of the resource manager. */
     private final ResourceID resourceId;
 
-    /** All currently registered JobMasterGateways scoped by JobID. */
+    // 从这里, 我们可以看出 多个JobManager 可以共用一个 ResourceManager
     private final Map<JobID, JobManagerRegistration> jobManagerRegistrations;
 
     /** All currently registered JobMasterGateways scoped by ResourceID. */
@@ -448,23 +448,36 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
                 getMainThreadExecutor());
     }
 
+    /*
+         TaskExecutor 通过 ResourceManagerGateway.sendSlotReport 方法 来远程调用
+         ResourceManager.sendSlotReport 方法
+         目的是为了向 ResourceManager 汇报 SlotReport 信息
+    */
     @Override
     public CompletableFuture<Acknowledge> sendSlotReport(
             ResourceID taskManagerResourceId,
             InstanceID taskManagerRegistrationId,
             SlotReport slotReport,
             Time timeout) {
+
+        // taskExecutors 成员变量 中的信息 是先前 registerTaskExecutor 时 put 进去的 ,内部包含重要的资源信息
+        // slotManager  注册 slot资源 会用到
         final WorkerRegistration<WorkerType> workerTypeWorkerRegistration =
                 taskExecutors.get(taskManagerResourceId);
 
+        // 如果校验通过
         if (workerTypeWorkerRegistration.getInstanceID().equals(taskManagerRegistrationId)) {
+
+            // 向 slotManager  注册 slot资源
             if (slotManager.registerTaskManager(
                     workerTypeWorkerRegistration,
                     slotReport,
                     workerTypeWorkerRegistration.getTotalResourceProfile(),
                     workerTypeWorkerRegistration.getDefaultSlotResourceProfile())) {
+
                 onWorkerRegistered(workerTypeWorkerRegistration.getWorker());
             }
+            // 向 taskExecutor 返回 Acknowledge 消息
             return CompletableFuture.completedFuture(Acknowledge.get());
         } else {
             return FutureUtils.completedExceptionally(
@@ -505,14 +518,21 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
         }
     }
 
+    // JobMaster 所持有的 SlotPoolService 会利用  ResourceManagerGateway对象 来调用 本方法
+    // JobMaster 向 ResourceManager 发起资源申请
     @Override
     public CompletableFuture<Acknowledge> declareRequiredResources(
             JobMasterId jobMasterId, ResourceRequirements resourceRequirements, Time timeout) {
         final JobID jobId = resourceRequirements.getJobId();
+        // ResourceManager 中可能注册了多个 JobMaster
         final JobManagerRegistration jobManagerRegistration = jobManagerRegistrations.get(jobId);
 
         if (null != jobManagerRegistration) {
+
             if (Objects.equals(jobMasterId, jobManagerRegistration.getJobMasterId())) {
+
+                // 利用 slotManager 来分配资源
+                // DeclarativeSlotManager  和 FineGrainedSlotManager 分别是 粗粒度槽位管理器  和 细粒度槽位管理器 实现
                 slotManager.processResourceRequirements(resourceRequirements);
 
                 return CompletableFuture.completedFuture(Acknowledge.get());

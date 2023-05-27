@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.table.planner.plan.batch.sql.agg.GroupingSetsTest
--------------------------------------------------------------------------------
-Tests run: 36, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 23.045 s - in org.apache.flink.table.planner.plan.batch.sql.agg.GroupingSetsTest

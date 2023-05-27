@@ -79,7 +79,7 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
      * @param fatalErrorHandler Fatal error handler
      */
     public ZooKeeperLeaderRetrievalDriver(
-            CuratorFramework client,
+            CuratorFramework client, // zk 的客户端
             String path,
             LeaderRetrievalEventHandler leaderRetrievalEventHandler,
             LeaderInformationClearancePolicy leaderInformationClearancePolicy,
@@ -87,6 +87,8 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
             throws Exception {
         this.client = checkNotNull(client, "CuratorFramework client");
         this.connectionInformationPath = ZooKeeperUtils.generateConnectionInformationPath(path);
+
+        // 调用zk curator 的api 来创建 TreeCache 对象; 而该对象 正好是专门监听zk服务器上 指定路径
         this.cache =
                 ZooKeeperUtils.createTreeCache(
                         client,
@@ -99,6 +101,11 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
 
         cache.start();
 
+        // 当zk服务器上 指定路径变化后 , 会触发监听器 调用 stateChanged方法
+        // ConnectionStateListener 类只有一个抽象方法; 所以它是一个函数式接口
+        // 所以 (client, newState) -> handleStateChange(newState) 是 stateChanged方法的匿名写法
+
+        // 所以  当zk服务器上 指定路径变化后 , 监听器 会调用本类（驱动类）的 handleStateChange 方法
         client.getConnectionStateListenable().addListener(connectionStateListener);
 
         running = true;
@@ -119,6 +126,8 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
         cache.close();
     }
 
+    // zk的客户端在 创建 TreeCache 的时候,会把本方法当做回调逻辑传入 ,于是zk节点信息发生变化的时候,会调用本方法寻回 leader的信息
+    // 从zk 服务器 寻回新的主节点 信息
     private void retrieveLeaderInformationFromZooKeeper() {
         try {
             LOG.debug("Leader node has changed.");
@@ -133,6 +142,15 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
 
                     final String leaderAddress = ois.readUTF();
                     final UUID leaderSessionID = (UUID) ois.readObject();
+
+                    // DefaultLeaderRetrievalService.notifyLeaderAddress
+
+                    // 如果 场景是 TaskExecutor 寻回 ResourceManager 则调用栈如下
+                    // TaskExecutor.ResourceManagerLeaderListener.notifyLeaderAddress
+                    // TaskExecutor.notifyOfNewResourceManagerLeader
+                    // org.apache.flink.runtime.taskexecutor.TaskExecutor.reconnectToResourceManager
+
+                    // 最终会 利用zk服务器寻回新的ResourceManager  ,重新连接 新的ResourceManager
                     leaderRetrievalEventHandler.notifyLeaderAddress(
                             LeaderInformation.known(leaderSessionID, leaderAddress));
                     return;
@@ -146,6 +164,7 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
         }
     }
 
+    // 监听器监听路径 发生变化的时候,会被调用
     private void handleStateChange(ConnectionState newState) {
         switch (newState) {
             case CONNECTED:
@@ -158,7 +177,7 @@ public class ZooKeeperLeaderRetrievalDriver implements LeaderRetrievalDriver {
                     notifyNoLeader();
                 }
                 break;
-            case RECONNECTED:
+            case RECONNECTED: // 监听的主节点发生变化, 调用重连 逻辑
                 LOG.info(
                         "Connection to ZooKeeper was reconnected. Leader retrieval can be restarted.");
                 onReconnectedConnectionState();

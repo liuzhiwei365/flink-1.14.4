@@ -145,6 +145,7 @@ public abstract class AbstractDispatcherLeaderProcess implements DispatcherLeade
 
     private CompletableFuture<Void> closeDispatcherService() {
         if (dispatcherService != null) {
+            // 实现类 DefaultDispatcherGatewayService 会 停止相关的 rpc server
             return dispatcherService.closeAsync();
         } else {
             return FutureUtils.completedVoidFuture();
@@ -165,8 +166,11 @@ public abstract class AbstractDispatcherLeaderProcess implements DispatcherLeade
             DispatcherGatewayService createdDispatcherService) {
         Preconditions.checkState(
                 dispatcherService == null, "The DispatcherGatewayService can only be set once.");
+
+        // 把新创建的 或者新恢复的 DispatcherGatewayService 设置好
         dispatcherService = createdDispatcherService;
         dispatcherGatewayFuture.complete(createdDispatcherService.getGateway());
+
         FutureUtils.forward(createdDispatcherService.getShutDownFuture(), shutDownFuture);
         handleUnexpectedDispatcherServiceTermination(createdDispatcherService);
     }

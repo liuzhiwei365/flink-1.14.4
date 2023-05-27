@@ -107,11 +107,18 @@ public final class FieldsDataType extends DataType {
 
     // --------------------------------------------------------------------------------------------
 
+    // 当父 FieldsDataType的conversionClass成员变量是RowData.class 的时候,
+    // 对它的每个子DataType对象的conversionClass成员变量做更新
     private DataType updateInnerDataType(DataType innerDataType) {
         if (conversionClass == RowData.class) {
+            // 就是更新innerDataType 内部的 conversionClass 成员变量
+            // 最终一定会调用 AtomicDataType的 bridgedTo,  AtomicDataType 不会继续包含 子 DataTypes
             return innerDataType.bridgedTo(
+                    //把逻辑类型 转变为 java的 *.class 字节码类型
                     toInternalConversionClass(innerDataType.getLogicalType()));
         }
         return innerDataType;
     }
+
+
 }

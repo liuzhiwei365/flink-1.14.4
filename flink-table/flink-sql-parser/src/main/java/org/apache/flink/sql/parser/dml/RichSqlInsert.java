@@ -35,6 +35,7 @@ import java.util.List;
 
 /** A {@link SqlInsert} that have some extension functions like partition, overwrite. * */
 public class RichSqlInsert extends SqlInsert {
+     // partition(city='beijing' , day = '20220323')
     private final SqlNodeList staticPartitions;
 
     private final SqlNodeList extendedKeywords;

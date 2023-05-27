@@ -124,6 +124,11 @@ public abstract class RpcEndpoint implements RpcGateway, AutoCloseableAsync {
         this.rpcService = checkNotNull(rpcService, "rpcService");
         this.endpointId = checkNotNull(endpointId, "endpointId");
 
+        // 每个RpcEndpoint被实例化的时候 都会startServer()
+        //  rpcService 内部含有一个superActor 可以作为新创建的Actor的父Actor
+
+        // rpcServer 是一个动态代理对象  代理了 所有实现了RpcGateway的类 , RpcServer ,AkkaBasedEndpoint 等类
+        // 这些类中的方法都会被 AkkaInvocationHandler或者 FencedAkkaInvocationHandler 的 invoke 方法拦截调用
         this.rpcServer = rpcService.startServer(this);
 
         this.mainThreadExecutor = new MainThreadExecutor(rpcServer, this::validateRunsInMainThread);
@@ -411,6 +416,7 @@ public abstract class RpcEndpoint implements RpcGateway, AutoCloseableAsync {
         }
 
         private void scheduleRunAsync(Runnable runnable, long delayMillis) {
+            // gateway 在这里必定是 AkkaInvocationHandler 对象
             gateway.scheduleRunAsync(runnable, delayMillis);
         }
 
@@ -421,6 +427,7 @@ public abstract class RpcEndpoint implements RpcGateway, AutoCloseableAsync {
 
         @Override
         public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+
             final long delayMillis = TimeUnit.MILLISECONDS.convert(delay, unit);
             FutureTask<Void> ft = new FutureTask<>(command, null);
             scheduleRunAsync(ft, delayMillis);

@@ -99,6 +99,8 @@ public class IntermediateResultPartition {
         }
     }
 
+    // ConsumerVertexGroup 消费顶点组 包含成员  List<ExecutionVertexID> vertices ,
+    // 代表的是本节点的 某个 partitionId将会被下游的多少个顶点消费
     public void addConsumers(ConsumerVertexGroup consumers) {
         getEdgeManager().connectPartitionWithConsumerVertexGroup(partitionId, consumers);
     }

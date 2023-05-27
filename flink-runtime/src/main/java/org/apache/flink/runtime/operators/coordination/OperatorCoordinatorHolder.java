@@ -217,7 +217,7 @@ public class OperatorCoordinatorHolder
         // this needs to happen first, so that the coordinator may access the gateway
         // in the 'subtaskReset()' function (even though they cannot send events, yet).
         setupSubtaskGateway(subtask);
-
+        // 恢复和放回 源的分片信息
         coordinator.subtaskReset(subtask, checkpointId);
     }
 
@@ -270,6 +270,7 @@ public class OperatorCoordinatorHolder
             setupAllSubtaskGateways();
         }
 
+        // 重新设置和恢复一个算子协调者的 状态（注意和快照状态不一样）
         coordinator.resetToCheckpoint(checkpointId, checkpointData);
     }
 

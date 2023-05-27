@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.apache.flink.state.changelog.ChangelogDelegateFileStateBackendTest
--------------------------------------------------------------------------------
-Tests run: 136, Failures: 0, Errors: 0, Skipped: 14, Time elapsed: 3.909 s - in org.apache.flink.state.changelog.ChangelogDelegateFileStateBackendTest

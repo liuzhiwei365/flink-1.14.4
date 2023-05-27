@@ -84,14 +84,15 @@ public enum ResultPartitionType {
     PIPELINED_APPROXIMATE(true, true, true, false, true);
 
     /** Can the partition be consumed while being produced? */
+    // 当这个分区的数据的数据被生产的时候也同时会被消耗吗
     private final boolean isPipelined;
-
     /** Does the partition produce back pressure when not consumed? */
+    // 当不被消费的时候会有反压吗
     private final boolean hasBackPressure;
-
     /** Does this partition use a limited number of (network) buffers? */
+    // 这个分区的数据使用有限数量的缓冲区吗
     private final boolean isBounded;
-
+    // 如果isPersistent 是true , 这个分区的数据即使是被消费过 也不会被释放
     /** This partition will not be released after consuming if 'isPersistent' is true. */
     private final boolean isPersistent;
 
@@ -105,6 +106,7 @@ public enum ResultPartitionType {
      * RestartPipelinedRegionFailoverStrategy} 2. FLINK-19895: Unify the life cycle of
      * ResultPartitionType Pipelined Family
      */
+    // 能重连接吗
     private final boolean isReconnectable;
 
     /** Specifies the behaviour of an intermediate result partition at runtime. */

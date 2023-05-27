@@ -311,6 +311,7 @@ public class CliClient implements AutoCloseable {
                     .println(new AttributedString(String.format("%s%s", prompt, statement)));
             terminal.flush();
 
+            //  执行文件中的一条 sql
             if (!executeStatement(statement, mode)) {
                 // cancel execution when meet error or ctrl + C;
                 return false;
@@ -321,6 +322,9 @@ public class CliClient implements AutoCloseable {
 
     private boolean executeStatement(String statement, ExecutionMode executionMode) {
         try {
+            // 开始解析执行 sql
+            //  sql 语句  ->  sqlNode        利用  CalciteParser
+            //  sqlNode  ->  operation操作   利用  SqlToOperationConverter
             final Optional<Operation> operation = parseCommand(statement);
             operation.ifPresent(
                     op -> {
@@ -329,6 +333,7 @@ public class CliClient implements AutoCloseable {
                                 terminal.handle(
                                         Terminal.Signal.INT, (signal) -> thread.interrupt());
                         try {
+                            // 执行 operation操作, 这里会去调用 table api
                             callOperation(op, executionMode);
                         } finally {
                             terminal.handle(Terminal.Signal.INT, previousHandler);
@@ -392,7 +397,10 @@ public class CliClient implements AutoCloseable {
         if (stmt.trim().isEmpty()) {
             return Optional.empty();
         }
-        // stmt 代表 去掉了 ； 号之后的sql 语句
+
+
+        // 上面是做一些sql 格式上的修剪和处理, 这里正式开始 解析 sql
+        // 这里的executor 只有一个实现类 LocalExecutor
         Operation operation = executor.parseStatement(sessionId, stmt);
         return Optional.of(operation);
     }
@@ -564,10 +572,12 @@ public class CliClient implements AutoCloseable {
     private void callInserts(List<ModifyOperation> operations) {
         printInfo(CliStrings.MESSAGE_SUBMITTING_STATEMENT);
 
+        // table.dml-sync
         boolean sync = executor.getSessionConfig(sessionId).get(TABLE_DML_SYNC);
         if (sync) {
             printInfo(MESSAGE_WAIT_EXECUTE);
         }
+        // 插入是属于修改操作
         TableResult tableResult = executor.executeModifyOperations(sessionId, operations);
         checkState(tableResult.getJobClient().isPresent());
 

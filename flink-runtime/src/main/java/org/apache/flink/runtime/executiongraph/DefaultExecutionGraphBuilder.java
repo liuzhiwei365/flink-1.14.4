@@ -110,11 +110,11 @@ public class DefaultExecutionGraphBuilder {
                         jobGraph.getUserJarBlobKeys(),
                         jobGraph.getClasspaths());
 
-        //历史保留的 最大 先前执行的 尝试次数
+        // 历史保留的 最大 先前执行的 尝试次数
         final int maxPriorAttemptsHistoryLength =
                 jobManagerConfig.getInteger(JobManagerOptions.MAX_ATTEMPTS_HISTORY_SIZE);
 
-        //分区组 释放策略 ??
+        // 分区组 释放策略 ??
         final PartitionGroupReleaseStrategy.Factory partitionGroupReleaseStrategyFactory =
                 PartitionGroupReleaseStrategyFactoryLoader.loadPartitionGroupReleaseStrategyFactory(
                         jobManagerConfig);
@@ -162,6 +162,7 @@ public class DefaultExecutionGraphBuilder {
 
         for (JobVertex vertex : jobGraph.getVertices()) {
             String executableClass = vertex.getInvokableClassName();
+            // 检验每个Jobvertex 的 executableClass
             if (executableClass == null || executableClass.isEmpty()) {
                 throw new JobSubmissionException(
                         jobId,
@@ -173,6 +174,7 @@ public class DefaultExecutionGraphBuilder {
             }
 
             try {
+                // 初始化一下每个 jobVerx , 主要是设置 输入输出 格式
                 vertex.initializeOnMaster(classLoader);
             } catch (Throwable t) {
                 throw new JobExecutionException(
@@ -186,7 +188,7 @@ public class DefaultExecutionGraphBuilder {
                 "Successfully ran initialization on master in {} ms.",
                 (System.nanoTime() - initMasterStart) / 1_000_000);
 
-        // topologically sort the job vertices and attach the graph to the existing one
+        // 把 JobVertex 排序
         List<JobVertex> sortedTopology = jobGraph.getVerticesSortedTopologicallyFromSources();
         if (log.isDebugEnabled()) {
             log.debug(
@@ -214,7 +216,8 @@ public class DefaultExecutionGraphBuilder {
             CheckpointStatsTracker checkpointStatsTracker =
                     new CheckpointStatsTracker(
                             historySize,
-                            snapshotSettings.getCheckpointCoordinatorConfiguration(),
+                            snapshotSettings.getCheckpointCoordinatorConfiguration(), // 与checkpoint
+                            // 协调者相关的配置
                             metrics);
 
             // load the state backend from the application settings
@@ -234,7 +237,7 @@ public class DefaultExecutionGraphBuilder {
                 }
             }
 
-            //applicationConfiguredBackend 有可能为null ,也有可能是反序列化后得到的值
+            // applicationConfiguredBackend 有可能为null ,也有可能是反序列化后得到的值
             final StateBackend rootBackend;
             try {
                 rootBackend =
@@ -285,6 +288,7 @@ public class DefaultExecutionGraphBuilder {
 
             // instantiate the user-defined checkpoint hooks
 
+            //  实例化用户自定义的 checkpoint hooks
             final SerializedValue<MasterTriggerRestoreHook.Factory[]> serializedHooks =
                     snapshotSettings.getMasterHooks();
             final List<MasterTriggerRestoreHook<?>> hooks;
@@ -314,11 +318,16 @@ public class DefaultExecutionGraphBuilder {
                 }
             }
 
-            //用户的checkpoint配置 最终大都会交给这个类, 因为CheckpointCoordinator 是 checkpoint的驱动
+            // 用户的checkpoint配置 最终大都会交给这个类, 因为CheckpointCoordinator 是 checkpoint的驱动
             final CheckpointCoordinatorConfiguration chkConfig =
                     snapshotSettings.getCheckpointCoordinatorConfiguration();
 
-            //上面创建的种种组件, 最终都是为了配置 executionGraph; 都会作为enableCheckpointing方法的参数
+            /*
+            上面创建的种种组件, 最终都是为了配置 executionGraph; 都会作为enableCheckpointing方法的参数
+            内部会构造 CheckpointCoordinator 对象 和 注册 JobStatusListener,
+            其中 子类 CheckpointCoordinatorDeActivator 在回调 jobStatusChanges(监听器的方法)方法的时候
+            会根据作业的状态开始 或者 结束 checkpoint 的调度
+            所以 这里才是 一个 job 的 checkpoint 调度的真正入口 */
             executionGraph.enableCheckpointing(
                     chkConfig,
                     hooks,

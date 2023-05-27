@@ -94,11 +94,11 @@ public class ParserImpl implements Parser {
             return Collections.singletonList(command.get());
         }
 
-        // parse the sql query
+        // 将 sql语句转化为  SqlNode
         SqlNode parsed = parser.parse(statement);
-        // 将sqlNode 转为 Operation
-        // 针对insert 类型的sql  会转化为CatalogSinkModifyOperation
+
         Operation operation =
+                //  convert 方法 是 sqlNode 转化为 Operation 的入口
                 SqlToOperationConverter.convert(planner, catalogManager, parsed)
                         .orElseThrow(() -> new TableException("Unsupported query: " + statement));
         return Collections.singletonList(operation);

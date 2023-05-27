@@ -117,16 +117,16 @@ public class WindowAggregateQueryOperation implements QueryOperation {
 
         private final WindowType type;
         private final String alias;
-        private final FieldReferenceExpression timeAttribute;
+        private final FieldReferenceExpression timeAttribute;  // 窗口只有一个时间属性来切割窗口
         private final ValueLiteralExpression slide;
         private final ValueLiteralExpression size;
         private final ValueLiteralExpression gap;
 
         /** The type of window. */
         public enum WindowType {
-            SLIDE,
+            SLIDE,  //滑动窗口
             SESSION,
-            TUMBLE
+            TUMBLE  //滚动窗口
         }
 
         /** Size, slide and gap can be null depending on the window type. */

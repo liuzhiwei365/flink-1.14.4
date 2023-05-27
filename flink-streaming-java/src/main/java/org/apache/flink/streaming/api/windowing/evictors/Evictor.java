@@ -40,7 +40,7 @@ import java.io.Serializable;
  * @param <T> The type of elements that this {@code Evictor} can evict.
  * @param <W> The type of {@link Window Windows} on which this {@code Evictor} can operate.
  */
-//evictor 就是可以在窗口计算前/后移除元素
+// evictor 就是可以在窗口计算前/后移除元素
 @PublicEvolving
 public interface Evictor<T, W extends Window> extends Serializable {
 

@@ -335,8 +335,12 @@
     <file url="file://$PROJECT_DIR$/flink-table/flink-sql-client/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser-hive/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser-hive/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser-hive/target/generated-sources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser-hive/target/maven-shared-archive-resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser/target/generated-sources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink-table/flink-sql-parser/target/maven-shared-archive-resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-api-java-bridge/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-api-java-bridge/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-api-java/src/main/java" charset="UTF-8" />
@@ -351,6 +355,8 @@
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-common/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-planner/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-planner/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink-table/flink-table-planner/src/main/scala" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink-table/flink-table-planner/target/maven-shared-archive-resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-runtime/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-runtime/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-table/flink-table-uber/src/main/java" charset="UTF-8" />
@@ -381,6 +387,8 @@
     <file url="file://$PROJECT_DIR$/flink-yarn-tests/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-yarn/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/flink-yarn/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lzw-test/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lzw-test/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/tools/ci/java-ci-tools/src/main/java" charset="UTF-8" />

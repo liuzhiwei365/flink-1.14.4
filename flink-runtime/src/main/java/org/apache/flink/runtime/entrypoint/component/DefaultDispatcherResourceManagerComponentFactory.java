@@ -124,22 +124,25 @@ public class DefaultDispatcherResourceManagerComponentFactory
             resourceManagerRetrievalService =
                     highAvailabilityServices.getResourceManagerLeaderRetriever();
 
+            // GatewayRetriever 组件用于获取指定集群组件Gateway 当前活跃的 dispatcher 的 Leader地址
             final LeaderGatewayRetriever<DispatcherGateway> dispatcherGatewayRetriever =
                     new RpcGatewayRetriever<>(
                             rpcService,
                             DispatcherGateway.class,
-                            DispatcherId::fromUuid,
+                            DispatcherId::fromUuid, // 将uuid变成 dispatcherId
                             new ExponentialBackoffRetryStrategy(
                                     12, Duration.ofMillis(10), Duration.ofMillis(50)));
 
+            // resourceManager 的leader 地址
             final LeaderGatewayRetriever<ResourceManagerGateway> resourceManagerGatewayRetriever =
                     new RpcGatewayRetriever<>(
                             rpcService,
                             ResourceManagerGateway.class,
-                            ResourceManagerId::fromUuid,
+                            ResourceManagerId::fromUuid, // 将uuid变成  resourceManagerId
                             new ExponentialBackoffRetryStrategy(
                                     12, Duration.ofMillis(10), Duration.ofMillis(50)));
 
+            // 该线程服务  会被webMonitorEndpoint 利用来处理请求
             final ScheduledExecutorService executor =
                     WebMonitorEndpoint.createExecutorService(
                             configuration.getInteger(RestOptions.SERVER_NUM_THREADS),
@@ -157,6 +160,7 @@ public class DefaultDispatcherResourceManagerComponentFactory
                                     dispatcherGatewayRetriever,
                                     executor);
 
+            // web monitor endpoint 内部有一个内置netty web 服务器
             webMonitorEndpoint =
                     restEndpointFactory.createRestEndpoint(
                             configuration,
@@ -168,11 +172,13 @@ public class DefaultDispatcherResourceManagerComponentFactory
                             highAvailabilityServices.getClusterRestEndpointLeaderElectionService(),
                             fatalErrorHandler);
 
+            // 启动 web 服务器
             log.debug("Starting Dispatcher REST endpoint.");
             webMonitorEndpoint.start();
 
             final String hostname = RpcUtils.getHostname(rpcService);
 
+            // 创建资源调度服务  (**)
             resourceManagerService =
                     ResourceManagerServiceImpl.create(
                             resourceManagerFactory,
@@ -208,6 +214,13 @@ public class DefaultDispatcherResourceManagerComponentFactory
                             ioExecutor);
 
             log.debug("Starting Dispatcher.");
+            // 构建并 启动dispatcher 的服务
+            /* 1 启动JobGraphStore 服务
+              2 从JobGraphStore恢复执行Job,要启动Dispatchcer
+                    只不过 Dispatcher 在构建之前,Flink先构建了一个DispatchcerRunner,并进行了Leader选举,选举完成之后才由
+                    LeaderDispatcher构建Dispatcher并启动:  LeaderDispatcher的选举环节会调用 isLeader方法, LeaderDispatcher
+                    对象继承了RpcEndpoint,所以构建完成后会调用onStart() 方法
+            */
             dispatcherRunner =
                     dispatcherRunnerFactory.createDispatcherRunner(
                             highAvailabilityServices.getDispatcherLeaderElectionService(),
@@ -218,8 +231,15 @@ public class DefaultDispatcherResourceManagerComponentFactory
                             partialDispatcherServices);
 
             log.debug("Starting ResourceManagerService.");
+            // 启动resourceManager 服务
+            /*
+              1.ResourceManager 是 RpcEndpoint 的子类,然后就调准到它的 onStart() 方法执行
+              2.ResourceManager 是 LeaderContender 的子类，会通过 LeaderElectionService 参加竞选
+                如果竞选成功，则会回调 isLeader() 方法
+            */
             resourceManagerService.start();
 
+            // 各类 Retriever 都是 LeaderRetrievalListener 监听器
             resourceManagerRetrievalService.start(resourceManagerGatewayRetriever);
             dispatcherLeaderRetrievalService.start(dispatcherGatewayRetriever);
 

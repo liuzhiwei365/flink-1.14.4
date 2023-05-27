@@ -56,6 +56,7 @@ public interface ProcessingTimeService {
      * @param period after the initial delay after which the callback is executed
      * @return Scheduled future representing the task to be executed repeatedly
      */
+    // 以固定周期执行某任务
     ScheduledFuture<?> scheduleAtFixedRate(
             ProcessingTimeCallback callback, long initialDelay, long period);
 
@@ -70,6 +71,7 @@ public interface ProcessingTimeService {
      * @param period after the initial delay after which the callback is executed
      * @return Scheduled future representing the task to be executed repeatedly
      */
+    // 以固定延迟执行某任务
     ScheduledFuture<?> scheduleWithFixedDelay(
             ProcessingTimeCallback callback, long initialDelay, long period);
 

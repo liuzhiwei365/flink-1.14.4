@@ -183,6 +183,8 @@ public class StreamGraphGenerator {
 
     static {
         @SuppressWarnings("rawtypes")
+        // 每一中转换   对应  一个翻译器 , 就是把Transformation 变成 Operator
+        // 存入     translatorMap 成员变量中
         Map<Class<? extends Transformation>, TransformationTranslator<?, ? extends Transformation>>
                 tmp = new HashMap<>();
         tmp.put(OneInputTransformation.class, new OneInputTransformationTranslator<>());
@@ -217,7 +219,7 @@ public class StreamGraphGenerator {
 
     private StreamGraph streamGraph;
 
-    //跟踪 我们已经解析 的 装换操作
+    // 记录 我们已经解析 的 装换操作
     private Map<Transformation<?>, Collection<Integer>> alreadyTransformed;
 
     public StreamGraphGenerator(
@@ -300,27 +302,34 @@ public class StreamGraphGenerator {
         this.savepointRestoreSettings = savepointRestoreSettings;
     }
 
+    // 生成初级流图    为了连贯性, 直接去 PipelineExecutorUtils.getJobGraph 看 jobGraph的生成
     public StreamGraph generate() {
         streamGraph = new StreamGraph(executionConfig, checkpointConfig, savepointRestoreSettings);
         streamGraph.setEnableCheckpointsAfterTasksFinish(
                 configuration.get(
                         ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH));
         shouldExecuteInBatchMode = shouldExecuteInBatchMode();
+
+        // 设置 用户jar信息 时间语义 等
         configureStreamGraph(streamGraph);
 
         alreadyTransformed = new HashMap<>();
 
         for (Transformation<?> transformation : transformations) {
+            // 核心逻辑
             transform(transformation);
         }
 
+        // 设置 stream graph  的资源信息
         streamGraph.setSlotSharingGroupResource(slotSharingGroupResources);
 
+        // 设置 细粒度的全局流交换模式
         setFineGrainedGlobalStreamExchangeMode(streamGraph);
 
         for (StreamNode node : streamGraph.getStreamNodes()) {
             if (node.getInEdges().stream().anyMatch(this::shouldDisableUnalignedCheckpointing)) {
                 for (StreamEdge edge : node.getInEdges()) {
+                    // 设置支持 非对齐的 checkpoint
                     edge.setSupportsUnalignedCheckpoints(false);
                 }
             }
@@ -344,7 +353,9 @@ public class StreamGraphGenerator {
         checkNotNull(graph);
 
         graph.setChaining(chaining);
+        // 设置用户的jar 信息给 stream graph
         graph.setUserArtifacts(userArtifacts);
+
         graph.setTimeCharacteristic(timeCharacteristic);
 
         if (shouldExecuteInBatchMode) {
@@ -522,8 +533,9 @@ public class StreamGraphGenerator {
                                         slotSharingGroup.getName(),
                                         (name, profile) -> {
                                             if (profile == null) {
-                                                //创建ResourceProfile对象
-                                                return ResourceProfile.fromResourceSpec(resourceSpec, MemorySize.ZERO);
+                                                // 创建ResourceProfile对象
+                                                return ResourceProfile.fromResourceSpec(
+                                                        resourceSpec, MemorySize.ZERO);
                                             } else if (!ResourceProfile.fromResourceSpec(
                                                             resourceSpec, MemorySize.ZERO)
                                                     .equals(profile)) {
@@ -536,12 +548,12 @@ public class StreamGraphGenerator {
                                             }
                                         });
                             }
-
                         });
 
         // call at least once to trigger exceptions about MissingTypeInfo
         transform.getOutputType();
 
+        // 拿到 本 Transform 对应的 翻译器
         @SuppressWarnings("unchecked")
         final TransformationTranslator<?, Transformation<?>> translator =
                 (TransformationTranslator<?, Transformation<?>>)
@@ -551,11 +563,14 @@ public class StreamGraphGenerator {
         if (translator != null) {
             transformedIds = translate(translator, transform);
         } else {
+            // 如果没拿到翻译器
             transformedIds = legacyTransform(transform);
         }
 
         // need this check because the iterate transformation adds itself before
         // transforming the feedback edges
+
+        // transformedIds  ???
         if (!alreadyTransformed.containsKey(transform)) {
             alreadyTransformed.put(transform, transformedIds);
         }
@@ -798,13 +813,17 @@ public class StreamGraphGenerator {
         checkNotNull(translator);
         checkNotNull(transform);
 
+        // 如果本 transform 有父transform
+        // 针对所有的父 transformation  递归地  调用transform 方法
         final List<Collection<Integer>> allInputIds = getParentInputIds(transform.getInputs());
 
         // the recursive call might have already transformed this
         if (alreadyTransformed.containsKey(transform)) {
+            // 已经转换过就免了
             return alreadyTransformed.get(transform);
         }
 
+        // 自己没有配置,就拿上游的 , 上游也没有 就用默认的
         final String slotSharingGroup =
                 determineSlotSharingGroup(
                         transform.getSlotSharingGroup().isPresent()
@@ -867,7 +886,7 @@ public class StreamGraphGenerator {
                 if (inputGroup == null) {
                     inputGroup = inputGroupCandidate;
                 } else if (!inputGroup.equals(inputGroupCandidate)) {
-                    return DEFAULT_SLOT_SHARING_GROUP;//默认的 slot-group
+                    return DEFAULT_SLOT_SHARING_GROUP; // 默认的 slot-group
                 }
             }
             return inputGroup == null ? DEFAULT_SLOT_SHARING_GROUP : inputGroup;

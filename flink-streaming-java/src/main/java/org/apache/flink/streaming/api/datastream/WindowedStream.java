@@ -70,10 +70,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 @Public
 public class WindowedStream<T, K, W extends Window> {
 
+    private final KeyedStream<T, K> input; // 被加窗的输入流
 
-    private final KeyedStream<T, K> input;//被加窗的输入流
-
-    private final WindowOperatorBuilder<T, K, W> builder;//内部包括 窗口分配器,触发器,驱逐器等
+    private final WindowOperatorBuilder<T, K, W> builder; // 内部包括 窗口分配器,触发器,驱逐器等
 
     @PublicEvolving
     public WindowedStream(KeyedStream<T, K> input, WindowAssigner<? super T, W> windowAssigner) {
@@ -91,7 +90,7 @@ public class WindowedStream<T, K, W extends Window> {
     }
 
     /** Sets the {@code Trigger} that should be used to trigger window emission. */
-    //用户的api之一 只不过 给builder的成员赋值
+    // 用户的api之一 只不过 给builder的成员赋值
     @PublicEvolving
     public WindowedStream<T, K, W> trigger(Trigger<? super T, ? super W> trigger) {
         builder.trigger(trigger);
@@ -105,7 +104,7 @@ public class WindowedStream<T, K, W extends Window> {
      *
      * <p>Setting an allowed lateness is only valid for event-time windows.
      */
-    //用户的api之一 只不过 给builder的成员赋值
+    // 用户的api之一 只不过 给builder的成员赋值
     @PublicEvolving
     public WindowedStream<T, K, W> allowedLateness(Time lateness) {
         builder.allowedLateness(lateness);
@@ -122,7 +121,7 @@ public class WindowedStream<T, K, W extends Window> {
      * SingleOutputStreamOperator} resulting from the windowed operation with the same {@link
      * OutputTag}.
      */
-    //用户的api之一 只不过 给builder的成员赋值
+    // 用户的api之一 只不过 给builder的成员赋值
     @PublicEvolving
     public WindowedStream<T, K, W> sideOutputLateData(OutputTag<T> outputTag) {
         outputTag = input.getExecutionEnvironment().clean(outputTag);
@@ -136,7 +135,7 @@ public class WindowedStream<T, K, W extends Window> {
      * <p>Note: When using an evictor window performance will degrade significantly, since
      * incremental aggregation of window results cannot be used.
      */
-    //用户的api之一 只不过 给builder的成员赋值
+    // 用户的api之一 只不过 给builder的成员赋值
     @PublicEvolving
     public WindowedStream<T, K, W> evictor(Evictor<? super T, ? super W> evictor) {
         builder.evictor(evictor);
@@ -218,7 +217,7 @@ public class WindowedStream<T, K, W extends Window> {
 
         final String opName = builder.generateOperatorName(reduceFunction, function);
 
-        //WindowOperatorBuilder 的 reduce
+        // WindowOperatorBuilder 的 reduce
         OneInputStreamOperator<T, R> operator = builder.reduce(reduceFunction, function);
         return input.transform(opName, resultType, operator);
     }
