@@ -26,11 +26,15 @@ import org.apache.flink.util.clock.SystemClock;
 
 /**
  * {@link TimerGauge} measures how much time is spent in a given state, with entry into that state
- * being signaled by {@link #markStart()}. Measuring is stopped by {@link #markEnd()}. This class in
- * particularly takes care of the case, when {@link #update()} is called when some measurement
- * started but has not yet finished. For example even if next {@link #markEnd()} call is expected to
- * happen in a couple of hours, the returned value will account for this ongoing measurement.
+ * being signaled by {@link #markStart()}. Measuring is stopped by {@link #markEnd()}.
+ *
+ * This class in particularly takes care of the case, when {@link #update()} is called when some
+ * measurement started but has not yet finished.
+ *
+ * For example even if next {@link #markEnd()} call is expected to happen in a couple of hours,
+ * the returned value will account for this ongoing measurement.
  */
+// 时间度量器 , 记录在某种状态（比如用户数据处理） 花费了多少时间
 public class TimerGauge implements Gauge<Long>, View {
     private final Clock clock;
 
@@ -104,6 +108,7 @@ public class TimerGauge implements Gauge<Long>, View {
         return currentCount;
     }
 
+    // 是否在测量中
     @VisibleForTesting
     public synchronized boolean isMeasuring() {
         return currentMeasurementStart != 0;

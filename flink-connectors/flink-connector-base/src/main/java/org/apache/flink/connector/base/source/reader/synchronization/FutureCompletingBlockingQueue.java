@@ -375,11 +375,13 @@ public class FutureCompletingBlockingQueue<T> {
 
     @GuardedBy("lock")
     private void maybeCreateCondition(int threadIndex) {
+        // 如果容量不够 扩容 一个长度
         if (putConditionAndFlags.length < threadIndex + 1) {
             putConditionAndFlags = Arrays.copyOf(putConditionAndFlags, threadIndex + 1);
         }
 
         if (putConditionAndFlags[threadIndex] == null) {
+            // 将元素放到扩容后  数组 最末尾的地方
             putConditionAndFlags[threadIndex] = new ConditionAndFlag(lock.newCondition());
         }
     }

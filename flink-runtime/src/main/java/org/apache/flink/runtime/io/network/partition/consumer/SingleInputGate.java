@@ -662,16 +662,19 @@ public class SingleInputGate extends IndexedInputGate {
     // Consume
     // ------------------------------------------------------------------------
 
+    // 阻塞模式获取
     @Override
     public Optional<BufferOrEvent> getNext() throws IOException, InterruptedException {
         return getNextBufferOrEvent(true);
     }
 
+    // 非阻塞模式获取
     @Override
     public Optional<BufferOrEvent> pollNext() throws IOException, InterruptedException {
         return getNextBufferOrEvent(false);
     }
 
+    // blocking 表示 在 inputChannelsWithData队列中获取 inputChannel 的时候是否阻塞
     private Optional<BufferOrEvent> getNextBufferOrEvent(boolean blocking)
             throws IOException, InterruptedException {
         if (hasReceivedAllEndOfPartitionEvents) {
@@ -689,6 +692,7 @@ public class SingleInputGate extends IndexedInputGate {
             return Optional.empty();
         }
 
+        // inputWithData  可以理解为 带有inputChannel 标记的 buffer数据
         InputWithData<InputChannel, BufferAndAvailability> inputWithData = next.get();
 
         return Optional.of( // 转换成buffer 或者 event
@@ -703,13 +707,14 @@ public class SingleInputGate extends IndexedInputGate {
             boolean blocking) throws IOException, InterruptedException {
         while (true) {
             synchronized (inputChannelsWithData) {
+                // 先从inputChannelsWithData 中取出（poll）一个 inputChannel 元素
                 Optional<InputChannel> inputChannelOpt = getChannel(blocking);
                 if (!inputChannelOpt.isPresent()) {
                     return Optional.empty();
                 }
 
                 final InputChannel inputChannel = inputChannelOpt.get();
-                // 是RemoteInputChannel,则本方法的数据最终来自 RemoteInputChannel的 receivedBuffers队列
+                // 是RemoteInputChannel,则本方法的数据最终  来自 RemoteInputChannel的 receivedBuffers队列
                 // 如果是LocalInputChannel,则数据来源于读视图
                 Optional<BufferAndAvailability> bufferAndAvailabilityOpt =
                         inputChannel.getNextBuffer();
@@ -721,13 +726,16 @@ public class SingleInputGate extends IndexedInputGate {
 
                 final BufferAndAvailability bufferAndAvailability = bufferAndAvailabilityOpt.get();
                 if (bufferAndAvailability.moreAvailable()) {
-                    // enqueue the inputChannel at the end to avoid starvation
+                    // 如果 该bufferAndAvailability 的 nextDataType 不为null,则将inputChannel排在最后以避免饥饿
+
+                    // 参考 RemoteInputChannel 的 getNextBuffer() 方法,你们就明白了
                     queueChannelUnsafe(inputChannel, bufferAndAvailability.morePriorityEvents());
                 }
 
-                final boolean morePriorityEvents =
-                        inputChannelsWithData.getNumPriorityElements() > 0;
+                final boolean morePriorityEvents = inputChannelsWithData.getNumPriorityElements() > 0;
+
                 if (bufferAndAvailability.hasPriority()) {
+                    // 更新 最新的优先级 序列号
                     lastPrioritySequenceNumber[inputChannel.getChannelIndex()] =
                             bufferAndAvailability.getSequenceNumber();
                     if (!morePriorityEvents) {
@@ -975,6 +983,7 @@ public class SingleInputGate extends IndexedInputGate {
      * @return true iff it has been enqueued/prioritized = some change to {@link
      *     #inputChannelsWithData} happened
      */
+    //如果尚未排队且未收到 EndOfPartition, 则对通道进行排队； 如果 nextDataType 有优先级； 则会排在优先级部分（优先级部分在前面）
     private boolean queueChannelUnsafe(InputChannel channel, boolean priority) {
         assert Thread.holdsLock(inputChannelsWithData);
 
@@ -991,6 +1000,7 @@ public class SingleInputGate extends IndexedInputGate {
             return false;
         }
 
+        // 如果已经排过队,则只需提升优先级
         inputChannelsWithData.add(channel, priority, alreadyEnqueued);
         if (!alreadyEnqueued) {
             enqueuedInputChannelsWithData.set(channel.getChannelIndex());
@@ -1014,7 +1024,9 @@ public class SingleInputGate extends IndexedInputGate {
             }
         }
 
+        // 有数据的inputChannel 才会去 inputChannelsWithData 排队
         InputChannel inputChannel = inputChannelsWithData.poll();
+        // 取消相关bit 位编号
         enqueuedInputChannelsWithData.clear(inputChannel.getChannelIndex());
 
         return Optional.of(inputChannel);

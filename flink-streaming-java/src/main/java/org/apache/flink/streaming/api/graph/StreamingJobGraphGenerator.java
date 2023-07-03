@@ -867,6 +867,7 @@ public class StreamingJobGraphGenerator {
 
         StreamPartitioner<?> partitioner = edge.getPartitioner();
 
+        //  resultPartitionType 后续会决定 ResultPartition 使用那个子类
         ResultPartitionType resultPartitionType;
         switch (edge.getExchangeMode()) {
             case PIPELINED:
@@ -889,10 +890,12 @@ public class StreamingJobGraphGenerator {
           JobGraph 的 结构
           JobVertex A->  IntermediateDataSet -> JobEdge -> JobVertex B
 
+             JobVertex B 的输入链条 可以有多个, 用成员变量 inputs 维护
           connectNewDataSetAsInput 连接的 是  IntermediateDataSet(中间数据集一定是shuffle的数据) 与 JobEdge
         */
         JobEdge jobEdge;
         if (partitioner.isPointwise()) {
+            // 只有 ForwardPartitioner 或 RescalePartitioner 才是 Pointwise
             jobEdge =
                     downStreamVertex.connectNewDataSetAsInput(
                             headVertex, DistributionPattern.POINTWISE, resultPartitionType);
@@ -903,6 +906,7 @@ public class StreamingJobGraphGenerator {
         }
 
         // set strategy name so that web interface can show it.
+        // web 页面上 会展示相关信息
         jobEdge.setShipStrategyName(partitioner.toString());
         jobEdge.setDownstreamSubtaskStateMapper(partitioner.getDownstreamSubtaskStateMapper());
         jobEdge.setUpstreamSubtaskStateMapper(partitioner.getUpstreamSubtaskStateMapper());
@@ -929,7 +933,9 @@ public class StreamingJobGraphGenerator {
         }
     }
 
+    // 根据 GlobalStreamExchangeMode的类型 和 partitioner分区器的类型 来决定最终的 ResultPartitionType 类型
     private ResultPartitionType determineResultPartitionType(StreamPartitioner<?> partitioner) {
+        //  GlobalStreamExchangeMode 是一个枚举类
         switch (streamGraph.getGlobalStreamExchangeMode()) {
             case ALL_EDGES_BLOCKING:
                 return ResultPartitionType.BLOCKING;

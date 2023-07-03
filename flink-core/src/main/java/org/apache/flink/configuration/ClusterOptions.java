@@ -90,6 +90,7 @@ public class ClusterOptions {
                                             code("TaskExecutors"))
                                     .build());
 
+    // 进程是否应该在出现致命错误时halt ，而不是正常关闭
     @Documentation.Section(Documentation.Sections.EXPERT_CLUSTER)
     public static final ConfigOption<Boolean> HALT_ON_FATAL_ERROR =
             key("cluster.processes.halt-on-fatal-error")
@@ -106,6 +107,7 @@ public class ClusterOptions {
                                                     "FLINK-16510"))
                                     .build());
 
+    // 用户调用 System.exit() 代码时,我们将其拦截 ,然后halt
     @Documentation.Section(Documentation.Sections.EXPERT_CLUSTER)
     public static final ConfigOption<UserSystemExitMode> INTERCEPT_USER_SYSTEM_EXIT =
             key("cluster.intercept-user-system-exit")

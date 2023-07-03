@@ -56,6 +56,7 @@ public class PipelinedApproximateSubpartition extends PipelinedSubpartition {
      * of time then multiple netty worker threads can createReadView at the same time. TODO: This
      * problem will be solved in FLINK-19774
      */
+    //当下游任务在短时间内连续失败时，多个netty worker线程可以同时创建ReadView
     @Override
     public PipelinedSubpartitionView createReadView(
             BufferAvailabilityListener availabilityListener) {

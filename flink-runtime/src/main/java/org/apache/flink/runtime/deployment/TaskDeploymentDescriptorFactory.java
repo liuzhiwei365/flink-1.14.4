@@ -63,7 +63,7 @@ public class TaskDeploymentDescriptorFactory {
     private final ExecutionAttemptID executionId;
     private final int attemptNumber;
     private final MaybeOffloaded<JobInformation> serializedJobInformation;
-    private final MaybeOffloaded<TaskInformation> taskInfo;
+    private final MaybeOffloaded<TaskInformation> taskInfo; // TaskInformation 内部包含 invokableClassName 主类
     private final JobID jobID;
     private final PartitionLocationConstraint partitionDeploymentConstraint;
     private final int subtaskIndex;

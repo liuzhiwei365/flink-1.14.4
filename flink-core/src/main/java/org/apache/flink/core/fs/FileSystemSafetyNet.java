@@ -60,6 +60,9 @@ import static org.apache.flink.util.Preconditions.checkState;
  * }
  * }</pre>
  */
+// FileSystemSafetyNet可用于保护线程不受流资源泄漏的影响
+// 当为线程激活时, 它会跟踪线程获得的文件系统打开的所有流
+// 安全网有一个全局 清理的 钩子程序，可以关闭所有未正确关闭的流
 @Internal
 public class FileSystemSafetyNet {
 

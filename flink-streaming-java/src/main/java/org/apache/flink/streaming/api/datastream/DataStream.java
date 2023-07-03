@@ -855,6 +855,20 @@ public class DataStream<T> {
      * @param watermarkStrategy The strategy to generate watermarks based on event timestamps.
      * @return The stream after the transformation, with assigned timestamps and watermarks.
      */
+
+
+    //  本类另外两个 分配水印的方法,也会调用到这里
+    //  一般来说, env.addSource 后会紧跟着 assignTimestampsAndWatermarks的分配水印的逻辑
+
+    //  1 客户端 顺序执行DataStream api 代码时，会将 TimestampsAndWatermarksTransformation 对象
+    //    添加到 相关 env类的 transformations 成员, 此时会没有构建 StreamGraph
+    //  2 当 env 调用执行方法时,构建StreamdGraph 阶段, 会用 SimpleOperatorFactory.of 方法
+    //    包装TimestampsAndWatermarksOperator 后, 赋给 StreamNode 的 成员
+    //  3 在 用StreamGraph 构建 JobGraph 阶段, 会将 本算子于前一阶段的算子 合并链化起来, 即和 Source 合并
+    //    它们的信息会被封装到 一个 JobVertex 中
+    //    TimestampsAndWatermarksOperator  的 ChainingStrategy 是  ALWAYS, 总是和前面的算子链在一起
+
+    //  4 要研究水印的 分配策略，只需要重点研究  TimestampsAndWatermarksOperator 即可
     public SingleOutputStreamOperator<T> assignTimestampsAndWatermarks(
             WatermarkStrategy<T> watermarkStrategy) {
         final WatermarkStrategy<T> cleanedStrategy = clean(watermarkStrategy);
@@ -867,6 +881,7 @@ public class DataStream<T> {
                         inputParallelism,
                         getTransformation(),
                         cleanedStrategy);
+        // transformation 将会被添加到  transformations 成员中
         getExecutionEnvironment().addOperator(transformation);
         return new SingleOutputStreamOperator<>(getExecutionEnvironment(), transformation);
     }

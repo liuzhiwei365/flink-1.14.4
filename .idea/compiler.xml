@@ -65,7 +65,6 @@
         <module name="flink-end-to-end-tests-pulsar" />
         <module name="flink-rpc-core" />
         <module name="flink-queryable-state-client-java" />
-        <module name="lzw-test" />
         <module name="flink-stream-state-ttl-test" />
         <module name="flink-rpc-akka-loader" />
         <module name="flink-sql-connector-hbase-1.4_2.11" />
@@ -188,6 +187,7 @@
     <bytecodeTargetLevel>
       <module name="flink-connector-testing_2.11" target="1.8" />
       <module name="flink-test-utils_2.11" target="1.8" />
+      <module name="lzw-test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

@@ -270,7 +270,7 @@ public interface Buffer {
         EVENT_BUFFER(false, true, false, false, false),
 
         /** Same as EVENT_BUFFER, but the event has been prioritized (e.g. it skipped buffers). */
-        // 与EVENT_BUFFER相同,但事件已按优先级排序
+        // 与EVENT_BUFFER相同,但事件有优先级
         PRIORITIZED_EVENT_BUFFER(false, true, false, true, false),
 
         /**
@@ -292,10 +292,10 @@ public interface Buffer {
          */
         RECOVERY_COMPLETION(false, true, true, false, false);
 
-        private final boolean isBuffer;
-        private final boolean isEvent;
-        private final boolean isBlockingUpstream;
-        private final boolean hasPriority;
+        private final boolean isBuffer;//是否buffer
+        private final boolean isEvent;//是否事件
+        private final boolean isBlockingUpstream; // 是否阻塞上游
+        private final boolean hasPriority; //是否有优先级
         /**
          * If buffer (currently only Events are supported in that case) requires announcement, it's
          * arrival in the {@link
@@ -304,7 +304,8 @@ public interface Buffer {
          * #PRIORITIZED_EVENT_BUFFER} processed out of order. It allows readers of the input to
          * react sooner on arrival of such Events, before it will be able to be processed normally.
          */
-        private final boolean requiresAnnouncement;
+        //它允许输入的读者在收到此类事件时更快地做出反应，然后才能正常处理
+        private final boolean requiresAnnouncement;//是否需要声明
 
         DataType(
                 boolean isBuffer,

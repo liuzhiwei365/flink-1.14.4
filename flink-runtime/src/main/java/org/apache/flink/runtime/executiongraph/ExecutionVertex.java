@@ -547,6 +547,8 @@ public class ExecutionVertex
         // otherwise we have an outdated execution
         if (isCurrentExecution(execution)) {
             getExecutionGraphAccessor()
+                    // 调用 ExecutionDeploymentListener 的回调逻辑
+                    // ExecutionDeploymentTrackerDeploymentListenerAdapter 是其实现类
                     .getExecutionDeploymentListener()
                     .onCompletedDeployment(execution.getAttemptId());
         }

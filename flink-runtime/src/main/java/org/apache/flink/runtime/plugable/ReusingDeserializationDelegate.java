@@ -52,6 +52,9 @@ public class ReusingDeserializationDelegate<T> implements DeserializationDelegat
 
     @Override
     public void read(DataInputView in) throws IOException {
+        // 与 NonReusingDeserializationDelegate 类下的read 方法不同的是, 多传入了一个 instance 参数
+        // 本类调用的是 TypeSerializer 的 deserialize(T reuse, DataInputView source)  方法
+        // 而  NonReusingDeserializationDelegate 调用的是 deserialize(DataInputView source) 方法
         this.instance = this.serializer.deserialize(this.instance, in);
     }
 }

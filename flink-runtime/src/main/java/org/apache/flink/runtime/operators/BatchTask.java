@@ -163,6 +163,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
     protected TaskConfig config;
 
     /** A list of chained drivers, if there are any. */
+    // 在initOutputs() 方法中会利用反射创建ChainedDriver 元素,然后添加到 chainedTasks中
     protected ArrayList<ChainedDriver<?, ?>> chainedTasks;
 
     /**
@@ -236,12 +237,11 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
             this.metrics.getIOMetricGroup().reuseOutputMetricsForTask();
         }
 
-        // initialize the readers.
-        // this does not yet trigger any stream consuming or processing.
+        // 初始化 readers , 目前还没触发任何的 流消费 和处理
         initInputReaders();
+        // 初始化广播的 input readers
         initBroadcastInputReaders();
-
-        // initialize the writers.
+        // 初始化 writers.
         initOutputs();
 
         if (LOG.isDebugEnabled()) {
@@ -264,15 +264,16 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
         // this is especially important, since there may be asynchronous closes (such as through
         // canceling).
         try {
-            // initialize the remaining data structures on the input and trigger the local
-            // processing
+            // initialize the remaining data structures on the input and trigger the local processing
             // the local processing includes building the dams / caches
             try {
                 int numInputs = driver.getNumberOfInputs();
                 int numComparators = driver.getNumberOfDriverComparators();
                 int numBroadcastInputs = this.config.getNumBroadcastInputs();
 
+                // 初始化 inputSerializers , inputIterators 以及 inputComparators
                 initInputsSerializersAndComparators(numInputs, numComparators);
+                // 初始化 broadcastInputSerializers
                 initBroadcastInputsSerializers(numBroadcastInputs);
 
                 // set the iterative status for inputs and broadcast inputs
@@ -346,17 +347,17 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
                 return;
             }
 
-            // pre main-function initialization
+            // 初始化 主用户函数
             initialize();
 
-            // read the broadcast variables. they will be released in the finally clause
+            // 读取广播变量的值. finally 块中会释放广播变量
             for (int i = 0; i < this.config.getNumBroadcastInputs(); i++) {
                 final String name = this.config.getBroadcastInputName(i);
                 readAndSetBroadcastInput(
                         i, name, this.runtimeUdfContext, 1 /* superstep one for the start */);
             }
 
-            // the work goes here
+            // 调用用户自定义算子的逻辑
             run();
         } finally {
             // clean up in any case!
@@ -418,6 +419,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
             final Class<? super S> userCodeFunctionType = this.driver.getStubType();
             // if the class is null, the driver has no user code
             if (userCodeFunctionType != null) {
+                // 初始化用户函数
                 this.stub = initStub(userCodeFunctionType);
             }
         } catch (Exception e) {
@@ -447,13 +449,14 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
         final MutableReader<?> reader = this.broadcastInputReaders[inputNum];
 
         BroadcastVariableMaterialization<X, ?> variable =
-                getEnvironment()
-                        .getBroadcastVariableManager()
+                getEnvironment()//拿到taskManager的运行时环境
+                        .getBroadcastVariableManager()// 拿到广播变量管理器
                         .materializeBroadcastVariable(
-                                bcVarName, superstep, this, reader, serializerFactory);
+                                bcVarName, superstep, this, reader, serializerFactory);//实例化，并且维护广播变量
         context.setBroadcastVariable(bcVarName, variable);
     }
 
+    // 释放广播变量
     protected void releaseBroadcastVariables(
             String bcVarName, int superstep, DistributedRuntimeUDFContext context) {
         if (LOG.isDebugEnabled()) {
@@ -479,7 +482,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
         boolean stubOpen = false;
 
         try {
-            // run the data preparation
+            // 准备数据
             try {
                 this.driver.prepare();
             } catch (Throwable t) {
@@ -498,10 +501,11 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
                 return;
             }
 
-            // start all chained tasks
+            // 回调所有 chained tasks 中的 open方法;
+            // 只有 IterationIntermediateTask 和 IterationTailTask 子类中, chainedTasks才不会为空
             BatchTask.openChainedTasks(this.chainedTasks, this);
 
-            // open stub implementation
+            // 回调 stub 的 open方法
             if (this.stub != null) {
                 try {
                     Configuration stubConfig = this.config.getStubParameters();
@@ -515,20 +519,19 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
                 }
             }
 
-            // run the user code
+            // 运行用户的 核心代码逻辑
             this.driver.run();
 
-            // close. We close here such that a regular close throwing an exception marks a task as
-            // failed.
+            // 回调 stub 的 close方法
             if (this.running && this.stub != null) {
                 FunctionUtils.closeFunction(this.stub);
                 stubOpen = false;
             }
 
-            // close all chained tasks letting them report failure
+            // 最终会调用算子 的 close 回调逻辑
             BatchTask.closeChainedTasks(this.chainedTasks, this);
 
-            // close the output collector
+            // 关闭收集器
             this.output.close();
         } catch (Exception ex) {
             // close the input, but do not report any exceptions, since we already have another root
@@ -640,6 +643,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
      *
      * @param newOutputCollector new output collector to set as last collector
      */
+    // IterationIntermediateTask 和 IterationTailTask 才会调用该方法
     protected void setLastOutputCollector(Collector<OT> newOutputCollector) {
         int numChained = this.chainedTasks.size();
 
@@ -825,28 +829,31 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
         this.inputIsAsyncMaterialized = new boolean[numInputs];
         this.materializationMemory = new int[numInputs];
 
-        // set up the local strategies first, such that the can work before any temp barrier is
-        // created
         for (int i = 0; i < numInputs; i++) {
+            // 初始化  输入的本地策略 （ 内部可能创建 combiner sorter 等等）
             initInputLocalStrategy(i);
         }
 
         // we do another loop over the inputs, because we want to instantiate all
         // sorters, etc before requesting the first input (as this call may block)
 
-        // we have two types of materialized inputs, and both are replayable (can act as a cache)
         // The first variant materializes in a different thread and hence
         // acts as a pipeline breaker. this one should only be there, if a pipeline breaker is
         // needed.
         // the second variant spills to the side and will not read unless the result is also
         // consumed
         // in a pipelined fashion.
+
+        //我们有两种类型的物化输入, 它们都是可重放的（可以作为缓存）
+        //
         this.resettableInputs = new SpillingResettableMutableObjectIterator<?>[numInputs];
         this.tempBarriers = new TempBarrier<?>[numInputs];
 
         for (int i = 0; i < numInputs; i++) {
             final int memoryPages;
+            // 是否 异步
             final boolean async = this.config.isInputAsynchronouslyMaterialized(i);
+            // 是否 缓存
             final boolean cached = this.config.isInputCached(i);
 
             this.inputIsAsyncMaterialized[i] = async;
@@ -1046,6 +1053,7 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
                     }
                     final S localStub;
                     try {
+                        //localStub 应该是 GroupCombineFunction对象
                         localStub = initStub(userCodeFunctionType);
                     } catch (Exception e) {
                         throw new RuntimeException(
@@ -1067,9 +1075,10 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
                                             this.inputSerializers[inputNum].getSerializer(),
                                             getLocalStrategyComparator(inputNum))
                                     .maxNumFileHandles(this.config.getFilehandlesInput(inputNum))
+                                    // 和 case SORT 不一样的地方是 多设置了一个combiner
                                     .withCombiner(
-                                            (GroupCombineFunction) localStub,
-                                            this.config.getStubParameters())
+                                            (GroupCombineFunction) localStub, //combine函数
+                                            this.config.getStubParameters())//combine函数的配置参数
                                     .enableSpilling(
                                             getIOManager(),
                                             this.config.getSpillingThresholdInput(inputNum))
@@ -1461,6 +1470,8 @@ public class BatchTask<S extends Function, OT> extends AbstractInvokable
                         cl,
                         executionConfig,
                         accumulatorMap);
+
+                // 遍历设置 chainedTasksTarget 的 ChainedDriver对象
                 chainedTasksTarget.add(0, ct);
 
                 if (i == numChained - 1) {

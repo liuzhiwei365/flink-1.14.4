@@ -72,11 +72,11 @@ public class IterationTailTask<S extends Function, OT> extends AbstractIterative
                     "The iteration tail doesn't update workset or the solution set.");
         }
 
-        // set the last output collector of this task to reflect the iteration tail state update:
-        // a) workset update,
-        // b) solution set update, or
-        // c) merged workset and solution set update
 
+        //  设置此任务的最后一个输出收集器 以反映迭代尾部状态更新：
+
+        // 根据 isWorksetUpdate、isWorksetIteration、isSolutionSetUpdate、isWorksetIteration
+        // 这四个成员变量的不同 创建不同的收集器
         Collector<OT> outputCollector = null;
         if (isWorksetUpdate) {
             outputCollector = createWorksetUpdateOutputCollector();

@@ -305,6 +305,8 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
         final FileStateHandle metaDataFileHandle =
                 new FileStateHandle(metadataFileStatus.getPath(), metadataFileStatus.getLen());
 
+        // 得到 类似于 file:/Users/liuzhiwei/ideapro/flink-1.14.4/flink-core/test/test 的路径
+        // 是 带有协议的绝对路径 的 字符串
         final String pointer = checkpointDir.makeQualified(fs).toString();
 
         return new FsCompletedCheckpointStorageLocation(

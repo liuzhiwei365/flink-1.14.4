@@ -52,6 +52,8 @@ public class SplitFetcher<E, SplitT extends SourceSplit> implements Runnable {
     private final SplitReader<E, SplitT> splitReader;
     private final Consumer<Throwable> errorHandler;
     private final Runnable shutdownHook;
+
+    // 只有addSplits方法被调用去添加分片的时候,才会 将 wakeUp 设置为true
     private final AtomicBoolean wakeUp;
     private final AtomicBoolean closed;
     private final FetchTask<E, SplitT> fetchTask;
@@ -123,23 +125,16 @@ public class SplitFetcher<E, SplitT extends SourceSplit> implements Runnable {
     /** Package private method to help unit test. */
     void runOnce() {
         try {
-            // The fetch task should run if the split assignment is not empty or there is a split
-            // change.
             if (shouldRunFetchTask()) {
+                // 如果taskQueue为空, assignedSplits非空
+                // 则运行 FetchTask 任务 ,否则从 taskQueue 任务队列中取出一个任务, 比如 AddSplitsTask 对象
                 runningTask = fetchTask;
             } else {
                 runningTask = taskQueue.take();
             }
-            // Now the running task is not null. If wakeUp() is called after this point,
-            // task.wakeUp() will be called. On the other hand, if the wakeUp() call was make before
-            // this point, the wakeUp flag must have already been set. The code hence checks the
-            // wakeUp
-            // flag first to avoid an unnecessary task run.
-            // Note that the runningTask may still encounter the case that the task is waken up
-            // before
-            // the it starts running.
+
             LOG.debug("Prepare to run {}", runningTask);
-            if (!wakeUp.get() && runningTask.run()) {
+            if (!wakeUp.get() && runningTask.run()) {    // 核心是 runningTask.run() 方法
                 LOG.debug("Finished running task {}", runningTask);
                 // the task has finished running. Set it to null so it won't be enqueued.
                 runningTask = null;
@@ -152,14 +147,12 @@ public class SplitFetcher<E, SplitT extends SourceSplit> implements Runnable {
                             id),
                     e);
         }
-        // If the task is not null that means this task needs to be re-executed. This only
-        // happens when the task is the fetching task or the task was interrupted.
+       // 如果任务不为null,则意味着需要把runningTask 重新排在队列最前面  执行 （只有当任务是获取任务或任务被中断时才会发生这种情况）
         maybeEnqueueTask(runningTask);
         synchronized (wakeUp) {
-            // Set the running task to null. It is necessary for the shutdown method to avoid
-            // unnecessarily interrupt the running task.
+            // 将正在运行的任务设置为null.  shutdown方法 有必要 避免 中断 正在运行的任务
             runningTask = null;
-            // Set the wakeUp flag to false.
+            // 恢复 wakeUp 为 false
             wakeUp.set(false);
             LOG.debug("Cleaned wakeup flag.");
         }
@@ -172,6 +165,7 @@ public class SplitFetcher<E, SplitT extends SourceSplit> implements Runnable {
      */
     public void addSplits(List<SplitT> splitsToAdd) {
         enqueueTask(new AddSplitsTask<>(splitReader, splitsToAdd, assignedSplits));
+        // 将  wakeUp 设置为ture 的地方只有这一个地方
         wakeUp(true);
     }
 
@@ -290,7 +284,7 @@ public class SplitFetcher<E, SplitT extends SourceSplit> implements Runnable {
         if (!closed.get()
                 && isRunningTask(task)
                 && task != fetchTask
-                && !taskQueue.offerFirst(task)) {
+                && !taskQueue.offerFirst(task)) {// 把runningTask 重新排在队列最前面
             throw new RuntimeException(
                     "The task queue is full. This is only theoretically possible when really bad thing happens.");
         }

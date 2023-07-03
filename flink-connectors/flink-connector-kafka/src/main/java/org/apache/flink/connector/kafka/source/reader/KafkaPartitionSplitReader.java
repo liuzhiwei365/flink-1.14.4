@@ -147,6 +147,7 @@ public class KafkaPartitionSplitReader
         return recordsBySplits;
     }
 
+    // 当kafka 分片信息发生变化
     @Override
     public void handleSplitsChanges(SplitsChange<KafkaPartitionSplit> splitsChange) {
         // Get all the partition assignments and stopping offsets.

@@ -176,12 +176,10 @@ public class SourceStreamTask<
 
         controller.suspendDefaultAction();
 
-        // Against the usual contract of this method, this implementation is not step-wise but
-        // blocking instead for
-        // compatibility reasons with the current source interface (source functions run as a loop,
-        // not in steps).
         sourceThread.setTaskDescription(getName());
 
+        //   LegacySourceFunctionThread 的 run 方法
+        //   内部调用 mainOperator.run  => userFunction.run
         sourceThread.start();
 
         sourceThread
@@ -252,6 +250,8 @@ public class SourceStreamTask<
 
     // ------------------------------------------------------------------------
     //  Checkpointing
+    //  注意关于 checkpoint 的各类操作, 都是用 mainMailboxExecutor 执行的;  其实会向信箱发送Mail
+    //  随后,信箱处理器会统一处理; 这一定会是异步的
     // ------------------------------------------------------------------------
 
     @Override
@@ -323,6 +323,7 @@ public class SourceStreamTask<
                     LOG.debug(
                             "Legacy source {} skip execution since the task is finished on restore",
                             getTaskNameWithSubtaskAndId());
+                    // 对调用 userFunction.run(ctx) ，这是重点
                     mainOperator.run(lock, operatorChain);
                 }
                 completeProcessing();

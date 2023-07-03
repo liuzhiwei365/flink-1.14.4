@@ -83,10 +83,10 @@ final class OperatorCoordinatorCheckpoints {
             final Executor acknowledgeExecutor)
             throws Exception {
 
+        // trigger 部分
         final CompletableFuture<AllCoordinatorSnapshots> snapshots =
                 triggerAllCoordinatorCheckpoints(coordinators, checkpoint.getCheckpointId());
-
-        //
+        // ack 部分
         return snapshots.thenAcceptAsync(
                 (allSnapshots) -> {
                     try {
@@ -119,6 +119,8 @@ final class OperatorCoordinatorCheckpoints {
             PendingCheckpoint checkpoint, Collection<CoordinatorSnapshot> snapshots)
             throws CheckpointException {
         for (final CoordinatorSnapshot snapshot : snapshots) {
+
+            // 指定算子的 指定状态
             final PendingCheckpoint.TaskAcknowledgeResult result =
                     checkpoint.acknowledgeCoordinatorState(snapshot.coordinator, snapshot.state);
 

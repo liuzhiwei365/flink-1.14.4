@@ -262,6 +262,8 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
                     }
                 };
 
+        // readerFactory 最开始传入时是  source::createReader （位置在 SourceOperatorFactory类的 createStreamOperator方法中 ）
+        // 如果source 是 KafkaSource对象时, 相当于调用了 KafkaSource 的 createReader 方法, 最终返回 KafkaSourceReader 对象
         sourceReader = readerFactory.apply(context);
     }
 
@@ -276,6 +278,7 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
         // in the future when we this one is migrated to the "eager initialization" operator
         // (StreamOperatorV2), then we should evaluate this during operator construction.
         if (emitProgressiveWatermarks) {
+            // 如果开启 Watermark 逻辑
             eventTimeLogic =
                     TimestampsAndWatermarks.createProgressiveEventTimeLogic(
                             watermarkStrategy,
@@ -288,19 +291,21 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
                             watermarkStrategy, sourceMetricGroup);
         }
 
-        // restore the state if necessary.
+        // 算子的 initializeState 方法 先于 open方法 ； 故此时 readerState 已经被恢复或者初始化
         final List<SplitT> splits = CollectionUtil.iterableToList(readerState.get());
         if (!splits.isEmpty()) {
             sourceReader.addSplits(splits);
         }
 
-        // Register the reader to the coordinator.
+        // 向 SourceCoordinator 注册 reader
+        // 向 SourceCoordinator 发送 ReaderRegistrationEvent 事件
         registerReader();
 
         sourceMetricGroup.idlingStarted();
         // Start the reader after registration, sending messages in start is allowed.
         sourceReader.start();
 
+        // 开始 watermark 周期性的调度
         eventTimeLogic.startPeriodicWatermarkEmits();
     }
 
@@ -431,6 +436,14 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
         }
     }
 
+    // 方法调用栈:
+    // StreamTask.restoreInternal
+    // StreamTask.restoreGates
+    // RegularOperatorChain.initializeStateAndOpenOperators
+    // AbstractStreamOperator.initializeState           入参 StreamTaskStateInitializer 对象
+    // StreamOperatorStateHandler.initializeOperatorState
+
+    // StateInitializationContext 的唯一 实现类是 StateInitializationContextImpl
     @Override
     public void initializeState(StateInitializationContext context) throws Exception {
         super.initializeState(context);
@@ -451,10 +464,32 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
         sourceReader.notifyCheckpointAborted(checkpointId);
     }
 
+
+    //  JobManager  SourceOperator  （以Kafka实现 的 调用栈）
+    //      SourceCoordinator. start
+    //      KafkaSourceEnumerator. start
+    //      KafkaSourceEnumerator. checkPartitionChanges
+    //      KafkaSourceEnumerator. handlePartitionSplitChanges
+    //      SourceCoordinatorContext. assignSplits
+    //      SubtaskGatewayImpl. sendEvent
+    //      ExecutionSubtaskAccess. createEventSendAction
+    //      Execution. sendOperatorEvent
+    //      RpcTaskManagerGateway. sendOperatorEventToTask
+
+    //   TaskMananger subtask 的调用栈
+    //      TaskExecutor.sendOperatorEventToTask
+    //      Task.deliverOperatorEvent
+    //      StreamTask.dispatchOperatorEvent
+    //      RegularOperatorChain.dispatchOperatorEvent
+    //      OperatorEventDispatcherImpl.dispatchEventToHandlers
+    //      SourceOperator.handleOperatorEvent
     @SuppressWarnings("unchecked")
+    // 处理算子协调者 发来的 算子事件  （ 其实只会收到 SourceCoordinator发来的消息 ）
     public void handleOperatorEvent(OperatorEvent event) {
         if (event instanceof AddSplitEvent) {
             try {
+                // 算子会把 分片信息 添加给 拉数据 的 fetcher 对象
+                // splits 方法内部会反序列化分片消息
                 sourceReader.addSplits(((AddSplitEvent<SplitT>) event).splits(splitSerializer));
             } catch (IOException e) {
                 throw new FlinkRuntimeException("Failed to deserialize the splits.", e);

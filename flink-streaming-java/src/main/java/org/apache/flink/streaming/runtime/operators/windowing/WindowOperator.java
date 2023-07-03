@@ -125,8 +125,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
     private final Trigger<? super IN, ? super W> trigger;
 
     // 见 WindowOperatorBuilder 的 apply,aggregate,reduce 方法
-    // 可知,成员windowStateDescriptor 一定是  ListStateDescriptor, AggregatingStateDescriptor或者
-    // ReducingStateDescriptor类型
+    // 可知,成员windowStateDescriptor 一定是
+    //                ListStateDescriptor, AggregatingStateDescriptor或者 ReducingStateDescriptor类型
     private final StateDescriptor<? extends AppendingState<IN, ACC>, ?> windowStateDescriptor;
 
     /** For serializing the key in checkpoints. */
@@ -252,29 +252,22 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
                     }
                 };
 
-        // create (or restore) the state that hold the actual window contents
-        // NOTE - the state may be null in the case of the overriding evicting window operator
+        // flink 会将用户数据写入 到 windowState中
         if (windowStateDescriptor != null) {
+            // 注意入参 状态描述, 最终状态描述的类型 取决于用户使用的api  （具体请参考 WindowOperatorBuilder 类）
+            // aggregate 对应 AggregatingState; reduce 对应 ReducingState ; apply 和 process 对应 ListState
             windowState =
                     (InternalAppendingState<K, W, IN, ACC, ACC>)
                             getOrCreateKeyedState(windowSerializer, windowStateDescriptor);
         }
 
-        // create the typed and helper states for merging windows
+        // 创建各类状态,为 窗口合并做准备
         if (windowAssigner instanceof MergingWindowAssigner) {
 
-            // store a typed reference for the state of merging windows - sanity check
+            // InternalMergingState 继承了 InternalAppendingState 和  MergingState
             if (windowState instanceof InternalMergingState) {
                 windowMergingState = (InternalMergingState<K, W, IN, ACC, ACC>) windowState;
             }
-            // TODO this sanity check should be here, but is prevented by an incorrect test (pending
-            // validation)
-            // TODO see WindowOperatorTest.testCleanupTimerWithEmptyFoldingStateForSessionWindows()
-            // TODO activate the sanity check once resolved
-            //			else if (windowState != null) {
-            //				throw new IllegalStateException(
-            //						"The window uses a merging assigner, but the window state is not mergeable.");
-            //			}
 
             @SuppressWarnings("unchecked")
             final Class<Tuple2<W, W>> typedTuple = (Class<Tuple2<W, W>>) (Class<?>) Tuple2.class;
@@ -286,11 +279,12 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
             final ListStateDescriptor<Tuple2<W, W>> mergingSetsStateDescriptor =
                     new ListStateDescriptor<>("merging-window-set", tupleSerializer);
 
-            // get the state that stores the merging sets
+            // mergingSetsState 用来合并窗口的 状态
             mergingSetsState =
                     (InternalListState<K, VoidNamespace, Tuple2<W, W>>)
                             getOrCreateKeyedState(
                                     VoidNamespaceSerializer.INSTANCE, mergingSetsStateDescriptor);
+
             mergingSetsState.setCurrentNamespace(VoidNamespace.INSTANCE);
         }
     }
@@ -306,7 +300,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
-        // 为每个元素分配窗口, windowAssinger的不同实现类有不同的(一个数据可能分配到多个窗口)
+        // 为每个元素分配窗口, windowAssinger的不同实现类有不同的(一个数据可能分配到多个窗口, 比如滑动窗口)
         final Collection<W> elementWindows =
                 windowAssigner.assignWindows(
                         element.getValue(), element.getTimestamp(), windowAssignerContext);
@@ -323,11 +317,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
             for (W window : elementWindows) {
 
-                // adding the new window might result in a merge, in that case the actualWindow
-                // is the merged window and we work with that. If we don't merge then
-                // actualWindow == window
+                // 合并窗口 ,并且返回 该窗口所属的合并后的真正的窗口
                 W actualWindow =
-                        // 方法调用之后，mergeResult返回合并的结果
                         mergingWindows.addWindow(
                                 window,
                                 new MergingWindowSet.MergeFunction<W>() {
@@ -341,8 +332,8 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
                                         if ((windowAssigner.isEventTime()
                                                 && mergeResult.maxTimestamp() + allowedLateness
-                                                        <= internalTimerService
-                                                                .currentWatermark())) {
+                                                        <= internalTimerService.currentWatermark())) {
+                                            // 如果当前窗口的 结束边缘 加上允许迟到的尺度 小于 当前水印时间, 则抛异常
                                             throw new UnsupportedOperationException(
                                                     "The end timestamp of an "
                                                             + "event-time window cannot become earlier than the current watermark "
@@ -352,10 +343,10 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
                                                             + " window: "
                                                             + mergeResult);
                                         } else if (!windowAssigner.isEventTime()) {
-                                            long currentProcessingTime =
-                                                    internalTimerService.currentProcessingTime();
-                                            if (mergeResult.maxTimestamp()
-                                                    <= currentProcessingTime) {
+                                            // 当前处理时间
+                                            long currentProcessingTime = internalTimerService.currentProcessingTime();
+                                            // 如果当前窗口的 结束边缘 比 当前处理时间小,则抛异常
+                                            if (mergeResult.maxTimestamp() <= currentProcessingTime) {
                                                 throw new UnsupportedOperationException(
                                                         "The end timestamp of a "
                                                                 + "processing-time window cannot become earlier than the current processing time "
@@ -369,17 +360,19 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
                                         triggerContext.key = key;
                                         triggerContext.window = mergeResult;
 
-                                        // 注册一个定时器，为窗口的结束时间
+                                        // 在 trigger 中做状态合并
                                         triggerContext.onMerge(mergedWindows);
-                                        // 合并之后，清除之前注册的定时器
+
                                         for (W m : mergedWindows) {
+                                            // 合并之后,依次清除 trigger 中 相关窗口的状态,因为已经保留了它们的 合并状态
                                             triggerContext.window = m;
                                             triggerContext.clear();
+                                            // 合并之后，清除之前注册的定时器
                                             deleteCleanupTimer(m);
                                         }
 
-                                        // merge the merged state windows into the newly resulting
-                                        // state window
+                                        // 操作 windowMergingState 相当于操作  windowState, 因为 它们是操作的 堆上的同一个对象
+                                        // 把这些 namespace 的合并起来, 会把这些mergedStateWindows 的用户数据全部合并到stateWindowResult 下
                                         windowMergingState.mergeNamespaces(
                                                 stateWindowResult, mergedStateWindows);
                                     }
@@ -411,17 +404,19 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
                     if (contents == null) {
                         continue;
                     }
+                    // 会调用用户的 函数, 处理该窗口的数据
                     emitWindowContents(actualWindow, contents);
                 }
 
                 if (triggerResult.isPurge()) {
+                    // 清除本 namespace 的 数据, 也就是本窗口的数据
                     windowState.clear();
                 }
 
                 registerCleanupTimer(actualWindow);
             }
 
-            // need to make sure to update the merging state in state
+            // 如果 mapping 和 初始拷贝不一样, 则 把 mapping 持久化 (mapping 是mergingWindows 的成员变量 )
             mergingWindows.persist();
         } else {
             // 循环处理每一个窗口
@@ -466,6 +461,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
         // 设置了晚到时间 并且在晚到时间内数据达到 如果定义了测流输出就把数据用测流输出
         if (isSkippedElement && isElementLate(element)) {
             if (lateDataOutputTag != null) {
+                //
                 sideOutput(element);
             } else {
                 // 没有侧输出流的话,简单的记录一下 丢弃数据的条数

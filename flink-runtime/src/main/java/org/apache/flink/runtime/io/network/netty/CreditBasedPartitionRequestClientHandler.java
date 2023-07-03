@@ -262,8 +262,9 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
     private void decodeMsg(Object msg) throws Throwable {
         final Class<?> msgClazz = msg.getClass();
 
-        // ---- Buffer --------------------------------------------------------
+
         if (msgClazz == NettyMessage.BufferResponse.class) {
+            // 如果消息类型为 NettyMessage.BufferResponse 类型
             NettyMessage.BufferResponse bufferOrEvent = (NettyMessage.BufferResponse) msg;
 
             RemoteInputChannel inputChannel = inputChannels.get(bufferOrEvent.receiverId);
@@ -276,13 +277,14 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
             }
 
             try {
+                // 解码 event
                 decodeBufferOrEvent(inputChannel, bufferOrEvent);
             } catch (Throwable t) {
                 inputChannel.onError(t);
             }
 
         } else if (msgClazz == NettyMessage.ErrorResponse.class) {
-            // ---- Error ---------------------------------------------------------
+            // 如果消息类型为 NettyMessage.ErrorResponse 类型
             NettyMessage.ErrorResponse error = (NettyMessage.ErrorResponse) msg;
 
             SocketAddress remoteAddr = ctx.channel().remoteAddress();
@@ -309,6 +311,7 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
                 }
             }
         } else if (msgClazz == NettyMessage.BacklogAnnouncement.class) {
+            // 如果消息类型为 NettyMessage.BacklogAnnouncement  类型
             NettyMessage.BacklogAnnouncement announcement = (NettyMessage.BacklogAnnouncement) msg;
 
             RemoteInputChannel inputChannel = inputChannels.get(announcement.receiverId);
@@ -332,8 +335,10 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
             RemoteInputChannel inputChannel, NettyMessage.BufferResponse bufferOrEvent)
             throws Throwable {
         if (bufferOrEvent.isBuffer() && bufferOrEvent.bufferSize == 0) {
+            // 缓存 空的 buffer
             inputChannel.onEmptyBuffer(bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
         } else if (bufferOrEvent.getBuffer() != null) {
+            // 缓存 buffer ,这个 buffer 很有可能就是 用户数据
             inputChannel.onBuffer(
                     bufferOrEvent.getBuffer(), bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
         } else {

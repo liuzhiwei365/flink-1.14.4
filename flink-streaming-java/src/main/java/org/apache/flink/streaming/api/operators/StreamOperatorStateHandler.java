@@ -105,6 +105,7 @@ public class StreamOperatorStateHandler {
             throws Exception {
         CloseableIterable<KeyGroupStatePartitionStreamProvider> keyedStateInputs =
                 context.rawKeyedStateInputs();
+
         CloseableIterable<StatePartitionStreamProvider> operatorStateInputs =
                 context.rawOperatorStateInputs();
 

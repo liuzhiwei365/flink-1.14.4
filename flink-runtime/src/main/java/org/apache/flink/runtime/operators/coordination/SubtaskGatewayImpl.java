@@ -95,6 +95,8 @@ class SubtaskGatewayImpl implements OperatorCoordinator.SubtaskGateway {
 
         sendingExecutor.execute(
                 () -> {
+                    //EventSender 目前只有一个实现类 OperatorEventValve
+                    // 能控制是否将消息阻塞
                     sender.sendEvent(sendAction, sendResult);
                     incompleteFuturesTracker.trackFutureWhileIncomplete(result);
                 });

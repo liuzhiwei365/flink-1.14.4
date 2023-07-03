@@ -24,6 +24,7 @@ package org.apache.flink.runtime.scheduler;
  */
 public class DeploymentOption {
 
+    //指示  task 当数据到来时是否通知 master
     private final boolean notifyPartitionDataAvailable;
 
     public DeploymentOption(boolean notifyPartitionDataAvailable) {

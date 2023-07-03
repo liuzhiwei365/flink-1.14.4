@@ -51,6 +51,7 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable>
 
     @Override
     public void emit(T record) throws IOException {
+        // 向下游 指定的 通道编号下发数据
         emit(record, channelSelector.selectChannel(record));
     }
 

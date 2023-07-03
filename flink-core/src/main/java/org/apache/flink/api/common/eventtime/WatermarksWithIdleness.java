@@ -28,11 +28,8 @@ import java.time.Duration;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
-/**
- * A WatermarkGenerator that adds idleness detection to another WatermarkGenerator. If no events
- * come within a certain time (timeout duration) then this generator marks the stream as idle, until
- * the next watermark is generated.
- */
+// 将空闲检测  添加到另一个水印生成器 的 水印生成器 (可以理解为其他 水印生成器的一个 代理 )
+// 如果检测空闲, 则会向下游发送 WatermarkStatus.IDLE 水印状态
 @Public
 public class WatermarksWithIdleness<T> implements WatermarkGenerator<T> {
 
@@ -70,6 +67,8 @@ public class WatermarksWithIdleness<T> implements WatermarkGenerator<T> {
     @Override
     public void onPeriodicEmit(WatermarkOutput output) {
         if (idlenessTimer.checkIfIdle()) {
+            //  如果在特定时间端内（超时持续时间）内没有用户数据到来, 则此生成器将流标记为空闲
+            //  会向下游发送 WatermarkStatus.IDLE 水印状态
             output.markIdle();
         } else {
             watermarks.onPeriodicEmit(output);
@@ -117,19 +116,22 @@ public class WatermarksWithIdleness<T> implements WatermarkGenerator<T> {
             counter++;
         }
 
+        // 检测是否有空闲, 是否在 固定的时间段内, 用户数据一直没来
         public boolean checkIfIdle() {
             if (counter != lastCounter) {
-                // activity since the last check. we reset the timer
+                // 说明在此期间有 用户数据到来 ,没有空闲, 所以返回false
                 lastCounter = counter;
                 startOfInactivityNanos = 0L;
                 return false;
-            } else // timer started but has not yet reached idle timeout
+            } else
             if (startOfInactivityNanos == 0L) {
-                // first time that we see no activity since the last periodic probe
-                // begin the timer
-                startOfInactivityNanos = clock.relativeTimeNanos();
+                // 计时器还没有开始计时 , 没法检测,不能算作检测到空闲
+                startOfInactivityNanos = clock.relativeTimeNanos();// clock 是 java 的 SystemClock
                 return false;
             } else {
+                // 代码走到这里, 说明目前还没有数据到来
+                // 如果 超过了最大空闲的时间尺度, 所以我们认为 检测到了空闲
+                // 否则,仍然认为没有空闲
                 return clock.relativeTimeNanos() - startOfInactivityNanos > maxIdleTimeNanos;
             }
         }

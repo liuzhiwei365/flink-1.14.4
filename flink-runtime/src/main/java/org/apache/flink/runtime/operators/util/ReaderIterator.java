@@ -38,7 +38,9 @@ public class ReaderIterator<T> implements MutableObjectIterator<T> {
 
     private final MutableReader<DeserializationDelegate<T>> reader; // the source
 
+    //存在对象重用的反序列化代理
     private final ReusingDeserializationDelegate<T> reusingDelegate;
+    //没有对象重用的反序列化代理
     private final NonReusingDeserializationDelegate<T> nonReusingDelegate;
 
     /**
@@ -53,6 +55,7 @@ public class ReaderIterator<T> implements MutableObjectIterator<T> {
         this.nonReusingDelegate = new NonReusingDeserializationDelegate<T>(serializer);
     }
 
+    // 存在对象重用
     @Override
     public T next(T target) throws IOException {
         this.reusingDelegate.setInstance(target);
@@ -67,6 +70,7 @@ public class ReaderIterator<T> implements MutableObjectIterator<T> {
         }
     }
 
+    // 没有对象重用
     @Override
     public T next() throws IOException {
         try {

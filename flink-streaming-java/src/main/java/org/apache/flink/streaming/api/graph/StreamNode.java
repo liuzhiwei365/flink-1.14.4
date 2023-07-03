@@ -53,10 +53,8 @@ public class StreamNode {
 
     private final int id;
     private int parallelism;
-    /**
-     * Maximum parallelism for this stream node. The maximum parallelism is the upper limit for
-     * dynamic scaling and the number of key groups used for partitioned state.
-     */
+
+    // 1 动态扩容的上限   2 划分状态时键组的个数
     private int maxParallelism;
 
     private ResourceSpec minResources = ResourceSpec.DEFAULT;
@@ -68,16 +66,23 @@ public class StreamNode {
     private final String operatorName;
     private @Nullable String slotSharingGroup;
     private @Nullable String coLocationGroup;
+
+    // 只有当 该 node 的输入都是 keyed stream , 于key 相关的选择器 和 序列化器才会有值
+    // 多个 key 选择器
     private KeySelector<?, ?>[] statePartitioners = new KeySelector[0];
+    // key 的 序列化器 , 有key的情况 仅针对 keyed stream
     private TypeSerializer<?> stateKeySerializer;
 
+    //  算子工厂 可以创建算子; taskManager 在运行任务的时候 会调用工厂类 创建算子
     private StreamOperatorFactory<?> operatorFactory;
+
     private TypeSerializer<?>[] typeSerializersIn = new TypeSerializer[0];
     private TypeSerializer<?> typeSerializerOut;
 
     private List<StreamEdge> inEdges = new ArrayList<StreamEdge>();
     private List<StreamEdge> outEdges = new ArrayList<StreamEdge>();
 
+    //  StreamTask 等 在 TaskManager 中执行的类
     private final Class<? extends TaskInvokable> jobVertexClass;
 
     // 维护输入输出格式
@@ -327,6 +332,10 @@ public class StreamNode {
         return statePartitioners;
     }
 
+    // 三个调用点:
+    // StreamGraph 的 setOneInputStateKey 方法    数组长度为1
+    // StreamGraph 的 setTwoInputStateKey 方法    数组长度为2
+    // StreamGraph 的 setMultipleInputStateKey 方法  数组长度大于2
     public void setStatePartitioners(KeySelector<?, ?>... statePartitioners) {
         checkArgument(statePartitioners.length > 0);
         this.statePartitioners = statePartitioners;
@@ -365,6 +374,8 @@ public class StreamNode {
         return inputRequirements;
     }
 
+    // 目前的flink版本中
+    // SourceOperatorFactory 和 CollectSinkOperatorFactory 都有 OperatorCoordinator.Provider 算子协调者提供者
     public Optional<OperatorCoordinator.Provider> getCoordinatorProvider(
             String operatorName, OperatorID operatorID) {
         if (operatorFactory instanceof CoordinatedOperatorFactory) {

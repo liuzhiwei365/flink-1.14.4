@@ -254,9 +254,9 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     // 调用链
-    // org.apache.flink.streaming.runtime.tasks.StreamTask#restoreInternal
-    // org.apache.flink.streaming.runtime.tasks.StreamTask#restoreGates
-    // org.apache.flink.streaming.runtime.tasks.RegularOperatorChain#initializeStateAndOpenOperators
+    // org.apache.flink.streaming.runtime.tasks.StreamTask # restoreInternal
+    // org.apache.flink.streaming.runtime.tasks.StreamTask # restoreGates
+    // org.apache.flink.streaming.runtime.tasks.RegularOperatorChain # initializeStateAndOpenOperators
     @Override
     public final void initializeState(StreamTaskStateInitializer streamTaskStateManager)
             throws Exception {

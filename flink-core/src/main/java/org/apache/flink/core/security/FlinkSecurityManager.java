@@ -38,6 +38,10 @@ import java.security.Permission;
  * against user mistakes by gracefully handling them informing users rather than causing silent
  * unavailability.
  */
+// 来控制Java系统安全管理器可以捕获的某些行为。
+// 它可用于控制可能影响的集群可用性,意外用户行为
+
+// 说白了,就是防止 恶意的用户代码把jvm 搞挂
 public class FlinkSecurityManager extends SecurityManager {
 
     static final Logger LOG = LoggerFactory.getLogger(FlinkSecurityManager.class);
@@ -82,6 +86,8 @@ public class FlinkSecurityManager extends SecurityManager {
      * @return FlinkUserSecurityManager instantiated based on configuration. Return null if
      *     disabled.
      */
+    //  halt 是强制关闭虚拟机,不会调用相关钩子程序
+    //  exit 也是关机, 但是会调用相关钩子程序
     @VisibleForTesting
     static FlinkSecurityManager fromConfiguration(Configuration configuration) {
         final ClusterOptions.UserSystemExitMode userSystemExitMode =
@@ -109,6 +115,7 @@ public class FlinkSecurityManager extends SecurityManager {
 
         if (flinkSecurityManager != null) {
             try {
+                // 把flink 安全管理器 设置给系统  （调用java System 原生api ）
                 System.setSecurityManager(flinkSecurityManager);
             } catch (Exception e) {
                 throw new IllegalConfigurationException(
@@ -124,6 +131,7 @@ public class FlinkSecurityManager extends SecurityManager {
                                 e));
             }
         }
+        // 赋给相关静态属性
         FlinkSecurityManager.flinkSecurityManager = flinkSecurityManager;
     }
 

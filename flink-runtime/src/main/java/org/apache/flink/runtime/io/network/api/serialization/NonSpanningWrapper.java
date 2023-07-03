@@ -334,6 +334,7 @@ final class NonSpanningWrapper implements DataInputView {
 
     DeserializationResult readInto(IOReadableWritable target) throws IOException {
         try {
+            // 这里会走 ReusingDeserializationDelegate 或者 NonReusingDeserializationDelegate 的 read方法
             target.read(this);
         } catch (IndexOutOfBoundsException e) {
             throw new IOException(BROKEN_SERIALIZATION_ERROR_MESSAGE, e);
@@ -348,10 +349,12 @@ final class NonSpanningWrapper implements DataInputView {
     }
 
     boolean hasCompleteLength() {
+        // 大于等于 int 字节数, 也就是大于等于 4
         return remaining() >= LENGTH_BYTES;
     }
 
     boolean canReadRecord(int recordLength) {
+        // 剩下来的字节长度 必须要大于等于 记录长度, 记录才能被正常读取
         return recordLength <= remaining();
     }
 

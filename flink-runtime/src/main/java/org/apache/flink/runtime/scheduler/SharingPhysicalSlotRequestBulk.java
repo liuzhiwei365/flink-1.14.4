@@ -100,6 +100,7 @@ class SharingPhysicalSlotRequestBulk implements PhysicalSlotRequestBulk {
      * @param allocationId {@link AllocationID} of the fulfilled request
      */
     void markFulfilled(ExecutionSlotSharingGroup group, AllocationID allocationId) {
+        // 把 申请槽位成功的 group 从 pending （悬而未决）结构中移除, 然后放入到filfilled（完成） 结构中
         pendingRequests.remove(group);
         fulfilledRequests.put(group, allocationId);
     }

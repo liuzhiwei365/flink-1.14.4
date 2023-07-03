@@ -49,6 +49,8 @@ public class RescalePartitioner<T> extends StreamPartitioner<T> {
 
     private int nextChannelToSendTo = -1;
 
+    // 所有的分区器 都继承自 ChannelSelector 接口
+    // 在 ChannelSelectorRecordWriter 向下游下发数据的时候,会调用selectChannel 决定向下游的那个具体的通道发送数据
     @Override
     public int selectChannel(SerializationDelegate<StreamRecord<T>> record) {
         if (++nextChannelToSendTo >= numberOfChannels) {

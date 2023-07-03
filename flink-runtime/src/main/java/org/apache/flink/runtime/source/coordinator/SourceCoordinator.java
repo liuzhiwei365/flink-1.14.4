@@ -83,12 +83,12 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
     private final Source<?, SplitT, EnumChkT> source;
     /** The serializer that handles the serde of the SplitEnumerator checkpoints. */
     private final SimpleVersionedSerializer<EnumChkT> enumCheckpointSerializer;
+
     /** The context containing the states of the coordinator. */
     private final SourceCoordinatorContext<SplitT> context;
-    /**
-     * The split enumerator created from the associated Source. This one is created either during
-     * resetting the coordinator to a checkpoint, or when the coordinator is started.
-     */
+
+    // 分片枚举器, 专门维护 source的 分片元数据信息
+    // 在本算子协调者 启动或者重置的时候 才会创建
     private SplitEnumerator<SplitT, EnumChkT> enumerator;
     /** A flag marking whether the coordinator has started. */
     private boolean started;
@@ -103,12 +103,12 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         this.context = context;
     }
 
+    // 算子协调者的功能本来就是协调 算子在各个 subtask 中的状态
+    // 而作为 具体实现 SourceCoordinator, 其主要功能就是 维护和协调各个 subtask 的分片信息
     @Override
     public void start() throws Exception {
         LOG.info("Starting split enumerator for source {}.", operatorName);
 
-        // we mark this as started first, so that we can later distinguish the cases where
-        // 'start()' wasn't called and where 'start()' failed.
         started = true;
 
         // there are two ways the coordinator can get created:
@@ -121,6 +121,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                     context.getCoordinatorContext().getUserCodeClassloader();
             try (TemporaryClassLoaderContext ignored =
                     TemporaryClassLoaderContext.of(userCodeClassLoader)) {
+                // 创建分配枚举器
                 enumerator = source.createEnumerator(context);
             } catch (Throwable t) {
                 ExceptionUtils.rethrowIfFatalErrorOrOOM(t);
@@ -130,9 +131,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
             }
         }
 
-        // The start sequence is the first task in the coordinator executor.
-        // We rely on the single-threaded coordinator executor to guarantee
-        // the other methods are invoked after the enumerator has started.
+        // 我们依靠单线程 的 协调者执行器, 来保证  其他方法调用前 在 分片枚举器一定已经启动好了
         runInEventLoop(() -> enumerator.start(), "starting the SplitEnumerator.");
     }
 
@@ -145,6 +144,9 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         LOG.info("Source coordinator for source {} closed.", operatorName);
     }
 
+    // 算子通过 OperatorEventGateway 接口 调用 sendEventToCoordinator 方法
+    // 会被 OperatorCoordinator 接口 的  handleEventFromOperator 方法 相应
+    // 本方法 只是本子类 的 实现
     @Override
     public void handleEventFromOperator(int subtask, OperatorEvent event) {
         runInEventLoop(
@@ -244,6 +246,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                             checkpointId);
                     try {
                         context.onCheckpoint(checkpointId);
+                        // 把 checkpointId 下的 分片信息序列化
                         result.complete(toBytes(checkpointId));
                     } catch (Throwable e) {
                         ExceptionUtils.rethrowIfFatalErrorOrOOM(e);
@@ -312,6 +315,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         }
     }
 
+    // 用成员变量 coordinatorExecutor 来执行
     private void runInEventLoop(
             final ThrowingRunnable<Throwable> action,
             final String actionName,
@@ -319,9 +323,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
 
         ensureStarted();
 
-        // we may end up here even for a non-started enumerator, in case the instantiation
-        // failed, and we get the 'subtaskFailed()' notification during the failover.
-        // we need to ignore those.
+        // 分片枚举器 没有构造好, 其他的逻辑就没有必须做, 因为其他的逻辑都是围绕着 分片枚举器展开的
         if (enumerator == null) {
             return;
         }
@@ -370,6 +372,9 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
      * @throws Exception When something goes wrong in serialization.
      */
     private byte[] toBytes(long checkpointId) throws Exception {
+
+        //  把 checkpointId 下的 checkpoint信息  序列化分片信息
+        //  如果是 kafka 场景,   new KafkaSourceEnumState(assignedPartitions)
         return writeCheckpointBytes(
                 enumerator.snapshotState(checkpointId), enumCheckpointSerializer);
     }

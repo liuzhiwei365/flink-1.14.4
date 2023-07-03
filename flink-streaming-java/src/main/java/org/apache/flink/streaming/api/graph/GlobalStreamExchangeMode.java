@@ -30,26 +30,18 @@ import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
  */
 @Internal
 public enum GlobalStreamExchangeMode {
-    /** Set all job edges to be {@link ResultPartitionType#BLOCKING}. */
+    // 所有的边都是 BLOCKING类型
     ALL_EDGES_BLOCKING,
 
-    /**
-     * Set job edges with {@link ForwardPartitioner} to be {@link
-     * ResultPartitionType#PIPELINED_BOUNDED} and other edges to be {@link
-     * ResultPartitionType#BLOCKING}.
-     */
+    // 如果使用 ForwardPartitioner,则边是 PIPELINED_BOUNDED类型, 否则是 BLOCKING类型
     FORWARD_EDGES_PIPELINED,
 
-    /**
-     * Set job edges with {@link ForwardPartitioner} or {@link RescalePartitioner} to be {@link
-     * ResultPartitionType#PIPELINED_BOUNDED} and other edges to be {@link
-     * ResultPartitionType#BLOCKING}.
-     */
+    // 如果使用 ForwardPartitioner 或 RescalePartitioner,则边是 PIPELINED_BOUNDED类型, 否则是 BLOCKING类型
     POINTWISE_EDGES_PIPELINED,
 
-    /** Set all job edges {@link ResultPartitionType#PIPELINED_BOUNDED}. */
+    // 所有的边都是 PIPELINED_BOUNDED  类型
     ALL_EDGES_PIPELINED,
 
-    /** Set all job edges {@link ResultPartitionType#PIPELINED_APPROXIMATE}. */
+    // 所有的边都是 PIPELINED_APPROXIMATE 类型
     ALL_EDGES_PIPELINED_APPROXIMATE
 }

@@ -435,6 +435,7 @@ public class NetworkBufferPool
                             numSubpartitions,
                             maxBuffersPerChannel);
 
+            // 交给 NetWorkBufferPool 的  allBufferPools 成员来维护
             allBufferPools.add(localBufferPool);
 
             redistributeBuffers();

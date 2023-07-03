@@ -327,16 +327,21 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
             return;
         }
 
+        // 判断当前 actualClass 是否含有 subClass子类
         Integer subclassTag = -1;
         Class<?> actualClass = value.getClass();
         TypeSerializer subclassSerializer = null;
         if (clazz != actualClass) {
             subclassTag = registeredClasses.get(actualClass);
             if (subclassTag != null) {
+                // actualClass是已经被打过标记的子类
                 flags |= IS_TAGGED_SUBCLASS;
+                // 获取actualClass 该有的序列化器
                 subclassSerializer = registeredSerializers[subclassTag];
             } else {
+                // actualClass是子类，但是还未标记（也就是还未注册）
                 flags |= IS_SUBCLASS;
+                // 为子类获取缓存的序列化器；如果还不存在，还会创建序列化器,并放入缓存
                 subclassSerializer = getSubclassSerializer(actualClass);
             }
         } else {
@@ -345,16 +350,16 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
 
         target.writeByte(flags);
 
-        // if its a registered subclass, write the class tag id, otherwise write the full classname
+        // 如果它是一个注册的子类，那么写class标记id，否则写完整的类名
         if ((flags & IS_SUBCLASS) != 0) {
             target.writeUTF(actualClass.getName());
         } else if ((flags & IS_TAGGED_SUBCLASS) != 0) {
             target.writeByte(subclassTag);
         }
 
-        // if its a subclass, use the corresponding subclass serializer,
-        // otherwise serialize each field with our field serializers
+        // 如果是子类则 使用相应的子类序列化器 , 否则 使用 字段序列化器序列化每个字段
         if ((flags & NO_SUBCLASS) != 0) {
+            // 使用 字段序列化器序列化每个字段
             try {
                 for (int i = 0; i < numFields; i++) {
                     Object o = (fields[i] != null) ? fields[i].get(value) : null;
@@ -362,6 +367,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
                         target.writeBoolean(true); // null field handling
                     } else {
                         target.writeBoolean(false);
+                        // fieldSerializers[i] 也有可能是一个 PojoSerializer 对象
                         fieldSerializers[i].serialize(o, target);
                     }
                 }
@@ -371,7 +377,7 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
                         e);
             }
         } else {
-            // subclass
+            // 使用相应的子类序列化器
             if (subclassSerializer != null) {
                 subclassSerializer.serialize(value, target);
             }
@@ -1157,7 +1163,10 @@ public final class PojoSerializer<T> extends TypeSerializer<T> {
      *
      * <p>This method is also exposed to package-private access for testing purposes.
      */
+    // 为子类获取缓存的序列化器；如果还不存在，还会创建序列化器,并放入缓存
+    // 注意, 此时仅仅在缓存中，还未注册
     TypeSerializer<?> getSubclassSerializer(Class<?> subclass) {
+
         TypeSerializer<?> result = subclassSerializerCache.get(subclass);
         if (result == null) {
             result = createSubclassSerializer(subclass);

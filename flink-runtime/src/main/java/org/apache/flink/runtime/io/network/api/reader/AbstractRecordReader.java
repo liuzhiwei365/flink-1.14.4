@@ -48,8 +48,10 @@ import java.util.stream.Collectors;
 abstract class AbstractRecordReader<T extends IOReadableWritable> extends AbstractReader
         implements ReaderBase {
 
+    // 维护了每个 inputChannel 的 记录反序列化器
     private final Map<InputChannelInfo, RecordDeserializer<T>> recordDeserializers;
 
+    //  RecordDeserializer 是 将  内存段（memory segments）序列转换为记录的接口
     private final Map<RecordDeserializer<T>, Boolean> partialData = new IdentityHashMap<>();
 
     @Nullable private RecordDeserializer<T> currentRecordDeserializer;
@@ -86,6 +88,7 @@ abstract class AbstractRecordReader<T extends IOReadableWritable> extends Abstra
         }
     }
 
+    // 这里的入参 target 可以是 ReusingDeserializationDelegate,也可以是NonReusingDeserializationDelegate
     protected boolean getNextRecord(T target) throws IOException, InterruptedException {
         // The action of partition request was removed from InputGate#setup since FLINK-16536, and
         // this is the only
@@ -115,18 +118,22 @@ abstract class AbstractRecordReader<T extends IOReadableWritable> extends Abstra
 
         while (true) {
             if (currentRecordDeserializer != null) {
+                // target 可以是 ReusingDeserializationDelegate,也可以是NonReusingDeserializationDelegate
                 DeserializationResult result = currentRecordDeserializer.getNextRecord(target);
 
                 if (result.isBufferConsumed()) {
+                    //缓冲区被消费完
                     partialData.put(currentRecordDeserializer, Boolean.FALSE);
                     currentRecordDeserializer = null;
                 }
 
                 if (result.isFullRecord()) {
+                    // 是整条记录
                     return true;
                 }
             }
 
+            //阻塞模式获取 BufferOrEvent
             final BufferOrEvent bufferOrEvent =
                     inputGate.getNext().orElseThrow(IllegalStateException::new);
 

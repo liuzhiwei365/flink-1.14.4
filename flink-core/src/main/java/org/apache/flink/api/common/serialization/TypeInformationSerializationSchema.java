@@ -89,6 +89,8 @@ public class TypeInformationSerializationSchema<T>
         }
 
         try {
+            // 如果TypeInformation 为 BasicTypeInfo.INT_TYPE_INFO ,也就是int类型数据，则对应的TypeSerializer为IntSerializer
+            // 内部会调用  DataInputDeserializer 的 readInt() 方法
             return serializer.deserialize(dis);
         } catch (IOException e) {
             throw new RuntimeException("Unable to deserialize message", e);

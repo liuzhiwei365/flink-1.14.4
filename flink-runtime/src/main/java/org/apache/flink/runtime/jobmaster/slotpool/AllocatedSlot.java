@@ -107,6 +107,7 @@ class AllocatedSlot implements PhysicalSlot {
 
     @Override
     public boolean willBeOccupiedIndefinitely() {
+        // 该槽位 被用了 ,且将会被无限期占用
         return isUsed() && payloadReference.get().willOccupySlotIndefinitely();
     }
 

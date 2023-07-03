@@ -24,6 +24,7 @@ import org.apache.flink.annotation.Internal;
  * A visitor encapsulates functionality that is applied to each node in the process of a traversal
  * of a tree or DAG.
  */
+// 如果实现 Visitor 接口 必须实现 preVisit  accept  和 postVisit 三个方法
 @Internal
 public interface Visitor<T extends Visitable<T>> {
 

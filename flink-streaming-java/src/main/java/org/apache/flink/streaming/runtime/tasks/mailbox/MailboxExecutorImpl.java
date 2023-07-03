@@ -43,6 +43,8 @@ public final class MailboxExecutorImpl implements MailboxExecutor {
 
     private final MailboxProcessor mailboxProcessor;
 
+    // MailboxExecutorImpl 有两个构造方法, 一个传入信箱处理器,一个不传
+
     public MailboxExecutorImpl(
             @Nonnull TaskMailbox mailbox, int priority, StreamTaskActionExecutor actionExecutor) {
         this(mailbox, priority, actionExecutor, null);

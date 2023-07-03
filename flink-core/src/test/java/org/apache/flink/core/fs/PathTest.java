@@ -292,4 +292,14 @@ public class PathTest {
         assertEquals(null, u.getAuthority());
         assertEquals(path, u.getPath());
     }
+
+    @Test
+    public void testMakeQualifiedLzw() throws IOException {
+        // make relative path qualified
+        String path = "test/test";
+        Path p = new Path(path).makeQualified(FileSystem.getLocalFileSystem());
+
+        System.out.println(p);
+    }
+
 }

@@ -115,6 +115,7 @@ public final class ValueSerializer<T extends Value> extends TypeSerializer<T> {
 
     @Override
     public T deserialize(DataInputView source) throws IOException {
+        // 不重用，就得重新创建实例
         return deserialize(createInstance(), source);
     }
 

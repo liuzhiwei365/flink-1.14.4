@@ -160,7 +160,7 @@ public class PartitionSortedBuffer implements SortBuffer {
 
         int totalBytes = source.remaining();
 
-        // return false directly if it can not allocate enough buffers for the given record
+        // 如果不能为给定的记录 分配足够的buffers ，直接返回
         if (!allocateBuffersForRecord(totalBytes)) {
             return false;
         }

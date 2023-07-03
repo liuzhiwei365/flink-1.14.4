@@ -44,6 +44,7 @@ public interface PartitionProducerStateChecker {
      *     execution and partition.
      * @return Future holding the execution state of the producing execution.
      */
+    //请求生成结果分区的执行的执行状态
     CompletableFuture<ExecutionState> requestPartitionProducerState(
             JobID jobId,
             IntermediateDataSetID intermediateDataSetId,

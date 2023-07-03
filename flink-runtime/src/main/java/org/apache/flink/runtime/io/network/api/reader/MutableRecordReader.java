@@ -28,6 +28,7 @@ import java.io.IOException;
  *
  * @param <T> The type of the record that is read.
  */
+// 可变记录类型 读取器
 public class MutableRecordReader<T extends IOReadableWritable> extends AbstractRecordReader<T>
         implements MutableReader<T> {
 
@@ -45,6 +46,7 @@ public class MutableRecordReader<T extends IOReadableWritable> extends AbstractR
 
     @Override
     public boolean next(final T target) throws IOException, InterruptedException {
+        // 这里的入参 target 可以是 ReusingDeserializationDelegate,也可以是NonReusingDeserializationDelegate
         return getNextRecord(target);
     }
 

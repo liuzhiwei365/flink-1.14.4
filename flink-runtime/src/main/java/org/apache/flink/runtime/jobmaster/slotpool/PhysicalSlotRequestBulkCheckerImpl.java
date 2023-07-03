@@ -65,9 +65,14 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
     @Override
     public void schedulePendingRequestBulkTimeoutCheck(
             final PhysicalSlotRequestBulk bulk, Time timeout) {
+
+        // 目前 bulk对象 一定是 SharingPhysicalSlotRequestBulk 子类的对象
         PhysicalSlotRequestBulkWithTimestamp bulkWithTimestamp =
                 new PhysicalSlotRequestBulkWithTimestamp(bulk);
+
         bulkWithTimestamp.markUnfulfillable(clock.relativeTimeMillis());
+
+        // 核心
         schedulePendingRequestBulkWithTimestampCheck(bulkWithTimestamp, timeout);
     }
 
@@ -79,7 +84,7 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
 
                     switch (result) {
                         case PENDING:
-                            // re-schedule the timeout check
+                            // 再次调度超时检查
                             schedulePendingRequestBulkWithTimestampCheck(bulk, timeout);
                             break;
                         case TIMEOUT:
@@ -88,6 +93,10 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
                                             "Slot request bulk is not fulfillable! Could not allocate the required slot within slot request timeout",
                                             new TimeoutException(
                                                     "Timeout has occurred: " + timeout));
+                            // bulk对象的结构是 PhysicalSlotRequestBulkWithTimestamp 内部包了一个 SharingPhysicalSlotRequestBulk
+                            // 会调用 logicalSlotRequestCanceller 来取消 pending 和fulfilled 结构中的 ((逻辑槽位请求))
+                            // logicalSlotRequestCanceller 也就是 SlotSharingExecutionSlotAllocator.cancelLogicalSlotRequest方法对象
+                            //
                             bulk.cancel(cancellationCause);
                             break;
                         case FULFILLED:
@@ -108,25 +117,35 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
      * @param slotRequestTimeout indicates how long a pending request can be unfulfillable
      * @return result of the check, indicating the bulk is fulfilled, still pending, or timed out
      */
+    //检查插槽请求批量;  如果,太长时间无法满足,则使其请求超时
     @VisibleForTesting
     TimeoutCheckResult checkPhysicalSlotRequestBulkTimeout(
-            final PhysicalSlotRequestBulkWithTimestamp slotRequestBulk,
-            final Time slotRequestTimeout) {
+            final PhysicalSlotRequestBulkWithTimestamp slotRequestBulk,//大量插槽请求
+            final Time slotRequestTimeout) {//指示挂起的请求无法完成的时间长度
 
+        // 如果slotRequestBulk 中 PendingRequests 请求 为空
         if (slotRequestBulk.getPendingRequests().isEmpty()) {
             return TimeoutCheckResult.FULFILLED;
         }
 
+        //返回 slotsRetriever 提供的槽位资源 ,是否可以满足  slotRequestBulk 中 所有的 PendingRequests 请求
         final boolean fulfillable = isSlotRequestBulkFulfillable(slotRequestBulk, slotsRetriever);
+
         if (fulfillable) {
+            // 将 unfulfillableTimestamp 设置为  Long.MAX_VALUE
             slotRequestBulk.markFulfillable();
         } else {
             final long currentTimestamp = clock.relativeTimeMillis();
 
+            // 如果 unfulfillableTimestamp 现在为Long.MAX_VALUE 则重置为  currentTimestamp
+            // 否则不处理 (只有初始的第一次会重置,今后都不会重置)
             slotRequestBulk.markUnfulfillable(currentTimestamp);
 
+            // 获取原来的 unfulfillableTimestamp
             final long unfulfillableSince = slotRequestBulk.getUnfulfillableSince();
             if (unfulfillableSince + slotRequestTimeout.toMilliseconds() <= currentTimestamp) {
+                // 原来的 unfulfillableTimestamp 加上 超时间隔 还是 小于 currentTimestamp ,则返回结构超时
+                // (只有初始化的时候, 第一次 unfulfillableTimestamp 才会与 currentTimestamp  相等)
                 return TimeoutCheckResult.TIMEOUT;
             }
         }
@@ -143,14 +162,19 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
      * @param slotsRetriever supplies slots to be used for the fulfill-ability check
      * @return true if the slot requests are possible to be fulfilled, otherwise false
      */
+    //返回 slotsRetriever 提供的槽位资源 ,是否可以满足  slotRequestBulk 中 所有的 PendingRequests 请求
     @VisibleForTesting
     static boolean isSlotRequestBulkFulfillable(
             final PhysicalSlotRequestBulk slotRequestBulk,
             final Supplier<Set<SlotInfo>> slotsRetriever) {
 
+        // 拿到已经分配成功的物理槽位
         final Set<AllocationID> assignedSlots =
                 slotRequestBulk.getAllocationIdsOfFulfilledRequests();
+
         final Set<SlotInfo> reusableSlots = getReusableSlots(slotsRetriever, assignedSlots);
+
+        // reusableSlots 能够满足所有的   物理槽位请求吗
         return areRequestsFulfillableWithSlots(slotRequestBulk.getPendingRequests(), reusableSlots);
     }
 
@@ -158,7 +182,9 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
             final Supplier<Set<SlotInfo>> slotsRetriever, final Set<AllocationID> slotsToExclude) {
 
         return slotsRetriever.get().stream()
+                // 除去被无限期占用的
                 .filter(slotInfo -> !slotInfo.willBeOccupiedIndefinitely())
+                // 除去已经被分配的
                 .filter(slotInfo -> !slotsToExclude.contains(slotInfo.getAllocationId()))
                 .collect(Collectors.toSet());
     }
@@ -172,13 +198,20 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
     private static boolean areRequestsFulfillableWithSlots(
             final Collection<ResourceProfile> requestResourceProfiles, final Set<SlotInfo> slots) {
 
+        // copy 一份 slots
         final Set<SlotInfo> remainingSlots = new HashSet<>(slots);
+
         for (ResourceProfile requestResourceProfile : requestResourceProfiles) {
+
             final Optional<SlotInfo> matchedSlot =
+                    // 依次找到每个符合 请求要求（资源一致） 的 SlotInfo
                     findMatchingSlotForRequest(requestResourceProfile, remainingSlots);
             if (matchedSlot.isPresent()) {
+                    // 将符合要求的 SlotInfo 从 remainingSlots 中移除
                 remainingSlots.remove(matchedSlot.get());
             } else {
+                // 必须所有的 请求都能找到符合要求的 SlotInfo ,该方法才能返回true
+                // 又一个不满足都得直接返回 false
                 return false;
             }
         }
@@ -189,10 +222,11 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
             final ResourceProfile requestResourceProfile, final Collection<SlotInfo> slots) {
 
         return slots.stream()
-                .filter(slot -> slot.getResourceProfile().isMatching(requestResourceProfile))
+                .filter(slot -> slot.getResourceProfile().isMatching(requestResourceProfile))// 匹配就是资源符合要求
                 .findFirst();
     }
 
+    // 本类的静态工厂方法，
     public static PhysicalSlotRequestBulkCheckerImpl createFromSlotPool(
             final SlotPool slotPool, final Clock clock) {
         return new PhysicalSlotRequestBulkCheckerImpl(() -> getAllSlotInfos(slotPool), clock);

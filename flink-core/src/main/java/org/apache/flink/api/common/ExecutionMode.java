@@ -43,7 +43,7 @@ public enum ExecutionMode {
      * mapped1.join(mapped2).where(...).equalTo(...);
      * }</pre>
      */
-    PIPELINED,
+    PIPELINED,// 0
 
     /**
      * Executes the program in a pipelined fashion (including shuffles and broadcasts),
@@ -57,7 +57,7 @@ public enum ExecutionMode {
      * sure that the program is safe for full pipelining and that Flink was too conservative when
      * choosing the batch exchange at a certain point.
      */
-    PIPELINED_FORCED,
+    PIPELINED_FORCED,// 1
 
     //	This is for later, we are missing a bit of infrastructure for this.
     //	/**
@@ -72,7 +72,7 @@ public enum ExecutionMode {
      * This mode executes all shuffles and broadcasts in a batch fashion, while pipelining data
      * between operations that exchange data only locally between one producer and one consumer.
      */
-    BATCH,
+    BATCH,// 2
 
     /**
      * This mode executes the program in a strict batch way, including all points where data is
@@ -80,5 +80,5 @@ public enum ExecutionMode {
      * execute than the {@link #BATCH} mode. It does guarantee that no successive operations are
      * ever executed concurrently.
      */
-    BATCH_FORCED
+    BATCH_FORCED// 3
 }

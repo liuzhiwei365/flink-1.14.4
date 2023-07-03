@@ -623,21 +623,22 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                 throw new TaskSubmissionException(message);
             }
 
-            // re-integrate offloaded data:
             try {
+                // 利用 blobService 加载大对象,供下面序列化使用
                 tdd.loadBigData(blobCacheService.getPermanentBlobService());
             } catch (IOException | ClassNotFoundException e) {
                 throw new TaskSubmissionException(
                         "Could not re-integrate offloaded TaskDeploymentDescriptor data.", e);
             }
 
-            // deserialize the pre-serialized information
             final JobInformation jobInformation;
             final TaskInformation taskInformation;
             try {
+                // 反序列化 JobInformation
                 jobInformation =
                         tdd.getSerializedJobInformation()
                                 .deserializeValue(getClass().getClassLoader());
+                // 反序列化 TaskInformation
                 taskInformation =
                         tdd.getSerializedTaskInformation()
                                 .deserializeValue(getClass().getClassLoader());
@@ -655,6 +656,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                                 + ")");
             }
 
+            // 将 task 信息添加到监控的数据结构中
             TaskMetricGroup taskMetricGroup =
                     taskManagerMetricGroup.addTaskForJob(
                             jobInformation.getJobId(),
@@ -665,6 +667,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                             tdd.getSubtaskIndex(),
                             tdd.getAttemptNumber());
 
+            //
             InputSplitProvider inputSplitProvider =
                     new RpcInputSplitProvider(
                             jobManagerConnection.getJobManagerGateway(),
@@ -678,18 +681,26 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
                             executionAttemptID,
                             (t) -> runAsync(() -> failTask(executionAttemptID, t)));
 
+            // task 与 taskExecutor 联系的接口
             TaskManagerActions taskManagerActions = jobManagerConnection.getTaskManagerActions();
+            // 快照应答者
             CheckpointResponder checkpointResponder = jobManagerConnection.getCheckpointResponder();
+
+            // 全局聚合管理器
             GlobalAggregateManager aggregateManager =
                     jobManagerConnection.getGlobalAggregateManager();
 
             LibraryCacheManager.ClassLoaderHandle classLoaderHandle =
                     jobManagerConnection.getClassLoaderHandle();
+
+            // 可消费结果分区 的 通知者
             ResultPartitionConsumableNotifier resultPartitionConsumableNotifier =
                     jobManagerConnection.getResultPartitionConsumableNotifier();
+            // 分区生产者状态检查器
             PartitionProducerStateChecker partitionStateChecker =
                     jobManagerConnection.getPartitionStateChecker();
 
+            // 任务本地状态存储
             final TaskLocalStateStore localStateStore =
                     localStateStoresManager.localStateStoreForSubtask(
                             jobId,
@@ -767,7 +778,7 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
             boolean taskAdded;
 
             try {
-                // 注册 Task ,
+                // 注册 Task , TaskSlotTable 实现类 TaskSlotTableImpl,  维护本TaskExecutor 的槽位信息
                 taskAdded = taskSlotTable.addTask(task);
             } catch (SlotNotFoundException | SlotNotActiveException e) {
                 throw new TaskSubmissionException("Could not submit task.", e);

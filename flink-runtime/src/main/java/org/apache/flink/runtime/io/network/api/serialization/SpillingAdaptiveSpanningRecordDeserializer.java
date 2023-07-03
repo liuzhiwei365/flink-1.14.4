@@ -39,10 +39,12 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
     private static final int MIN_THRESHOLD_FOR_SPILLING = 100 * 1024; // 100 KiBytes
     private static final int MIN_FILE_BUFFER_SIZE = 50 * 1024; // 50 KiBytes
 
+    // 用于表示二进制形式的int值 的 字节数 ,也就是4
     static final int LENGTH_BYTES = Integer.BYTES;
 
+    //前者将数据存储进内存
     private final NonSpanningWrapper nonSpanningWrapper;
-
+    //后者存储前者存不下的部分内存数据以及将 超量数据 溢出到磁盘
     private final SpanningWrapper spanningWrapper;
 
     @Nullable private Buffer currentBuffer;
@@ -71,6 +73,7 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
 
         // check if some spanning record deserialization is pending
         if (spanningWrapper.getNumGatheredBytes() > 0) {
+            // 如果存在  跨越内存段的 记录 的 反序列化正在进行
             spanningWrapper.addNextChunkFromMemorySegment(segment, offset, numBytes);
         } else {
             nonSpanningWrapper.initializeFromMemorySegment(segment, offset, numBytes + offset);
@@ -86,10 +89,9 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
 
     @Override
     public DeserializationResult getNextRecord(T target) throws IOException {
-        // always check the non-spanning wrapper first.
-        // this should be the majority of the cases for small records
-        // for large records, this portion of the work is very small in comparison anyways
-
+        //始终 首先检查非跨越包装器
+        //这应该是小记录的大多数情况
+        //对于大型唱片来说，无论如何，这部分作品与之相比都很小
         final DeserializationResult result = readNextRecord(target);
         if (result.isBufferConsumed()) {
             currentBuffer.recycleBuffer();
@@ -98,16 +100,22 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
         return result;
     }
 
+    // target 可以是 ReusingDeserializationDelegate,也可以是NonReusingDeserializationDelegate
     private DeserializationResult readNextRecord(T target) throws IOException {
         if (nonSpanningWrapper.hasCompleteLength()) {
+            // 如果 nonSpanningWrapper 超过4 个字节长度
             return readNonSpanningRecord(target);
 
         } else if (nonSpanningWrapper.hasRemaining()) {
+            // 如果 nonSpanningWrapper 没有超过4个字节长度
+            // 将 nonSpanningWrapper 剩下来的字节转移 到 spanningWrapper 的 lengthBuffer成员变量
             nonSpanningWrapper.transferTo(spanningWrapper.lengthBuffer);
             return PARTIAL_RECORD;
 
         } else if (spanningWrapper.hasFullRecord()) {
+            // 如果 spanningWrapper 中有完整的记录
             target.read(spanningWrapper.getInputView());
+            // 把剩下的字节转移到 nonSpanningWrapper 中
             spanningWrapper.transferLeftOverTo(nonSpanningWrapper);
             return nonSpanningWrapper.hasRemaining()
                     ? INTERMEDIATE_RECORD_FROM_BUFFER
@@ -119,14 +127,13 @@ public class SpillingAdaptiveSpanningRecordDeserializer<T extends IOReadableWrit
     }
 
     private DeserializationResult readNonSpanningRecord(T target) throws IOException {
-        // following three calls to nonSpanningWrapper from object oriented design would be better
-        // to encapsulate inside nonSpanningWrapper, but then nonSpanningWrapper.readInto equivalent
-        // would have to return a tuple of DeserializationResult and recordLen, which would affect
-        // performance too much
+
         int recordLen = nonSpanningWrapper.readInt();
         if (nonSpanningWrapper.canReadRecord(recordLen)) {
             return nonSpanningWrapper.readInto(target);
         } else {
+            //spanningWrapper 为跨区包装器,只有在nonSpanningWrapper 无法序列化出完整的StreamRecord时,
+            //才会转移到 spanningWrapper中等待buffer 数据接入,最终会将多个buffer 拼接以 序列化出完整的StreamRecord
             spanningWrapper.transferFrom(nonSpanningWrapper, recordLen);
             return PARTIAL_RECORD;
         }

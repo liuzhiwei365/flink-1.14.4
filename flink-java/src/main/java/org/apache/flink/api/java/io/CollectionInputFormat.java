@@ -49,6 +49,7 @@ public class CollectionInputFormat<T> extends GenericInputFormat<T> implements N
 
     private transient Iterator<T> iterator;
 
+    // 主要是在 ExecutionEnvironment.formCollection 方法中使用，用于将有界数据集合转换成DataSet 数据集
     public CollectionInputFormat(Collection<T> dataSet, TypeSerializer<T> serializer) {
         if (dataSet == null) {
             throw new NullPointerException();
@@ -100,6 +101,7 @@ public class CollectionInputFormat<T> extends GenericInputFormat<T> implements N
 
         if (collectionLength > 0) {
             try {
+                // DataInputViewStreamWrapper 对对象输入流进行包装
                 DataInputViewStreamWrapper wrapper = new DataInputViewStreamWrapper(in);
                 for (int i = 0; i < collectionLength; i++) {
                     T element = serializer.deserialize(wrapper);

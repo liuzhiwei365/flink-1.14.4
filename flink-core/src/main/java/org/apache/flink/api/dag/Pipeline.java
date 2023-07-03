@@ -22,5 +22,8 @@ package org.apache.flink.api.dag;
 import org.apache.flink.annotation.Internal;
 
 /** Common interface for Flink pipelines. */
+// pipeline 接口有两种实现：
+//     针对sql:  StreamGraph
+//     针对plan:   Plan
 @Internal
 public interface Pipeline {}

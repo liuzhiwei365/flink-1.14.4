@@ -97,10 +97,11 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
 
                         checkAllTasksInitiated();
 
+                        // 其他都是各种检查逻辑 ,只有这里核心
                         CheckpointPlan result =
                                 context.hasFinishedTasks()
-                                        ? calculateAfterTasksFinished()
-                                        : calculateWithAllTasksRunning();
+                                        ? calculateAfterTasksFinished() // 如果是结束时,已经有task完成
+                                        : calculateWithAllTasksRunning(); // 如果是初始时,还没有task 完成
 
                         checkTasksStarted(result.getTasksToWaitFor());
 
@@ -179,9 +180,8 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
      * @return The plan of this checkpoint.
      */
     private CheckpointPlan calculateAfterTasksFinished() {
-        // First collect the task running status into BitSet so that we could
-        // do JobVertex level judgement for some vertices and avoid time-consuming
-        // access to volatile isFinished flag of Execution.
+
+        //  JobVertexID ->  各个subtask是否 running 的 bit 位
         Map<JobVertexID, BitSet> taskRunningStatusByVertex = collectTaskRunningStatus();
 
         List<Execution> tasksToTrigger = new ArrayList<>();
@@ -193,6 +193,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
         for (ExecutionJobVertex jobVertex : jobVerticesInTopologyOrder) {
             BitSet taskRunningStatus = taskRunningStatusByVertex.get(jobVertex.getJobVertexId());
 
+            // 如果 BitSet 中 所有的 bit 位都在 finish状态 （ finish状态为0 , running状态为1 ）
             if (taskRunningStatus.cardinality() == 0) {
                 fullyFinishedJobVertex.add(jobVertex);
 
@@ -205,27 +206,32 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
 
             List<JobEdge> prevJobEdges = jobVertex.getJobVertex().getInputs();
 
-            // this is an optimization: we determine at the JobVertex level if some tasks can even
-            // be eligible for being in the "triggerTo" set.
+            // 为true 则表示, jobVertex 下存在子任务能进入 trigger 集合
             boolean someTasksMustBeTriggered =
                     someTasksMustBeTriggered(taskRunningStatusByVertex, prevJobEdges);
 
             for (int i = 0; i < jobVertex.getTaskVertices().length; ++i) {
                 ExecutionVertex task = jobVertex.getTaskVertices()[i];
+
                 if (taskRunningStatus.get(task.getParallelSubtaskIndex())) {
+                    // 如果 task 是running 状态
                     tasksToWaitFor.add(task.getCurrentExecutionAttempt());
                     tasksToCommitTo.add(task);
 
                     if (someTasksMustBeTriggered) {
+                        // task 有资格进入 trigger 集合
                         boolean hasRunningPrecedentTasks =
                                 hasRunningPrecedentTasks(
                                         task, prevJobEdges, taskRunningStatusByVertex);
 
                         if (!hasRunningPrecedentTasks) {
+                            // 如果说 task 的上游没有处于running 的 task ; 而自己又是running 状态;
+                            // 那么, 则说明  此时 task 自己就是源节点 ; 应该放到 trigger 的集合中
                             tasksToTrigger.add(task.getCurrentExecutionAttempt());
                         }
                     }
                 } else {
+                    // 如果 task 是 finish 状态
                     finishedTasks.add(task.getCurrentExecutionAttempt());
                 }
             }
@@ -240,14 +246,24 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
                 allowCheckpointsAfterTasksFinished);
     }
 
+
     private boolean someTasksMustBeTriggered(
             Map<JobVertexID, BitSet> runningTasksByVertex, List<JobEdge> prevJobEdges) {
 
         for (JobEdge jobEdge : prevJobEdges) {
+            // DistributionPattern 有  ALL_TO_ALL  和  POINTWISE  两种模式
             DistributionPattern distributionPattern = jobEdge.getDistributionPattern();
+
+            // jobEdge.getSource().getProducer() 是 上游 JobVertex
             BitSet upstreamRunningStatus =
                     runningTasksByVertex.get(jobEdge.getSource().getProducer().getID());
 
+            //  重点:
+            // 只有当上游没有 活跃的JobVertex , 本ExecutionVertex （subtask）才可能进入 trigger 集合 (作为源)
+            //  其实 hasActiveUpstreamVertex 这个方法名取的不够好
+
+            // 如果 是 all to all 模式 , 上游所有边 必须都是finish状态, 本 JobVertex下的sub task才有机会进入 trigger集合
+            // 如果 是 point wise 模式 , 上游 存在边是 finish存在, 本 JobVertex下的sub task才有机会进入 trigger集合
             if (hasActiveUpstreamVertex(distributionPattern, upstreamRunningStatus)) {
                 return false;
             }
@@ -269,8 +285,15 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
      * @param upstreamRunningTasks The running tasks of the upstream vertex.
      * @return Whether every task of the current vertex is connected to some active predecessors.
      */
+    // 如果 是 all to all 模式 , 上游所有边 必须都是finish状态, 本 JobVertex下的sub task才有机会进入 trigger集合
+    // 如果 是 point wise 模式 , 上游 存在边是 finish存在, 本 JobVertex下的sub task就有机会进入 trigger集合
     private boolean hasActiveUpstreamVertex(
             DistributionPattern distribution, BitSet upstreamRunningTasks) {
+
+        //（ running状态为1 finish状态为0 ）
+
+        // 上游是ALL_TO_ALL连接方式 且 存在子任务是running状态
+        // 或者   上游是POINTWISE连接方式 且 全部子任务都是running状态
         return (distribution == DistributionPattern.ALL_TO_ALL
                         && upstreamRunningTasks.cardinality() > 0)
                 || (distribution == DistributionPattern.POINTWISE
@@ -319,6 +342,7 @@ public class DefaultCheckpointPlanCalculator implements CheckpointPlanCalculator
 
             for (int i = 0; i < vertex.getTaskVertices().length; ++i) {
                 if (!vertex.getTaskVertices()[i].getCurrentExecutionAttempt().isFinished()) {
+                    // 执行属于 running 状态,则设置
                     runningTasks.set(i);
                 }
             }

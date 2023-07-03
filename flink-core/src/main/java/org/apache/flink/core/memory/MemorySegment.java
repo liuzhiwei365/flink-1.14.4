@@ -822,8 +822,12 @@ public final class MemorySegment {
      * @throws IndexOutOfBoundsException Thrown, if the index is negative, or larger than the
      *     segment size minus 4.
      */
+    // 按照大端字节序, 从指定位置读取 4个字节
+    // 高字节存储在低地址,低字节存储在高地址  是大端存储
+    // 反之 是 小端存储
     public int getIntBigEndian(int index) {
         if (LITTLE_ENDIAN) {
+            // 如果是小端存储, 得转换一下 (字节前后交换一下)
             return Integer.reverseBytes(getInt(index));
         } else {
             return getInt(index);
@@ -1308,6 +1312,9 @@ public final class MemorySegment {
      *     enough space for the bytes.
      * @throws ReadOnlyBufferException If the target buffer is read-only.
      */
+
+    // 将本MemorySegment的内容拷贝到  target 对象中
+    // ByteBuffer 有 HeapByteBuffer 和 DirectByteBuffer 等实现
     public void get(int offset, ByteBuffer target, int numBytes) {
         // check the byte array offset and length
         if ((offset | numBytes | (offset + numBytes)) < 0) {
@@ -1326,6 +1333,7 @@ public final class MemorySegment {
 
         if (target.isDirect()) {
             // copy to the target memory directly
+            // target 在直接内存
             final long targetPointer = getByteBufferAddress(target) + targetOffset;
             final long sourcePointer = address + offset;
 
@@ -1339,6 +1347,7 @@ public final class MemorySegment {
             }
         } else if (target.hasArray()) {
             // move directly into the byte array
+            // target 在堆内存
             get(offset, target.array(), targetOffset + target.arrayOffset(), numBytes);
 
             // this must be after the get() call to ensue that the byte buffer is not
@@ -1429,8 +1438,9 @@ public final class MemorySegment {
         final long otherPointer = target.address + targetOffset;
 
         if ((numBytes | offset | targetOffset) >= 0
-                && thisPointer <= this.addressLimit - numBytes
+                && thisPointer <= this.addressLimit - numBytes //防止越界
                 && otherPointer <= target.addressLimit - numBytes) {
+            // 利用 jdk 的 Unsafe 类, 将指定内存区域的数据拷贝到 另一内存区域
             UNSAFE.copyMemory(thisHeapRef, thisPointer, otherHeapRef, otherPointer, numBytes);
         } else if (this.address > this.addressLimit) {
             throw new IllegalStateException("this memory segment has been freed.");

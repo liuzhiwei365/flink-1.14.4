@@ -314,17 +314,23 @@ public class PendingCheckpoint implements Checkpoint {
             try {
                 checkpointPlan.fulfillFinishedTaskStatus(operatorStates);
 
-                // write out the metadata
+                // 把已经序列化好了的 算子状态 和 master状态 包装成 CheckpointMetadata 对象
                 final CheckpointMetadata savepoint =
                         new CheckpointMetadata(checkpointId, operatorStates.values(), masterStates);
+
                 final CompletedCheckpointStorageLocation finalizedLocation;
 
                 try (CheckpointMetadataOutputStream out =
                         targetLocation.createMetadataOutputStream()) {
+
+                    // 把 算子状态 和 master状态 持久化
                     Checkpoints.storeCheckpointMetadata(savepoint, out);
+
+                    // 关流,  返回 刚刚完成的checkpoint 的存储信息
                     finalizedLocation = out.closeAndFinalizeCheckpoint();
                 }
 
+                // 刚刚完成的checkpoint 的综合信息
                 CompletedCheckpoint completed =
                         new CompletedCheckpoint(
                                 jobId,
@@ -347,11 +353,12 @@ public class PendingCheckpoint implements Checkpoint {
                                     ? 0
                                     : statsCallback.getStateSize() / 1024,
                             statsCallback.getEndToEndDuration());
-                    // Finalize the statsCallback and give the completed checkpoint a
-                    // callback for discards.
+
+                    // 完成statsCallback并给完成的 checkpoint 一个回调
                     CompletedCheckpointStats.DiscardCallback discardCallback =
                             statsCallback.reportCompletedCheckpoint(
                                     finalizedLocation.getExternalPointer());
+
                     completed.setDiscardCallback(discardCallback);
                 }
 

@@ -76,18 +76,23 @@ public class MailboxProcessor implements Closeable {
      * Action that is repeatedly executed if no action request is in the mailbox. Typically record
      * processing.
      */
+    //如果邮箱中没有 特殊的操作请求，则重复执行的操作;     通常是 处理用户数据
     protected final MailboxDefaultAction mailboxDefaultAction;
 
     /**
      * Control flag to terminate the mailbox processor. Once it was terminated could not be
      * restarted again. Must only be accessed from mailbox thread.
      */
+    // 控制 信箱处理 的标志, 一旦终止,将不能恢复
+    // 初始值为true
     private boolean mailboxLoopRunning;
 
     /**
      * Control flag to temporary suspend the mailbox loop/processor. After suspending the mailbox
      * processor can be still later resumed. Must only be accessed from mailbox thread.
      */
+    // 控制 信箱挂起 的标志,挂起后,还可以重新恢复
+    // 初始值为false
     private boolean suspended;
 
     /**
@@ -95,6 +100,7 @@ public class MailboxProcessor implements Closeable {
      * suspended default action (suspended if not-null) and to reuse the object as return value in
      * consecutive suspend attempts. Must only be accessed from mailbox thread.
      */
+    //用作指示 用户数据处理的挂起 （如果不是null则挂起）的标志    并在连续的挂起尝试中 将重用对象 作为返回值。  只能从邮箱线程访问
     private DefaultActionSuspension suspendedDefaultAction;
 
     private final StreamTaskActionExecutor actionExecutor;
@@ -124,15 +130,11 @@ public class MailboxProcessor implements Closeable {
         this.suspendedDefaultAction = null;
     }
 
+    // 一个不传
     public MailboxExecutor getMainMailboxExecutor() {
         return new MailboxExecutorImpl(mailbox, MIN_PRIORITY, actionExecutor);
     }
-
-    /**
-     * Returns an executor service facade to submit actions to the mailbox.
-     *
-     * @param priority the priority of the {@link MailboxExecutor}.
-     */
+    // 传入信箱处理器
     public MailboxExecutor getMailboxExecutor(int priority) {
         return new MailboxExecutorImpl(mailbox, priority, actionExecutor, this);
     }
@@ -197,9 +199,15 @@ public class MailboxProcessor implements Closeable {
         final MailboxController defaultActionContext = new MailboxController(this);
 
         while (isNextLoopPossible()) {
-            // The blocking `processMail` call will not return until default action is available.
+            // 此方法处理邮箱中的所有特殊操作 , 而不是处理用户数据
+            // 在默认操作（也就是处理数据数据）可用之前，会一直处理 mailbox,如果mailbox中的元素处理完
+            // 则, 内部会一直用task方法阻塞 “processMail” , 调用不会返回
             processMail(localMailbox, false);
+
             if (isNextLoopPossible()) {
+                // MailboxProcessor在构造的时候 , mailboxDefaultAction赋值的就是 StreamTask::processInput方法
+                // MailboxDefaultAction 可以认为是一个  Consume 类型的 函数式接口
+                // 调用 runDefaultAction 方法 相当于调用了   StreamTask::processInput方法 (也可能是 子类的 processInput 方法)
                 mailboxDefaultAction.runDefaultAction(
                         defaultActionContext); // lock is acquired inside default action as needed
             }
@@ -216,6 +224,7 @@ public class MailboxProcessor implements Closeable {
      *
      * @return true if something was processed.
      */
+    // 功能还在测试阶段
     @VisibleForTesting
     public boolean runMailboxStep() throws Exception {
         suspended = !mailboxLoopRunning;
@@ -307,20 +316,21 @@ public class MailboxProcessor implements Closeable {
      *
      * @return true if a mail has been processed.
      */
+    //  此方法处理邮箱中的所有特殊操作 , 而不是处理用户数据
+    //  在当前设计中，此方法还评估 所有控制标志 的更改
     private boolean processMail(TaskMailbox mailbox, boolean singleStep) throws Exception {
-        // Doing this check is an optimization to only have a volatile read in the expected hot
-        // path, locks are only
-        // acquired after this point.
+
+        // batch队列中是否有数据 （会把将 queue中的数据全部 移动到 batch中）
         boolean isBatchAvailable = mailbox.createBatch();
 
-        // Take mails in a non-blockingly and execute them.
+        // 只会非阻塞地处理 batch中的元素,不会处理 queue中的元素
         boolean processed = isBatchAvailable && processMailsNonBlocking(singleStep);
         if (singleStep) {
             return processed;
         }
 
-        // If the default action is currently not available, we can run a blocking mailbox execution
-        // until the default action becomes available again.
+        // 非阻塞地处理 batch;  阻塞地处理 queue
+        // 如果默认操作（用户数据处理逻辑） 当前不可用,被挂起, 我们可以运行阻塞邮箱执行, 直到默认操作再次可用
         processed |= processMailsWhenDefaultActionUnavailable();
 
         return processed;
@@ -329,12 +339,17 @@ public class MailboxProcessor implements Closeable {
     private boolean processMailsWhenDefaultActionUnavailable() throws Exception {
         boolean processedSomething = false;
         Optional<Mail> maybeMail;
+        // 当 ! suspendedDefaultAction == null 且 信箱处理器没有被挂起
+        // 也就是 信箱处理器没有被挂起, 但是 处理用户数据的逻辑 被挂起了  （可见, 处理 checkpoint 和 处理用户数据 有一定的互斥性；用户数据量过大可能会影响checkpoint的逻辑）
         while (!isDefaultActionAvailable() && isNextLoopPossible()) {
+            // 非阻塞地拿
             maybeMail = mailbox.tryTake(MIN_PRIORITY);
             if (!maybeMail.isPresent()) {
+                // 前面没拿到, 继续阻塞地拿 （前面的非阻塞拿,效率高些,并非多此一举）
                 maybeMail = Optional.of(mailbox.take(MIN_PRIORITY));
             }
             maybePauseIdleTimer();
+            // 运行 mail 封装的任务
             maybeMail.get().run();
             maybeRestartIdleTimer();
             processedSomething = true;
@@ -342,10 +357,13 @@ public class MailboxProcessor implements Closeable {
         return processedSomething;
     }
 
+    // singleStep 为true 则表示只处理一个 Mail 对象
+    // 如果处理过 Mail 则 返回true , 没有真实处理过Mail 则返回false
     private boolean processMailsNonBlocking(boolean singleStep) throws Exception {
         long processedMails = 0;
         Optional<Mail> maybeMail;
 
+        // 不断从 batch 队列头 拉取Mail, 并进行处理
         while (isNextLoopPossible() && (maybeMail = mailbox.tryTakeFromBatch()).isPresent()) {
             if (processedMails++ == 0) {
                 maybePauseIdleTimer();
@@ -379,6 +397,7 @@ public class MailboxProcessor implements Closeable {
      * Calling this method signals that the mailbox-thread should (temporarily) stop invoking the
      * default action, e.g. because there is currently no input available.
      */
+    // 通过给 suspendedDefaultAction 赋值的方式 , 来挂起 用户数据处理的逻辑
     private MailboxDefaultAction.Suspension suspendDefaultAction(
             @Nullable PeriodTimer suspensionTimer) {
 

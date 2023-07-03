@@ -563,7 +563,7 @@ public class StreamGraphGenerator {
         if (translator != null) {
             transformedIds = translate(translator, transform);
         } else {
-            // 如果没拿到翻译器
+            // 如果没拿到翻译器, 也就是 translatorMap 中没有找到相关的 value值
             transformedIds = legacyTransform(transform);
         }
 

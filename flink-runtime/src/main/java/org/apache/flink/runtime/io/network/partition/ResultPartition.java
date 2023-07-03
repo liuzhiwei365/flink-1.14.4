@@ -73,6 +73,17 @@ import static org.apache.flink.util.Preconditions.checkState;
  *
  * <h2>State management</h2>
  */
+
+// 继承结构
+//    会根据不会的shuffle 类型 和配置,运行不同的子类
+
+//  ResultPartition (org.apache.flink.runtime.io.network.partition)
+//     SortMergeResultPartition (org.apache.flink.runtime.io.network.partition)
+//     BufferWritingResultPartition (org.apache.flink.runtime.io.network.partition)
+//        PipelinedResultPartition (org.apache.flink.runtime.io.network.partition)
+//        BoundedBlockingResultPartition (org.apache.flink.runtime.io.network.partition)
+//
+
 public abstract class ResultPartition implements ResultPartitionWriter {
 
     protected static final Logger LOG = LoggerFactory.getLogger(ResultPartition.class);

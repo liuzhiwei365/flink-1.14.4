@@ -502,6 +502,7 @@ public abstract class NettyMessage {
     // Client requests
     // ------------------------------------------------------------------------
 
+    // 分区请求
     static class PartitionRequest extends NettyMessage {
 
         private static final byte ID = 2;
@@ -568,6 +569,7 @@ public abstract class NettyMessage {
         }
     }
 
+    // 任务事件请求
     static class TaskEventRequest extends NettyMessage {
 
         private static final byte ID = 3;
@@ -643,6 +645,7 @@ public abstract class NettyMessage {
      * <p>There is a 1:1 mapping between the input channel and partition per physical channel.
      * Therefore, the {@link InputChannelID} instance is enough to identify which request to cancel.
      */
+    // 取消分区请求
     static class CancelPartitionRequest extends NettyMessage {
 
         private static final byte ID = 4;
@@ -688,6 +691,7 @@ public abstract class NettyMessage {
     }
 
     /** Incremental credit announcement from the client to the server. */
+    // 客户端 通知 服务端 增加 信誉声明
     static class AddCredit extends NettyMessage {
 
         private static final byte ID = 6;
@@ -734,6 +738,7 @@ public abstract class NettyMessage {
     }
 
     /** Message to notify the producer to unblock from checkpoint. */
+    //通知生产者 从检查点  取消阻塞
     static class ResumeConsumption extends NettyMessage {
 
         private static final byte ID = 7;
@@ -766,6 +771,7 @@ public abstract class NettyMessage {
         }
     }
 
+    // 消费者 通知 生产者 所有用户 数据被处理完了
     static class AckAllUserRecordsProcessed extends NettyMessage {
 
         private static final byte ID = 8;
@@ -799,6 +805,8 @@ public abstract class NettyMessage {
     }
 
     /** Backlog announcement from the producer to the consumer for credit allocation. */
+
+    // 生产者 发给 消费者 的 积压声明 , 为了增加 信誉分配
     static class BacklogAnnouncement extends NettyMessage {
 
         static final byte ID = 9;
@@ -847,6 +855,7 @@ public abstract class NettyMessage {
     }
 
     /** Message to notify producer about new buffer size. */
+    // 通知生产者  新缓冲区大小 的 消息
     static class NewBufferSize extends NettyMessage {
 
         private static final byte ID = 10;

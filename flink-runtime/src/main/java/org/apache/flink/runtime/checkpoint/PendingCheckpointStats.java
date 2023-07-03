@@ -230,6 +230,8 @@ public class PendingCheckpointStats extends AbstractCheckpointStats {
                         latestAcknowledgedSubtask,
                         externalPointer);
 
+        // 通知报告 已完成的 checkpoint 各类统计量;  会调用 CheckpointStatsTracker的 reportCompletedCheckpoint 方法
+        //
         trackerCallback.reportCompletedCheckpoint(completed);
 
         return completed.getDiscardCallback();

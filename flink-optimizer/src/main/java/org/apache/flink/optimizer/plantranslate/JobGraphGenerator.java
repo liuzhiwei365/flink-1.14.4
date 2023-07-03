@@ -119,6 +119,13 @@ import static org.apache.flink.util.Preconditions.checkState;
  * job vertices are created for the plan nodes, on the way back up, the nodes connect their
  * predecessors.
  */
+//StreamGraphTranslator：对StreamGraph的Pipeline进行转换处理
+//PlanTranslator：对Plan类型的Pipeline进行转换处理，用于SQL场景
+
+//而这2个分别对应到2个不同的类来生成JobGraph，分别如下：
+
+//StreamingJobGraphGenerator  将
+//JobGraphGenerator 将sql 的执行计划转为 JobGraph
 public class JobGraphGenerator implements Visitor<PlanNode> {
 
     private static final Logger LOG = LoggerFactory.getLogger(JobGraphGenerator.class);
@@ -166,8 +173,11 @@ public class JobGraphGenerator implements Visitor<PlanNode> {
      * configuration.
      */
     public JobGraphGenerator() {
+        // 限制每个运算符的文件句柄数，但如果设置得太小，可能会导致中间合并/分区
         this.defaultMaxFan = AlgorithmOptions.SPILLING_MAX_FAN.defaultValue();
+        // 运行时 排序溢出 阀值 默认 0.8
         this.defaultSortSpillingThreshold = AlgorithmOptions.SORT_SPILLING_THRESHOLD.defaultValue();
+        // 当溢出的时候是否使用 大记录处理器
         this.useLargeRecordHandler = ConfigConstants.DEFAULT_USE_LARGE_RECORD_HANDLER;
     }
 
@@ -192,6 +202,7 @@ public class JobGraphGenerator implements Visitor<PlanNode> {
         return compileJobGraph(program, null);
     }
 
+    // 本类的最核心方法, 将 OptimizedPlan 编译成 JobGraph
     public JobGraph compileJobGraph(OptimizedPlan program, JobID jobId) {
         if (program == null) {
             throw new NullPointerException(

@@ -116,33 +116,45 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
      * </ol>
      *
      * @param executionVertexIds Execution vertices to allocate slots for
+     *
+     *  从物理的共享槽位 创建逻辑的多个 SlotExecutionVertexAssignment
+     *
      */
+    // SlotExecutionVertexAssignment 中包含了  执行顶点  和  它分配到的逻辑槽位的future对象
     @Override
     public List<SlotExecutionVertexAssignment> allocateSlotsFor(
             List<ExecutionVertexID> executionVertexIds) {
 
         SharedSlotProfileRetriever sharedSlotProfileRetriever =
                 sharedSlotProfileRetrieverFactory.createFromBulk(new HashSet<>(executionVertexIds));
+
+        // 用ExecutionSlotSharingGroup 将 这些ExecutionVertexID 分组
         Map<ExecutionSlotSharingGroup, List<ExecutionVertexID>> executionsByGroup =
                 executionVertexIds.stream()
                         .collect(
+                                // 这种写法可以借鉴
                                 Collectors.groupingBy(
                                         slotSharingStrategy::getExecutionSlotSharingGroup));
+
+        // slots  和 executionsByGroup 这两者都是 以 ExecutionSlotSharingGroup 对象作为key
         Map<ExecutionSlotSharingGroup, SharedSlot> slots =
                 executionsByGroup.keySet().stream()
+                        // 针对每个ExecutionSlotSharingGroup  分配 共享槽位
                         .map(group -> getOrAllocateSharedSlot(group, sharedSlotProfileRetriever))
                         .collect(
                                 Collectors.toMap(
                                         SharedSlot::getExecutionSlotSharingGroup,
                                         Function.identity()));
+
+        // 从 SharedSlot 来分配 逻辑槽位
         Map<ExecutionVertexID, SlotExecutionVertexAssignment> assignments =
                 allocateLogicalSlotsFromSharedSlots(slots, executionsByGroup);
 
-        // we need to pass the slots map to the createBulk method instead of using the allocator's
-        // 'sharedSlots'
-        // because if any physical slots have already failed, their shared slots have been removed
-        // from the allocator's 'sharedSlots' by failed logical slots.
+        // 创建 SharingPhysicalSlotRequestBulk 对象
+        // 如果 一个物理的槽位请求失败, 与之相关联的 在一个共享槽位中的 所有逻辑槽位请求都会被取消
         SharingPhysicalSlotRequestBulk bulk = createBulk(slots, executionsByGroup);
+
+        // 调度 检查 bulk 对象
         bulkChecker.schedulePendingRequestBulkTimeoutCheck(bulk, allocationTimeout);
 
         return executionVertexIds.stream().map(assignments::get).collect(Collectors.toList());
@@ -153,14 +165,20 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
         cancelLogicalSlotRequest(executionVertexId, null);
     }
 
+    // 取消逻辑槽位请求
     private void cancelLogicalSlotRequest(ExecutionVertexID executionVertexId, Throwable cause) {
+
+        // 先拿到执行顶点的 执行共享槽位组
         ExecutionSlotSharingGroup executionSlotSharingGroup =
                 slotSharingStrategy.getExecutionSlotSharingGroup(executionVertexId);
         checkNotNull(
                 executionSlotSharingGroup,
                 "There is no ExecutionSlotSharingGroup for ExecutionVertexID " + executionVertexId);
+        // 通过执行共享槽位组 拿到 共享槽位
         SharedSlot slot = sharedSlots.get(executionSlotSharingGroup);
         if (slot != null) {
+            // 共享槽位 取消相关执行顶点的 逻辑槽位请求
+            // 取消的逻辑 最终调用 java 原生的 CompletableFuture 的 cancel 方法 ,就是取消相关future的对象
             slot.cancelLogicalSlotRequest(executionVertexId, cause);
         } else {
             LOG.debug(
@@ -169,10 +187,10 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
         }
     }
 
-    private static Map<ExecutionVertexID, SlotExecutionVertexAssignment>
-            allocateLogicalSlotsFromSharedSlots(
-                    Map<ExecutionSlotSharingGroup, SharedSlot> slots,
-                    Map<ExecutionSlotSharingGroup, List<ExecutionVertexID>> executionsByGroup) {
+    // 从 SharedSlot 来分配 逻辑槽位
+    private static Map<ExecutionVertexID, SlotExecutionVertexAssignment> allocateLogicalSlotsFromSharedSlots(
+        Map<ExecutionSlotSharingGroup, SharedSlot> slots,
+        Map<ExecutionSlotSharingGroup, List<ExecutionVertexID>> executionsByGroup) {
 
         Map<ExecutionVertexID, SlotExecutionVertexAssignment> assignments = new HashMap<>();
 
@@ -183,7 +201,10 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
 
             for (ExecutionVertexID executionId : executionIds) {
                 CompletableFuture<LogicalSlot> logicalSlotFuture =
+                        // 相同 group组里面 的 ExecutionVertexID 在分配逻辑槽位的时候都利用 该组对应的SharedSlot 来分配
                         slots.get(group).allocateLogicalSlot(executionId);
+
+                //SlotExecutionVertexAssignment 将 executionId 和 将其分配的逻辑槽位 封装在一起
                 SlotExecutionVertexAssignment assignment =
                         new SlotExecutionVertexAssignment(executionId, logicalSlotFuture);
                 assignments.put(executionId, assignment);
@@ -200,20 +221,26 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
                 executionSlotSharingGroup,
                 group -> {
                     SlotRequestId physicalSlotRequestId = new SlotRequestId();
+
+                    //拿到该 执行槽位共享组的 资源描述
                     ResourceProfile physicalSlotResourceProfile =
                             getPhysicalSlotResourceProfile(group);
+
                     SlotProfile slotProfile =
                             sharedSlotProfileRetriever.getSlotProfile(
                                     group, physicalSlotResourceProfile);
+
                     PhysicalSlotRequest physicalSlotRequest =
                             new PhysicalSlotRequest(
                                     physicalSlotRequestId,
                                     slotProfile,
                                     slotWillBeOccupiedIndefinitely);
+
                     CompletableFuture<PhysicalSlot> physicalSlotFuture =
                             slotProvider
                                     .allocatePhysicalSlot(physicalSlotRequest)
                                     .thenApply(PhysicalSlotRequest.Result::getPhysicalSlot);
+
                     return new SharedSlot(
                             physicalSlotRequestId,
                             physicalSlotResourceProfile,
@@ -253,6 +280,8 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
     private SharingPhysicalSlotRequestBulk createBulk(
             Map<ExecutionSlotSharingGroup, SharedSlot> slots,
             Map<ExecutionSlotSharingGroup, List<ExecutionVertexID>> executions) {
+
+        // 得到每个 执行共享槽位组的真实物理资源
         Map<ExecutionSlotSharingGroup, ResourceProfile> pendingRequests =
                 executions.keySet().stream()
                         .collect(
@@ -263,22 +292,28 @@ class SlotSharingExecutionSlotAllocator implements ExecutionSlotAllocator {
         SharingPhysicalSlotRequestBulk bulk =
                 new SharingPhysicalSlotRequestBulk(
                         executions, pendingRequests, this::cancelLogicalSlotRequest);
+
         registerPhysicalSlotRequestBulkCallbacks(slots, executions.keySet(), bulk);
         return bulk;
     }
 
     private static void registerPhysicalSlotRequestBulkCallbacks(
             Map<ExecutionSlotSharingGroup, SharedSlot> slots,
-            Iterable<ExecutionSlotSharingGroup> executions,
+            Iterable<ExecutionSlotSharingGroup> executions, //传入,为了遍历
             SharingPhysicalSlotRequestBulk bulk) {
+
         for (ExecutionSlotSharingGroup group : executions) {
+            // 先拿到物理槽位
             CompletableFuture<PhysicalSlot> slotContextFuture =
                     slots.get(group).getSlotContextFuture();
+
             slotContextFuture.thenAccept(
+                    // markFulfilled 是本方法的核心 ,所谓注册就是从 pending 结构中移除,而放到 filfilled 结构中
                     physicalSlot -> bulk.markFulfilled(group, physicalSlot.getAllocationId()));
             slotContextFuture.exceptionally(
                     t -> {
                         // clear the bulk to stop the fulfillability check
+                        // 物理槽位申请失败, 清空 整个 pending 结构 的 执行槽位共享组
                         bulk.clearPendingRequests();
                         return null;
                     });

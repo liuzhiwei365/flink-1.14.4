@@ -117,6 +117,9 @@ public abstract class TypeSerializer<T> implements Serializable {
      *
      * @return The length of the data type, or <code>-1</code> for variable length data types.
      */
+
+    //  如果是类型是固定长度的,则会有固定正值; 如果是非固定长度的，则值为 -1
+    // 比如 IntSerializer 为 4 ,   ArrayListSerializer 为 -1
     public abstract int getLength();
 
     // --------------------------------------------------------------------------------------------
@@ -141,6 +144,7 @@ public abstract class TypeSerializer<T> implements Serializable {
      *     Typically raised by the input view, which may have an underlying I/O channel from which
      *     it reads.
      */
+    //反序列化给定源输入视图中的记录   （针对对象不重用）,其实现类的方法都会重新创建新的对象
     public abstract T deserialize(DataInputView source) throws IOException;
 
     /**
@@ -154,6 +158,7 @@ public abstract class TypeSerializer<T> implements Serializable {
      *     Typically raised by the input view, which may have an underlying I/O channel from which
      *     it reads.
      */
+    // 将 给定源输入视图中 的 记录 反序列化为 给定的 重用记录 实例 （针对对象重用）
     public abstract T deserialize(T reuse, DataInputView source) throws IOException;
 
     /**

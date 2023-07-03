@@ -44,6 +44,7 @@ public class DefaultExecutionDeploymentTracker implements ExecutionDeploymentTra
 
     @Override
     public void completeDeploymentOf(ExecutionAttemptID executionAttemptId) {
+        // 移除 本次部署
         pendingDeployments.remove(executionAttemptId);
     }
 

@@ -120,9 +120,10 @@ public class ResultPartitionFactory {
                 desc.getPartitionType(),
                 desc.getNumberOfSubpartitions(),
                 desc.getMaxParallelism(),
-                createBufferPoolFactory(desc.getNumberOfSubpartitions(), desc.getPartitionType()));
+                createBufferPoolFactory(desc.getNumberOfSubpartitions(), desc.getPartitionType())); // BufferPool 工厂
     }
 
+    // 最终会创建那个子类, 由 PartitionDescriptor决定, 而PartitionDescriptor 来自于执行图
     @VisibleForTesting
     public ResultPartition create(
             String taskNameWithSubtaskAndId,
@@ -133,7 +134,7 @@ public class ResultPartitionFactory {
             int maxParallelism,
             SupplierWithException<BufferPool, IOException> bufferPoolFactory) {
         BufferCompressor bufferCompressor = null;
-        if (type.isBlocking() && blockingShuffleCompressionEnabled) {
+        if (type.isBlocking() && blockingShuffleCompressionEnabled) {// taskmanager.network.blocking-shuffle.compression.enabled
             bufferCompressor = new BufferCompressor(networkBufferSize, compressionCodec);
         }
 
@@ -144,6 +145,7 @@ public class ResultPartitionFactory {
                 || type == ResultPartitionType.PIPELINED_BOUNDED
                 || type == ResultPartitionType.PIPELINED_APPROXIMATE) {
             final PipelinedResultPartition pipelinedPartition =
+                    // 用于流计算场景
                     new PipelinedResultPartition(
                             taskNameWithSubtaskAndId,
                             partitionIndex,
@@ -172,6 +174,8 @@ public class ResultPartitionFactory {
                 || type == ResultPartitionType.BLOCKING_PERSISTENT) {
             if (numberOfSubpartitions >= sortShuffleMinParallelism) {
                 partition =
+                        // 会在 排序缓冲区排序
+                        // sort-merge based blocking shuffle
                         new SortMergeResultPartition(
                                 taskNameWithSubtaskAndId,
                                 partitionIndex,
@@ -187,6 +191,8 @@ public class ResultPartitionFactory {
                                 bufferPoolFactory);
             } else {
                 final BoundedBlockingResultPartition blockingPartition =
+                        // 不会排序,要简单很多
+                        // hash-based blocking shuffle
                         new BoundedBlockingResultPartition(
                                 taskNameWithSubtaskAndId,
                                 partitionIndex,
@@ -252,17 +258,14 @@ public class ResultPartitionFactory {
         }
     }
 
-    /**
-     * The minimum pool size should be <code>numberOfSubpartitions + 1</code> for two
-     * considerations:
-     *
-     * <p>1. StreamTask can only process input if there is at-least one available buffer on output
-     * side, so it might cause stuck problem if the minimum pool size is exactly equal to the number
-     * of subpartitions, because every subpartition might maintain a partial unfilled buffer.
-     *
-     * <p>2. Increases one more buffer for every output LocalBufferPool to avoid performance
-     * regression if processing input is based on at-least one buffer available on output side.
-     */
+
+     // 最小池大小应为   numberOfSubpartitions+1 , 基于两点考虑：
+     //   1  StreamTask只能在输出端至少有一个可用缓冲区的情况下处理输入,因此,如果最小池大小恰好等于子分区的数量，
+     //     则可能会导致阻塞问题,因为每个子分区可能都有一个部分未填充的缓冲区
+
+     //   2  如果处理输入 基于输出端 至少一个可用的缓冲区,  则为每个输出LocalBufferPool增加一个缓冲区，以避免性能下降
+
+     // 每个 channel 都存在一个 LocalbufferPool 与之对应
     @VisibleForTesting
     SupplierWithException<BufferPool, IOException> createBufferPoolFactory(
             int numberOfSubpartitions, ResultPartitionType type) {

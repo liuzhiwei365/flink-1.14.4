@@ -157,6 +157,8 @@ public class WindowOperatorBuilder<T, K, W extends Window> {
                     "ReduceFunction of apply can not be a RichFunction.");
         }
 
+        // 如果evictor不为空就构造EvictingWindowOperator对象，否则就构造WindowOperator对象
+        // 其实EvictingWindowOperator是WindowOperator的一个子类，只是多了一个删除数据的逻辑
         if (evictor != null) {
             // 当有剔除器时,创建EvictingWindowOperator 算子
             return buildEvictingWindowOperator(

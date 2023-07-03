@@ -94,8 +94,10 @@ class MergingSharedSlotProfileRetrieverFactory
         public SlotProfile getSlotProfile(
                 ExecutionSlotSharingGroup executionSlotSharingGroup,
                 ResourceProfile physicalSlotResourceProfile) {
+
             Collection<AllocationID> priorAllocations = new HashSet<>();
             Collection<TaskManagerLocation> preferredLocations = new ArrayList<>();
+
             for (ExecutionVertexID execution : executionSlotSharingGroup.getExecutionVertexIds()) {
                 priorAllocations.add(priorAllocationIdRetriever.apply(execution));
                 preferredLocations.addAll(

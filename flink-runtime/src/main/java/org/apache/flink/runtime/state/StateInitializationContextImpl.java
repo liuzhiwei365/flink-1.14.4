@@ -31,8 +31,10 @@ public class StateInitializationContextImpl implements StateInitializationContex
     /** Signal whether any state to restore was found */
     private final @Nullable Long restoredCheckpointId;
 
+    // 访问所有算子状态的接口
     private final OperatorStateStore operatorStateStore;
 
+    // 访问所有 keyed state 的 接口
     private final KeyedStateStore keyedStateStore;
 
     private final Iterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs;

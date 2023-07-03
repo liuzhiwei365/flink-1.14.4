@@ -34,8 +34,10 @@ public final class FlinkPipelineTranslationUtil {
     public static JobGraph getJobGraph(
             Pipeline pipeline, Configuration optimizerConfiguration, int defaultParallelism) {
 
-        // PlanTranslator 和   StreamGraphTranslator 两种类型的翻译器都有可能 返回
-        // pipelineTranslator  有针对 plan  和  streamGraph 的两种实现
+        //  FlinkPipelineTranslator   有针对 sql plan  和  streamGraph 的两种实现
+
+        //   sql plan:       PlanTranslator
+        //  streamGraph:   StreamGraphTranslator
         FlinkPipelineTranslator pipelineTranslator = getPipelineTranslator(pipeline);
 
         return pipelineTranslator.translateToJobGraph(

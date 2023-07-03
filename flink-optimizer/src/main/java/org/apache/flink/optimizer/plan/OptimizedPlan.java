@@ -124,9 +124,13 @@ public class OptimizedPlan implements Visitable<PlanNode> {
      * @param visitor The visitor to apply to the nodes in this plan.
      * @see org.apache.flink.util.Visitable#accept(org.apache.flink.util.Visitor)
      */
+
+    // 本类核心方法, 接受JobGraphGenerator 的访问 JobGraphGenerator 实现 Visitor
     @Override
     public void accept(Visitor<PlanNode> visitor) {
+        // 遍历 sinks 开始反向处理
         for (SinkPlanNode node : this.dataSinks) {
+            // 调用SinkPlanNode 的父类 SingleInputPlanNode 的accept 方法
             node.accept(visitor);
         }
     }

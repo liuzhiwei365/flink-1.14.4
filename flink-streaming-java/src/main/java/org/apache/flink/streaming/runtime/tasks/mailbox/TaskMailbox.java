@@ -105,6 +105,7 @@ public interface TaskMailbox {
      *     mailbox is not empty or an empty optional otherwise.
      * @throws IllegalStateException if mailbox is already closed.
      */
+    // 非阻塞地拿,不一定拿到
     Optional<Mail> tryTake(int priority);
 
     /**
@@ -117,6 +118,7 @@ public interface TaskMailbox {
      * @throws InterruptedException on interruption.
      * @throws IllegalStateException if mailbox is already closed.
      */
+    // 阻塞地拿,不拿到不返回
     @Nonnull
     Mail take(int priority) throws InterruptedException;
 

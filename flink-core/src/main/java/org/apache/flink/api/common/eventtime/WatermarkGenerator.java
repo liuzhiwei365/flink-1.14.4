@@ -28,6 +28,14 @@ import org.apache.flink.api.common.ExecutionConfig;
  * <p><b>Note:</b> This WatermarkGenerator subsumes the previous distinction between the {@code
  * AssignerWithPunctuatedWatermarks} and the {@code AssignerWithPeriodicWatermarks}.
  */
+//  目前的 实现类:
+// WatermarkWithIdleness  代理, 有检测 数据空闲的功能
+// NoWatermarksGenerator  空实现
+// BoundedOutOfOrdernessWatermarks   解决数据乱序问题
+
+// AssignerWithPeriodicWatermarksAdapter   与sql相关
+// AssignerWithPunctuatedWatermarksAdapter   与sql相关
+// DefaultWatermarkGenerator    与sql相关
 @Public
 public interface WatermarkGenerator<T> {
 

@@ -721,6 +721,8 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
      * @param assigner The {@code WindowAssigner} that assigns elements to windows.
      * @return The trigger windows data stream.
      */
+
+
     @PublicEvolving
     public <W extends Window> WindowedStream<T, KEY, W> window(
             WindowAssigner<? super T, W> assigner) {

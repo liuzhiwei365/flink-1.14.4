@@ -71,6 +71,8 @@ public class KafkaSourceReader<T>
         this.offsetsToCommit = Collections.synchronizedSortedMap(new TreeMap<>());
         this.offsetsOfFinishedSplits = new ConcurrentHashMap<>();
         this.kafkaSourceReaderMetrics = kafkaSourceReaderMetrics;
+
+        // commit.offsets.on.checkpoint   做快照的时候是否提交偏移量
         this.commitOffsetsOnCheckpoint =
                 config.get(KafkaSourceOptions.COMMIT_OFFSETS_ON_CHECKPOINT);
         if (!commitOffsetsOnCheckpoint) {
@@ -123,10 +125,13 @@ public class KafkaSourceReader<T>
     @Override
     public void notifyCheckpointComplete(long checkpointId) throws Exception {
         LOG.debug("Committing offsets for checkpoint {}", checkpointId);
+
+        // 如果 checkpoint 完成的时候不需要提交偏移量,则直接返回
         if (!commitOffsetsOnCheckpoint) {
             return;
         }
 
+        // 获取要提交的偏移量 和 元数据
         Map<TopicPartition, OffsetAndMetadata> committedPartitions =
                 offsetsToCommit.get(checkpointId);
         if (committedPartitions == null) {
@@ -136,6 +141,7 @@ public class KafkaSourceReader<T>
             return;
         }
 
+        // 提交偏移量
         ((KafkaSourceFetcherManager) splitFetcherManager)
                 .commitOffsets(
                         committedPartitions,

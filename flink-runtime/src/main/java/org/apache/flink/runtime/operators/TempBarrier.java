@@ -204,6 +204,7 @@ public class TempBarrier<T> implements CloseableInputProvider<T> {
                 T record = serializer.createInstance();
 
                 while (this.running && ((record = input.next(record)) != null)) {
+                    // 序列化单条数据 record , 然后写入 buffer
                     serializer.serialize(record, buffer);
                 }
 

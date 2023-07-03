@@ -381,7 +381,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             throws Exception {
         this.environment = environment;
         this.configuration = new StreamConfig(environment.getTaskConfiguration());
-        // RecordWriterDelegate 中有多个RecordWriter ,RecordWriter 的个数和输出边一致
+
+        //  RecordWriterDelegate 中有多个RecordWriter ,RecordWriter 的个数和输出边一致
         //  RecordWriter 负责将二进制数据写入网络
         this.recordWriter = createRecordWriterDelegate(configuration, environment);
 
@@ -427,7 +428,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         } else {
             this.timerService = timerService;
         }
-        // systemTimerService 与 timerService 是用同样的方式创建的, 不同点是名字不一样, 还有,前者是用户级别的，后者是用户级别
+        // systemTimerService 与 timerService 是用同样的方式创建的, 不同点是名字不一样, 还有,前者是系统级别的，后者是用户级别
         this.systemTimerService = createTimerService("System Time Trigger for " + getName());
 
         this.channelIOExecutor =
@@ -510,6 +511,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      *     stream task.
      * @throws Exception on any problems in the action.
      */
+
+    //  MailboxProcessor.runMailboxLoop 方法中会调用本方法来处理用户数据
+    //  当用户数据没有的时候, 这里即 status 返回 END_OF_INPUT, 会将用户处理数据的逻辑挂起 (其实也就是本方法会被挂起)
     protected void processInput(MailboxDefaultAction.Controller controller) throws Exception {
         DataInputStatus status = inputProcessor.processInput();
         switch (status) {
@@ -526,14 +530,9 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 endData();
                 return;
             case END_OF_INPUT:
-                /**
-                 * StreamTask#processInput收到DataInputStatus.END_OF_INPUT，则调用mailboxProcessor.suspend();
-                 */
-                // Suspend the mailbox processor, it would be resumed in afterInvoke and finished
-                // after all records processed by the downstream tasks. We also suspend the default
-                // actions to avoid repeat executing the empty default operation (namely process
-                // records).
+                // 会挂起默认的 用户数据处理的逻辑
                 controller.suspendDefaultAction();
+                // 把信箱也挂起
                 mailboxProcessor.suspend();
                 return;
         }
@@ -542,15 +541,21 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         PeriodTimer timer;
         CompletableFuture<?> resumeFuture;
         if (!recordWriter.isAvailable()) {
+            // 如果 recordWriter 不可用
+            //  GaugePeriodTimer 内部只有  时间度量器 , 没有  吞吐计算器
+            // 因为 写出器不可用,谈不上吞吐
             timer = new GaugePeriodTimer(ioMetrics.getBackPressuredTimePerSecond());
             resumeFuture = recordWriter.getAvailableFuture();
         } else {
+            //  ThroughputPeriodTimer  内部既有  时间度量器 , 还有  吞吐计算器
             timer =
                     new ThroughputPeriodTimer(
                             ioMetrics.getIdleTimeMsPerSecond(), throughputCalculator);
             resumeFuture = inputProcessor.getAvailableFuture();
         }
         assertNoException(
+                // ResumeWrapper在 构造时启动定时器 ;
+                // 在run方法 运行时关闭定时器, 且强制恢复 用户数据处理逻辑 (就是强制取消 用户数据处理逻辑的挂起)
                 resumeFuture.thenRun(
                         new ResumeWrapper(controller.suspendDefaultAction(timer), timer)));
     }
@@ -777,7 +782,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     @Override
     public final void invoke() throws Exception {
-        // Allow invoking method 'invoke' without having to call 'restore' before it.
         if (!isRunning) {
             LOG.debug("Restoring during invoke will be called.");
             // 初始化 input output operatorChain 等组件  ,算子状态恢复
@@ -789,7 +793,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
         scheduleBufferDebloater();
 
-        // let the task do its work
+        // 核心,  运行信箱, 内部会  处理用户数据 和 Mail元素 （封装了checkpoint 等动作）
         runMailboxLoop();
 
         // if this left the run() method cleanly despite the fact that this was canceled,
@@ -827,6 +831,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         }
     }
 
+    // VisibleForTesting  表示还在测试阶段
     @VisibleForTesting
     public boolean runMailboxStep() throws Exception {
         return mailboxProcessor.runMailboxStep();
@@ -1749,12 +1754,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         private final Suspension suspendedDefaultAction;
         private final PeriodTimer timer;
 
+        // 构造时 启动 定时器
         public ResumeWrapper(Suspension suspendedDefaultAction, PeriodTimer timer) {
             this.suspendedDefaultAction = suspendedDefaultAction;
             timer.markStart();
             this.timer = timer;
         }
 
+        // 运行时 关闭 定时器, 且强制恢复 用户数据处理逻辑
         @Override
         public void run() {
             timer.markEnd();
@@ -1766,6 +1773,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
      * Implementation of {@link org.apache.flink.streaming.runtime.tasks.mailbox.PeriodTimer} which
      * combine signal for metric and the throughput.
      */
+
+    // 度量 和 吞吐量 的组合信号
     private static class ThroughputPeriodTimer implements PeriodTimer {
         private final Clock clock = SystemClock.getInstance();
         private final TimerGauge idleTimerGauge;

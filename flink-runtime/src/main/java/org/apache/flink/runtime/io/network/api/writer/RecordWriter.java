@@ -85,7 +85,9 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
         this.serializer = new DataOutputSerializer(128);
 
         checkArgument(timeout >= ExecutionOptions.DISABLED_NETWORK_BUFFER_TIMEOUT);
+
         this.flushAlways = (timeout == ExecutionOptions.FLUSH_AFTER_EVERY_RECORD);
+
         if (timeout == ExecutionOptions.DISABLED_NETWORK_BUFFER_TIMEOUT
                 || timeout == ExecutionOptions.FLUSH_AFTER_EVERY_RECORD) {
             outputFlusher = null;
@@ -100,9 +102,12 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
         }
     }
 
+    // 向下游 指定的 通道编号下发数据
     protected void emit(T record, int targetSubpartition) throws IOException {
         checkErroneous();
+
         // 写入指定partition编号
+        //  先序列化成 ByteBuffer,
         targetPartition.emitRecord(serializeRecord(serializer, record), targetSubpartition);
 
         if (flushAlways) {
@@ -122,18 +127,22 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
         }
     }
 
+    // 将 StreamRecord 序列化成二进制,并将数据存储在NetworkBuffer结构中
     @VisibleForTesting
     public static ByteBuffer serializeRecord(
             DataOutputSerializer serializer, IOReadableWritable record) throws IOException {
         // the initial capacity should be no less than 4 bytes
+        // 预留前 4 个 字节
         serializer.setPositionUnsafe(4);
 
         // write data
         record.write(serializer);
 
         // write length
+        // 把 字节长度写入 前4个字节;  从偏移量为0 的地方 写入一个 int 值,该值表示数据实际的长度
         serializer.writeIntUnsafe(serializer.length() - 4, 0);
 
+        // DataOutputSerializer对象中 , warpper 就是 buffer 的包装
         return serializer.wrapAsByteBuffer();
     }
 

@@ -29,11 +29,13 @@ public interface RecordDeserializer<T extends IOReadableWritable> {
 
     /** Status of the deserialization result. */
     enum DeserializationResult {
-        // 表示记录并未完全被读取，但缓冲中的数据已被消费完成
+        // 表示记录并未完全被读取，但缓冲中的数据  已被消费完成
         PARTIAL_RECORD(false, true),
-        // 表示记录的数据已被完全读取，但缓冲中的数据并未被完全消费
+
+        // 表示记录的数据已被完全读取，但缓冲中的数据  并未被完全消费
         INTERMEDIATE_RECORD_FROM_BUFFER(true, false),
-        // 记录被完全读取，且缓冲中的数据也正好被完全消费
+
+        // 记录被完全读取，且缓冲中的数据  也正好被完全消费
         LAST_RECORD_FROM_BUFFER(true, true);
 
         private final boolean isFullRecord;
@@ -66,5 +68,6 @@ public interface RecordDeserializer<T extends IOReadableWritable> {
      * <p>Note that the unconsumed buffer might be null if the whole buffer was already consumed
      * before and there are no partial length or data remained in the end of buffer.
      */
+    //获取未使用的缓冲区, 该缓冲区需要在未对齐的检查点场景中持久化
     CloseableIterator<Buffer> getUnconsumedBuffer() throws IOException;
 }

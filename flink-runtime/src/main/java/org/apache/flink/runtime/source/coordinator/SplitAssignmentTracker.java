@@ -37,16 +37,19 @@ import java.util.TreeMap;
  * A class that is responsible for tracking the past split assignments made by {@link
  * SplitEnumerator}.
  */
-// 维护 SplitEnumerator 分片分配的状态
+// 跟踪 SplitEnumerator 分片分配的状态
 @Internal
 public class SplitAssignmentTracker<SplitT extends SourceSplit> {
     // All the split assignments since the last successful checkpoint.
     // Maintaining this allow the subtasks to fail over independently.
     // The mapping is [CheckpointId -> [SubtaskId -> LinkedHashSet[SourceSplits]]].
+
     // 维护历史的 分片分配
     private final SortedMap<Long, Map<Integer, LinkedHashSet<SplitT>>> assignmentsByCheckpointId;
+
     // The split assignments since the last checkpoint attempt.
     // The mapping is [SubtaskId -> LinkedHashSet[SourceSplits]].
+
     // 维护正在进行的还未完成的 分片分配
     private Map<Integer, LinkedHashSet<SplitT>> uncheckpointedAssignments;
 

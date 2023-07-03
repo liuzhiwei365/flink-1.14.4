@@ -715,6 +715,7 @@ public class ExecutionEnvironment {
 
         X firstValue = data.iterator().next();
 
+        // TypeExtractor 用于智能地推断类型 （从对象反推导类型）
         TypeInformation<X> type = TypeExtractor.getForObject(firstValue);
         CollectionInputFormat.checkCollection(data, type.getTypeClass());
         return new DataSource<>(

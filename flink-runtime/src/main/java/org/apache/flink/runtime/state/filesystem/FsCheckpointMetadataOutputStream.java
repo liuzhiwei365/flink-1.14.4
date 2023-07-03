@@ -128,10 +128,12 @@ public final class FsCheckpointMetadataOutputStream extends CheckpointMetadataOu
                     } catch (Exception ignored) {
                     }
 
+                    //关流
                     out.close();
 
                     FileStateHandle metaDataHandle = new FileStateHandle(metadataFilePath, size);
 
+                    // 描述了 checkpoint 完成后的 存储信息
                     return new FsCompletedCheckpointStorageLocation(
                             fileSystem,
                             exclusiveCheckpointDir,

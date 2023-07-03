@@ -45,6 +45,7 @@ public interface TimestampAssigner<T>
      *     if no timestamp has been assigned yet.
      * @return The new timestamp.
      */
+    // 从用户数据中 抽取事件 时间戳
     @Override
     long extractTimestamp(T element, long recordTimestamp);
 }

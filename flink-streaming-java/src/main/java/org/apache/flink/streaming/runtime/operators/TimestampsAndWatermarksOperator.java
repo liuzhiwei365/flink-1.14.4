@@ -86,13 +86,23 @@ public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T
     public void open() throws Exception {
         super.open();
 
+        // watermarkStrategy 最开始是由用户调用 dataStream api 时传入的
+        // 用户传入后，会被封装到  TimestampsAndWatermarksTransformer 中
+        // 作业提交后，在构建StreamGraph 的时候 会从TimestampsAndWatermarksTransformer 取出
+        // 然后放入 TimestampsAndWatermarksOperator中 (也就是本算子中),
+        // 再用SimpleOperatorFactory 把 本算子包裹 赋值给 StreamNode
+
+        // 时间戳分配器 用于从用户数据中提取时间 , 这个时间后续会赋值给 StreamRecord
         timestampAssigner = watermarkStrategy.createTimestampAssigner(this::getMetricGroup);
+
+        // 水印生成器  当每条用户数据来的时候  和  周期性时间点  分别有回调逻辑 ； 且不同实现类 逻辑差别很大
         watermarkGenerator =
                 emitProgressiveWatermarks
                         ? watermarkStrategy.createWatermarkGenerator(this::getMetricGroup)
                         : new NoWatermarksGenerator<>();
 
-        wmOutput = new WatermarkEmitter(output); // WatermarkEmitter 对普通 output 做了包装
+        // WatermarkEmitter 对普通 output 做了包装 和加强 ，它能 向下游发送 WatermarkStatus 和 Watermark
+        wmOutput = new WatermarkEmitter(output);
 
         watermarkInterval = getExecutionConfig().getAutoWatermarkInterval();
         if (watermarkInterval > 0 && emitProgressiveWatermarks) {
@@ -119,10 +129,12 @@ public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T
 
         final long newTimestamp = timestampAssigner.extractTimestamp(event, previousTimestamp);
 
+        // 给用户数据 打上时间戳
         element.setTimestamp(newTimestamp);
+        // 并且发往下游
         output.collect(element);
 
-        // 每来一条数据都会 更新 maxTimestamp
+        //
         watermarkGenerator.onEvent(event, newTimestamp, wmOutput);
     }
 

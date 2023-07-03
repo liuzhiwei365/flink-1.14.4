@@ -238,7 +238,10 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
                 s ->
                         splitStates.put(
                                 s.splitId(), new SplitContext<>(s.splitId(), initializedState(s))));
-        // Hand over the splits to the split fetcher to start fetch.
+
+        // 会创建 和 启动 SplitFetcher （实现了Runnable 接口） , 一个 SplitFetcher 会添加 所有的 splits
+        // SplitFetcher  启动后 会向目标源的多个分片拉取数据,  并保存到 本对象的 elementsQueue成员变量中
+        // 这个 阻塞队列 的元素也非常有意思  它是  RecordsWithSplitIds
         splitFetcherManager.addSplits(splits);
     }
 

@@ -25,15 +25,19 @@ import java.util.concurrent.CompletableFuture;
  * Interface defining couple of essential methods for listening on data availability using {@link
  * CompletableFuture}. For usage check out for example {@link PullingAsyncDataInput}.
  */
+
+//  利用 CompletableFuture,来监听数据可用性
 @Internal
 public interface AvailabilityProvider {
     /**
      * Constant that allows to avoid volatile checks {@link CompletableFuture#isDone()}. Check
      * {@link #isAvailable()} and {@link #isApproximatelyAvailable()} for more explanation.
      */
+    //  AVAILABLE 的 result 是 NIL ,是一个 new AltResult（null）对象
     CompletableFuture<?> AVAILABLE = CompletableFuture.completedFuture(null);
 
     /** @return a future that is completed if the respective provider is available. */
+    // 如果相关提供者可用, 那么 得到的 future 对象是完成的
     CompletableFuture<?> getAvailableFuture();
 
     /**
@@ -46,6 +50,7 @@ public interface AvailabilityProvider {
      *
      * @return true if this instance is available for further processing.
      */
+    // 以future 对象是否可用 来判断组件是否可用
     default boolean isAvailable() {
         CompletableFuture<?> future = getAvailableFuture();
         return future == AVAILABLE || future.isDone();
@@ -92,6 +97,11 @@ public interface AvailabilityProvider {
      */
     final class AvailabilityHelper implements AvailabilityProvider {
 
+        //  CompletableFuture 无参构造,内部的 result成员一定是null
+        //  AvailabilityHelper 通过 result 是否是null 来判断 组件是否可用
+        //  当 result 是null ,组件不可用 ; 反之,组件可用
+
+        // 用 CompletableFuture 对象作为 flag ,这种设计可以借鉴
         private CompletableFuture<?> availableFuture = new CompletableFuture<>();
 
         public CompletableFuture<?> and(CompletableFuture<?> other) {
@@ -118,6 +128,8 @@ public interface AvailabilityProvider {
         }
 
         /** Resets the constant completed {@link #AVAILABLE} as the current state. */
+        // CompletableFuture<?> AVAILABLE = CompletableFuture.completedFuture(null)
+        // AVAILABLE 它的 result 是Nil , 对 null 进行了包装的对象,但不是null
         public void resetAvailable() {
             availableFuture = AVAILABLE;
         }
@@ -126,6 +138,7 @@ public interface AvailabilityProvider {
          * Returns the previously not completed future and resets the constant completed {@link
          * #AVAILABLE} as the current state.
          */
+        //返回先前的状态,并且重置状态为 可用  （方法名取的有问题；不过初始状态一定是不可用的,这样一想，似乎方法名也说的通过）
         public CompletableFuture<?> getUnavailableToResetAvailable() {
             CompletableFuture<?> toNotify = availableFuture;
             availableFuture = AVAILABLE;
@@ -136,6 +149,7 @@ public interface AvailabilityProvider {
          * Creates a new uncompleted future as the current state and returns the previous
          * uncompleted one.
          */
+        // 返回先前的状态,并且重置状态为 不可用 （方法名取的有问题；不过初始状态一定是不可用的,这样一想，似乎方法名也说的通过）
         public CompletableFuture<?> getUnavailableToResetUnavailable() {
             CompletableFuture<?> toNotify = availableFuture;
             availableFuture = new CompletableFuture<>();

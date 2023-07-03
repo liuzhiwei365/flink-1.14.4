@@ -297,7 +297,7 @@ public abstract class AbstractKeyedStateBackend<K>
             if (!stateDescriptor.isSerializerInitialized()) {
                 stateDescriptor.initializeSerializerUnlessSet(executionConfig);
             }
-            // 如果开启了状态延迟追踪
+            // 如果开启了状态延迟追踪, 则用延迟追踪状态工厂来创建具有过期策略的 状态
             kvState =
                     LatencyTrackingStateFactory.createStateAndWrapWithLatencyTrackingIfEnabled(
                             // TtlStateFactory主要用于创建带有过期时间配置的状态
@@ -306,9 +306,10 @@ public abstract class AbstractKeyedStateBackend<K>
                             stateDescriptor,
                             latencyTrackingStateConfig);
 
+            // 把新创建的状态 交给 keyValueStatesByName 维护
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
 
-            // 如果开启QueryableState
+            // 如果开启QueryableState ,注册给  kvStateRegistry
             publishQueryableStateIfEnabled(stateDescriptor, kvState);
         }
         return (S) kvState;

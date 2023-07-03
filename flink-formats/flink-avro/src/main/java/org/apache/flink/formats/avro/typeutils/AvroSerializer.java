@@ -202,6 +202,7 @@ public class AvroSerializer<T> extends TypeSerializer<T> {
         try {
             checkAvroInitialized();
             this.decoder.setIn(source);
+            // 不存在 对象重用
             return this.reader.read(null, this.decoder);
         } finally {
             if (CONCURRENT_ACCESS_CHECK) {
@@ -219,6 +220,7 @@ public class AvroSerializer<T> extends TypeSerializer<T> {
         try {
             checkAvroInitialized();
             this.decoder.setIn(source);
+            // 存在 对象重用
             return this.reader.read(reuse, this.decoder);
         } finally {
             if (CONCURRENT_ACCESS_CHECK) {

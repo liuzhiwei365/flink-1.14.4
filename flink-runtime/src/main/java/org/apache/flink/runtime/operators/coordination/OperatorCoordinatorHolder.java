@@ -274,6 +274,8 @@ public class OperatorCoordinatorHolder
         coordinator.resetToCheckpoint(checkpointId, checkpointData);
     }
 
+
+    // 算子协调者做checkpoint 的内部流程
     private void checkpointCoordinatorInternal(
             final long checkpointId, final CompletableFuture<byte[]> result) {
         mainThreadExecutor.assertRunningInMainThread();
@@ -302,6 +304,7 @@ public class OperatorCoordinatorHolder
         try {
             eventValve.markForCheckpoint(checkpointId);
             // 算子协调者checkpoint 入口
+            // coordinator 如果是SourceCoordinator，会 把分片信息做 checkpoint
             coordinator.checkpointCoordinator(checkpointId, coordinatorCheckpoint);
         } catch (Throwable t) {
             ExceptionUtils.rethrowIfFatalErrorOrOOM(t);
@@ -315,6 +318,7 @@ public class OperatorCoordinatorHolder
             final CompletableFuture<byte[]> checkpointFuture,
             final byte[] checkpointResult) {
 
+        // unconfirmedEvents 未完成的future对象 也得先完成
         final Collection<CompletableFuture<?>> pendingEvents =
                 unconfirmedEvents.getCurrentIncompleteAndReset();
         if (pendingEvents.isEmpty()) {

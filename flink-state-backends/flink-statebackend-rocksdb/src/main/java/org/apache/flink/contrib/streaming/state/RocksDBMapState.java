@@ -133,8 +133,11 @@ class RocksDBMapState<K, N, UK, UV> extends AbstractRocksDBState<K, N, Map<UK, U
 
         byte[] rawKeyBytes =
                 serializeCurrentKeyWithGroupAndNamespacePlusUserKey(userKey, userKeySerializer);
+
+        // 将用户的 value 序列化
         byte[] rawValueBytes = serializeValueNullSensitive(userValue, userValueSerializer);
 
+        // 调用 RocksDb 的 api 写入 用户的 序列化后的键值状态
         backend.db.put(columnFamily, writeOptions, rawKeyBytes, rawValueBytes);
     }
 

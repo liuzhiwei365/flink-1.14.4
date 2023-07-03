@@ -132,7 +132,7 @@ public class ProgressiveTimestampsAndWatermarks<T> implements TimestampsAndWater
 
         periodicEmitHandle =
                 timeService.scheduleWithFixedDelay(
-                        this::triggerPeriodicEmit,
+                        this::triggerPeriodicEmit, //核心
                         periodicWatermarkInterval,
                         periodicWatermarkInterval);
     }

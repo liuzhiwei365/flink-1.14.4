@@ -68,7 +68,7 @@ final class SpanningWrapper {
 
     private final DataInputDeserializer serializationReadBuffer;
 
-    final ByteBuffer lengthBuffer;
+    final ByteBuffer lengthBuffer;// 初始化的时候只申请4个字节
 
     private final int fileBufferSize;
 
@@ -94,7 +94,9 @@ final class SpanningWrapper {
 
     SpanningWrapper(String[] tempDirectories, int threshold, int fileBufferSize) {
         tempDirs = tempDirectories;
+        // 只申请4个字节
         lengthBuffer = ByteBuffer.allocate(LENGTH_BYTES);
+        // 设置为大端存储
         lengthBuffer.order(ByteOrder.BIG_ENDIAN);
         recordLength = -1;
         serializationReadBuffer = new DataInputDeserializer();
@@ -103,11 +105,13 @@ final class SpanningWrapper {
         this.fileBufferSize = fileBufferSize;
     }
 
-    /** Copies the data and transfers the "ownership" (i.e. clears the passed wrapper). */
+    // 将NonSpanningWrapper中剩下的数据 转移到 SpanningWrapper 中
     void transferFrom(NonSpanningWrapper partial, int nextRecordLength) throws IOException {
         updateLength(nextRecordLength);
+        // 利用 updateLength 中创建的文件通道 溢写 partial数据; 或者 将 partial数据写到扩容的buffer
         accumulatedRecordBytes =
                 isAboveSpillingThreshold() ? spill(partial) : partial.copyContentTo(buffer);
+        // 清空 partial数据
         partial.clear();
     }
 
@@ -118,7 +122,10 @@ final class SpanningWrapper {
     void addNextChunkFromMemorySegment(MemorySegment segment, int offset, int numBytes)
             throws IOException {
         int limit = offset + numBytes;
+
+        // numBytesRead 大概率等于4
         int numBytesRead = isReadingLength() ? readLength(segment, offset, numBytes) : 0;
+
         offset += numBytesRead;
         numBytes -= numBytesRead;
         if (numBytes == 0) {
@@ -127,9 +134,12 @@ final class SpanningWrapper {
 
         int toCopy = min(recordLength - accumulatedRecordBytes, numBytes);
         if (toCopy > 0) {
+            // 将segment 的数据拷贝到 buffer 或者 spillFile 中
             copyFromSegment(segment, offset, toCopy);
         }
         if (numBytes > toCopy) {
+            // 这说明 入参 segment中的 内容没有被消费完
+            // numBytes > recordLength - accumulatedRecordBytes
             leftOverData = segment;
             leftOverStart = offset + toCopy;
             leftOverLimit = limit;
@@ -157,18 +167,25 @@ final class SpanningWrapper {
     }
 
     private void copyIntoBuffer(MemorySegment segment, int offset, int length) {
+        // 将 segment 的 内容copy 到 buffer 中
         segment.get(offset, buffer, accumulatedRecordBytes, length);
+        // 更新 累计记录字节数
         accumulatedRecordBytes += length;
         if (hasFullRecord()) {
             serializationReadBuffer.setBuffer(buffer, 0, recordLength);
         }
     }
 
+    // 把 入参segment 读到  成员变量 lengthBuffer 中 ; lengthBuffer 是 ByteBuffer 对象
     private int readLength(MemorySegment segment, int segmentPosition, int segmentRemaining)
             throws IOException {
+        // 大多数情况下 bytesToRead = 4
         int bytesToRead = min(lengthBuffer.remaining(), segmentRemaining);
+
+        // 将本 segment的内容拷贝到  lengthBuffer 对象中
         segment.get(segmentPosition, lengthBuffer, bytesToRead);
         if (!lengthBuffer.hasRemaining()) {
+            // lengthBuffer 总共只有4个字节
             updateLength(lengthBuffer.getInt(0));
         }
         return bytesToRead;
@@ -178,8 +195,11 @@ final class SpanningWrapper {
         lengthBuffer.clear();
         recordLength = length;
         if (isAboveSpillingThreshold()) {
+            // 如果记录大小 超过 溢出阈值
+            // 先创建随机访问文件,再利用随机访问文件拿到 通道对象
             spillingChannel = createSpillingChannel();
         } else {
+            // buffer字节数组 扩容 （如果需要的化）
             ensureBufferCapacity(length);
         }
     }
@@ -229,6 +249,7 @@ final class SpanningWrapper {
     void transferLeftOverTo(NonSpanningWrapper nonSpanningWrapper) {
         nonSpanningWrapper.clear();
         if (leftOverData != null) {
+            //  拿 本SpanningWrapper 对象的 MemorySegment 信息赋给 nonSpanningWrapper的相关引用, 达到类似高效 copy的效果
             nonSpanningWrapper.initializeFromMemorySegment(
                     leftOverData, leftOverStart, leftOverLimit);
         }
@@ -236,9 +257,12 @@ final class SpanningWrapper {
     }
 
     boolean hasFullRecord() {
+        // 已经累计的记录字节 大于 记录长度
         return recordLength >= 0 && accumulatedRecordBytes >= recordLength;
     }
 
+    // 如果跨越内存段的 记录 的 反序列化  没有正在进行
+    // 则 一定 accumulatedRecordBytes ==0  recordLength== -1  lengthBuffer.position()==0  这三点严格成立
     int getNumGatheredBytes() {
         return accumulatedRecordBytes
                 + (recordLength >= 0 ? LENGTH_BYTES : lengthBuffer.position());
@@ -277,6 +301,7 @@ final class SpanningWrapper {
 
     private void ensureBufferCapacity(int minLength) {
         if (buffer.length < minLength) {
+            // 构造一个新数组扩容
             byte[] newBuffer = new byte[max(minLength, buffer.length * 2)];
             System.arraycopy(buffer, 0, newBuffer, 0, accumulatedRecordBytes);
             buffer = newBuffer;
@@ -299,6 +324,8 @@ final class SpanningWrapper {
             try {
                 if (file.createNewFile()) {
                     spillFile = new RefCountedFile(file);
+
+                    // 创建随机访问文件对象
                     return new RandomAccessFile(file, "rw").getChannel();
                 }
             } catch (IOException e) {

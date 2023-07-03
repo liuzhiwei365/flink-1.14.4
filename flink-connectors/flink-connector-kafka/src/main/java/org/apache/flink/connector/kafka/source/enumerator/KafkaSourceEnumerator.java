@@ -75,6 +75,7 @@ public class KafkaSourceEnumerator
      * The discovered and initialized partition splits that are waiting for owner reader to be
      * ready.
      */
+    // key 代表 子任务编号 ,  value 代表 该子任务编号下应该 处理的数据分片集合
     private final Map<Integer, Set<KafkaPartitionSplit>> pendingPartitionSplitAssignment;
 
     /** The consumer group id used for this KafkaSource. */
@@ -84,8 +85,7 @@ public class KafkaSourceEnumerator
     private KafkaConsumer<byte[], byte[]> consumer;
     private AdminClient adminClient;
 
-    // This flag will be marked as true if periodically partition discovery is disabled AND the
-    // initializing partition discovery has finished.
+    //如果周期性分区发现被禁用 并且初始化分区发现已完成, 则此标志将被标记为true
     private boolean noMoreNewPartitionSplits = false;
 
     public KafkaSourceEnumerator(
@@ -149,6 +149,8 @@ public class KafkaSourceEnumerator
     public void start() {
         consumer = getKafkaConsumer();
         adminClient = getKafkaAdminClient();
+
+        // getSubscribedTopicPartitions 是核心
         if (partitionDiscoveryIntervalMs > 0) {
             LOG.info(
                     "Starting the KafkaSourceEnumerator for consumer group {} "
@@ -156,10 +158,10 @@ public class KafkaSourceEnumerator
                     consumerGroupId,
                     partitionDiscoveryIntervalMs);
             context.callAsync(
-                    this::getSubscribedTopicPartitions,
-                    this::checkPartitionChanges,
-                    0,
-                    partitionDiscoveryIntervalMs);
+                    this::getSubscribedTopicPartitions, // 正常执行逻辑
+                    this::checkPartitionChanges, // 如果有结果拉回，或者有异常，该方法处理
+                    0, //初始延迟执行 的 时间段
+                    partitionDiscoveryIntervalMs); // 周期性时间段
         } else {
             LOG.info(
                     "Starting the KafkaSourceEnumerator for consumer group {} "
@@ -237,12 +239,13 @@ public class KafkaSourceEnumerator
             throw new FlinkRuntimeException(
                     "Failed to list subscribed topic partitions due to ", t);
         }
+        //  PartitionChange 封装了新增 的 即将移除 的  TopicPartition 集合
         final PartitionChange partitionChange = getPartitionChange(fetchedPartitions);
         if (partitionChange.isEmpty()) {
             return;
         }
         context.callAsync(
-                () -> initializePartitionSplits(partitionChange),
+                () -> initializePartitionSplits(partitionChange), // 把新增的 TopicPartition 集合 的 偏移量信息填充好
                 this::handlePartitionSplitChanges);
     }
 
@@ -269,8 +272,20 @@ public class KafkaSourceEnumerator
     private PartitionSplitChange initializePartitionSplits(PartitionChange partitionChange) {
         Set<TopicPartition> newPartitions =
                 Collections.unmodifiableSet(partitionChange.getNewPartitions());
+
+        // 拿到分区偏移量 寻回器
         OffsetsInitializer.PartitionOffsetsRetriever offsetsRetriever = getOffsetsRetriever();
 
+        // 拿到每个新增分区的偏移量, 并最终封装为 KafkaPartitionSplit 对象
+
+        // 请关注 KafkaSourceBuilder 的构造方法
+        // startingOffsetInitializer 和 stoppingOffsetInitializer 最开始在 构造方法中创建并传入
+        // startingOffsetInitializer  可以是以下三个实现
+        //       ReaderHandledOffsetsInitializer  （默认）
+        //       SpecifiedOffsetsInitializer
+        //       TimestampOffsetsInitializer
+        // stoppingOffsetInitializer  的实现
+        //       NoStoppingOffsetsInitializer   （默认）
         Map<TopicPartition, Long> startingOffsets =
                 startingOffsetInitializer.getPartitionOffsets(newPartitions, offsetsRetriever);
         Map<TopicPartition, Long> stoppingOffsets =
@@ -306,16 +321,25 @@ public class KafkaSourceEnumerator
             noMoreNewPartitionSplits = true;
         }
         // TODO: Handle removed partitions.
+        // 把新增的 分片信息集合 分配给不同的 子任务编号
         addPartitionSplitChangeToPendingAssignments(partitionSplitChange.newPartitionSplits);
+        // 入参 就是 子任务集合,
         assignPendingPartitionSplits(context.registeredReaders().keySet());
     }
 
     // This method should only be invoked in the coordinator executor thread.
+    // 把新增的 分片信息集合 分配给不同的 子任务编号
     private void addPartitionSplitChangeToPendingAssignments(
             Collection<KafkaPartitionSplit> newPartitionSplits) {
+
         int numReaders = context.currentParallelism();
+
         for (KafkaPartitionSplit split : newPartitionSplits) {
+
+            // 计算该分片属于那个并行度
             int ownerReader = getSplitOwner(split.getTopicPartition(), numReaders);
+
+            // 把本分片信息  放入 pendingPartitionSplitAssignment  集合中
             pendingPartitionSplitAssignment
                     .computeIfAbsent(ownerReader, r -> new HashSet<>())
                     .add(split);
@@ -357,14 +381,15 @@ public class KafkaSourceEnumerator
             context.assignSplits(new SplitsAssignment<>(incrementalAssignment));
         }
 
-        // If periodically partition discovery is disabled and the initializing discovery has done,
-        // signal NoMoreSplitsEvent to pending readers
+        //如果周期性分区发现被禁用 并且初始化分区发现已完成, 并且是有界流
         if (noMoreNewPartitionSplits && boundedness == Boundedness.BOUNDED) {
             LOG.debug(
                     "No more KafkaPartitionSplits to assign. Sending NoMoreSplitsEvent to reader {}"
                             + " in consumer group {}.",
                     pendingReaders,
                     consumerGroupId);
+
+            // 向每个 subtask 发送 NoMoreSplitsEvent 消息
             pendingReaders.forEach(context::signalNoMoreSplits);
         }
     }
@@ -386,7 +411,12 @@ public class KafkaSourceEnumerator
                     }
                 };
 
+
+        // assignedPartitions 与 fetchedPartitions 的差集 添加到 removedPartitions
+        // fetchedPartitions 与 assignedPartitions 的差集  用来更新成新的 fetchedPartitions
         assignedPartitions.forEach(dedupOrMarkAsRemoved);
+
+        // 和上一行代码逻辑类似
         pendingPartitionSplitAssignment.forEach(
                 (reader, splits) ->
                         splits.forEach(
@@ -399,6 +429,7 @@ public class KafkaSourceEnumerator
             LOG.info("Discovered removed partitions: {}", removedPartitions);
         }
 
+        // 到目前为止，现在 fetchedPartitions里面的元素 是发现的新的 分区, removedPartitions里面的元素 是发现的要被删除的 老的 分区
         return new PartitionChange(fetchedPartitions, removedPartitions);
     }
 
@@ -477,7 +508,9 @@ public class KafkaSourceEnumerator
     /** A container class to hold the newly added partitions and removed partitions. */
     @VisibleForTesting
     static class PartitionChange {
+        // 发现的新的分区
         private final Set<TopicPartition> newPartitions;
+        // 要被删除的老的分区
         private final Set<TopicPartition> removedPartitions;
 
         PartitionChange(Set<TopicPartition> newPartitions, Set<TopicPartition> removedPartitions) {
@@ -499,7 +532,9 @@ public class KafkaSourceEnumerator
     }
 
     private static class PartitionSplitChange {
+        // 新 增加的 分片
         private final Set<KafkaPartitionSplit> newPartitionSplits;
+        // 新 移除的 分片
         private final Set<TopicPartition> removedPartitions;
 
         private PartitionSplitChange(

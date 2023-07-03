@@ -69,6 +69,7 @@ public class KafkaSourceFetcherManager
         super(elementsQueue, splitReaderSupplier, splitFinishedHook);
     }
 
+    //
     public void commitOffsets(
             Map<TopicPartition, OffsetAndMetadata> offsetsToCommit, OffsetCommitCallback callback) {
         LOG.debug("Committing offsets {}", offsetsToCommit);

@@ -22,6 +22,7 @@ package org.apache.flink.runtime.operators.shipping;
  * Enumeration defining the different shipping types of the output, such as local forward,
  * re-partitioning by hash, or re-partitioning by range.
  */
+// sql 的数据 上下游 传输策略 hash, range 等方式
 public enum ShipStrategyType {
 
     /** Constant used as an indicator for an unassigned ship strategy. */
@@ -55,9 +56,9 @@ public enum ShipStrategyType {
 
     // --------------------------------------------------------------------------------------------
 
-    private final boolean isNetwork;
+    private final boolean isNetwork;//是否需要网络传输
 
-    private final boolean requiresComparator;
+    private final boolean requiresComparator;//是否需要比较器
 
     private ShipStrategyType(boolean network, boolean requiresComparator) {
         this.isNetwork = network;

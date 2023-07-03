@@ -240,6 +240,7 @@ public class SortMergeResultPartition extends ResultPartition {
             throws IOException {
         checkInProduceState();
 
+        // 本类会维护 broadcastSortBuffer unicastSortBuffer 成员 （分别针对广播 和 单播）
         SortBuffer sortBuffer = isBroadcast ? getBroadcastSortBuffer() : getUnicastSortBuffer();
         if (sortBuffer.append(record, targetSubpartition, dataType)) {
             return;

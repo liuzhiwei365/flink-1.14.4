@@ -74,30 +74,26 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
      */
     @Override
     public Map<Integer, byte[]> traverseStreamGraphAndGenerateHashes(StreamGraph streamGraph) {
-        // The hash function used to generate the hash
+        // 返回  Murmur3_128HashFunction 方法
         final HashFunction hashFunction = Hashing.murmur3_128(0);
 
         // 存储每个顶点 id 对应 的hash 值
         final Map<Integer, byte[]> hashes = new HashMap<>();
 
         Set<Integer> visited = new HashSet<>();
+        // 双向队列
+        // 该算法中 用队列来维护全局顺序
         Queue<StreamNode> remaining = new ArrayDeque<>();
 
-        // We need to make the source order deterministic. The source IDs are
-        // not returned in the same order, which means that submitting the same
-        // program twice might result in different traversal, which breaks the
-        // deterministic hash assignment.
+        // 我们需要使source 顺序具有确定性。source id 的返回顺序不同, 这意味着两次提交同一个程序
+        // 可能会导致不同的遍历, 从而破坏确定性哈希分配 (用排序来保证 源的顺序确定 ; 用队列保证全局顺序确定)
         List<Integer> sources = new ArrayList<>();
         for (Integer sourceNodeId : streamGraph.getSourceIDs()) {
             sources.add(sourceNodeId);
         }
         Collections.sort(sources);
 
-        //
-        // Traverse the graph in a breadth-first manner. Keep in mind that
-        // the graph is not a tree and multiple paths to nodes can exist.
-        //
-
+        //以广度优先的方式遍历图形。请记住该图不是一个树,并且可以存在多条路径指向一个节点
         // Start with source nodes
         for (Integer sourceNodeId : sources) {
             remaining.add(streamGraph.getStreamNode(sourceNodeId));
@@ -171,6 +167,7 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
             }
 
             Hasher hasher = hashFunction.newHasher();
+            // 考虑众多因素 以生成唯一的 hash码
             byte[] hash =
                     generateDeterministicHash(node, hasher, hashes, isChainingEnabled, streamGraph);
 
@@ -240,6 +237,7 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
             }
         }
 
+        // 将hash 码 转成字节数组
         byte[] hash = hasher.hash().asBytes();
 
         // Make sure that all input nodes have their hash set before entering
@@ -259,8 +257,7 @@ public class StreamGraphHasherV2 implements StreamGraphHasher {
             }
 
             // 要注意的是，该节点的哈希值还与该节点和下游节点能够 chain 在一起的个数有关
-            // 最后还需要跟其上游所有节点的哈希值进行异或操作
-            // 保证 hash 唯一
+            // 最后还需要跟其上游所有节点的哈希值进行异或操作 保证 hash 唯一
             for (int j = 0; j < hash.length; j++) {
                 hash[j] = (byte) (hash[j] * 37 ^ otherHash[j]);
             }

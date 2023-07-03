@@ -50,6 +50,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * <p>The statistics are accessed via {@link #createSnapshot()} and exposed via both the web
  * frontend and the {@link Metric} system.
  */
+
+// 追踪 checkpoint 的 各类统计量
+//
 public class CheckpointStatsTracker {
 
     /**

@@ -59,6 +59,7 @@ public final class OperatorEventDispatcherImpl implements OperatorEventDispatche
         this.handlers = new HashMap<>();
     }
 
+    //分派和路由 其他算子协调者 发来的消息 给不同的  算子事件处理器 来处理
     void dispatchEventToHandlers(
             OperatorID operatorID, SerializedValue<OperatorEvent> serializedEvent)
             throws FlinkException {
@@ -69,8 +70,10 @@ public final class OperatorEventDispatcherImpl implements OperatorEventDispatche
             throw new FlinkException("Could not deserialize operator event", e);
         }
 
+        // 拿到指定的处理器
         final OperatorEventHandler handler = handlers.get(operatorID);
         if (handler != null) {
+            // 用指定的算子事件处理器  处理 算子事件
             handler.handleOperatorEvent(evt);
         } else {
             throw new FlinkException("Operator not registered for operator events");

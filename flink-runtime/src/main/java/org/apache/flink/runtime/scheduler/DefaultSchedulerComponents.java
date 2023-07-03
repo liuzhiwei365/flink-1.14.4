@@ -100,11 +100,16 @@ public class DefaultSchedulerComponents {
 
         final SlotSelectionStrategy slotSelectionStrategy =
                 selectSlotSelectionStrategy(jobType, jobMasterConfiguration);
+
+        // 调用工厂方法创建PhysicalSlotRequestBulkCheckerImpl 对象, 传入 SlotPool 和 SystemClock
+        // SlotPool 中有槽位资源 , SystemClock 仅仅是flink 自己封装的 单例的系统时间工具类
         final PhysicalSlotRequestBulkChecker bulkChecker =
                 PhysicalSlotRequestBulkCheckerImpl.createFromSlotPool(
                         slotPool, SystemClock.getInstance());
+
         final PhysicalSlotProvider physicalSlotProvider =
                 new PhysicalSlotProviderImpl(slotSelectionStrategy, slotPool);
+
         final ExecutionSlotAllocatorFactory allocatorFactory =
                 new SlotSharingExecutionSlotAllocatorFactory(
                         physicalSlotProvider,

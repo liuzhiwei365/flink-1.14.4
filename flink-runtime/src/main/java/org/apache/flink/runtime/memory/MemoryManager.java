@@ -96,7 +96,7 @@ public class MemoryManager {
 
         this.pageSize = pageSize;
         this.memoryBudget = new UnsafeMemoryBudget(memorySize);
-        this.totalNumberOfPages = memorySize / pageSize;
+        this.totalNumberOfPages = memorySize / pageSize; //计算总页数
         this.allocatedSegments = new ConcurrentHashMap<>();
         this.reservedMemory = new ConcurrentHashMap<>();
         this.sharedResources = new SharedResources();

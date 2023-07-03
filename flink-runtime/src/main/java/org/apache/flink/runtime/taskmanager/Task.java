@@ -626,25 +626,26 @@ public class Task
             //  check for canceling as a shortcut
             // ----------------------------
 
-            // activate safety net for task thread
+            // 开启 task 线程的 文件系统安全网 , 后面的 finally 中会调用 FileSystemSafetyNet.closeSafetyNetAndGuardedResourcesForThread来关闭
             LOG.debug("Creating FileSystem stream leak safety net for task {}", this);
             FileSystemSafetyNet.initializeSafetyNetForThread();
 
-            // first of all, get a user-code classloader
-            // this may involve downloading the job's JAR files and/or classes
             LOG.info("Loading JAR files for task {}.", this);
 
+            // 创建用户代码的类加载器, 最终会获得 ResolvedClassLoader对象（内部包含java 原生 的URLClassLoader）
             userCodeClassLoader = createUserCodeClassloader();
+
+            // 利用 用户代码类加载器 反序列化 执行配置
             final ExecutionConfig executionConfig =
                     serializedExecutionConfig.deserializeValue(userCodeClassLoader.asClassLoader());
 
             if (executionConfig.getTaskCancellationInterval() >= 0) {
-                // override task cancellation interval from Flink config if set in ExecutionConfig
+                // 从执行配置中获取信息 来覆盖 成员变量  taskCancellationInterval
                 taskCancellationInterval = executionConfig.getTaskCancellationInterval();
             }
 
             if (executionConfig.getTaskCancellationTimeout() >= 0) {
-                // override task cancellation timeout from Flink config if set in ExecutionConfig
+                // 从执行配置中获取信息 来覆盖 成员变量  taskCancellationTimeout
                 taskCancellationTimeout = executionConfig.getTaskCancellationTimeout();
             }
 
@@ -669,11 +670,12 @@ public class Task
                 taskEventDispatcher.registerPartition(partitionWriter.getPartitionId());
             }
 
-            // next, kick off the background copying of files for the distributed cache
+            // 启动分布式缓存文件的后台复制
             try {
                 for (Map.Entry<String, DistributedCache.DistributedCacheEntry> entry :
                         DistributedCache.readFileInfoFromConfig(jobConfiguration)) {
                     LOG.info("Obtaining local cache file for '{}'.", entry.getKey());
+                    // 遍历创建临时文件路径
                     Future<Path> cp =
                             fileCache.createTmpFile(
                                     entry.getKey(), entry.getValue(), jobId, executionId);
@@ -695,9 +697,11 @@ public class Task
             //  call the user code initialization methods
             // ----------------------------------------------------------------
 
+            // 利用键值对状态服务（在Task构造的时候被创建,后来被传入 Task中） 创建 任务的键值对注册表
             TaskKvStateRegistry kvStateRegistry =
                     kvStateService.createKvStateTaskRegistry(jobId, getJobVertexId());
 
+            // 创建Task 运行时环境
             Environment env =
                     new RuntimeEnvironment(
                             jobId,
@@ -728,13 +732,11 @@ public class Task
                             externalResourceInfoProvider,
                             throughputCalculator);
 
-            // Make sure the user code classloader is accessible thread-locally.
-            // We are setting the correct context class loader before instantiating the invokable
-            // so that it is available to the invokable during its entire lifetime.
+            // 给当前的执行线程设置 类加载器
+            // 在实例化可调用程序之前，我们将设置正确的上下文类加载器，以便可调用程序在其整个生命周期内都可以使用它
             executingThread.setContextClassLoader(userCodeClassLoader.asClassLoader());
 
-            // When constructing invokable, separate threads can be constructed and thus should be
-            // monitored for system exit (in addition to invoking thread itself monitored below).
+           // 监控用户是否 调用 System.exit 方法, 拦截该方法
             FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
             try {
                 // 主节点在向 TaskExecutor提交 任务的时候用的是 Task类来封装的 ,在这里才会进一步被细化成  TaskInvokable 的各个子类,有很多种
@@ -749,27 +751,24 @@ public class Task
             //  actual task core work
             // ----------------------------------------------------------------
 
-            // we must make strictly sure that the invokable is accessible to the cancel() call
-            // by the time we switched to running.
             this.invokable = invokable;
 
-            // switch to the INITIALIZING state, if that fails, we have been canceled/failed in the
-            // meantime
             if (!transitionState(ExecutionState.DEPLOYING, ExecutionState.INITIALIZING)) {
                 throw new CancelTaskException();
             }
 
+            // 将 task 执行状态同步更新到  JobMaster
             taskManagerActions.updateTaskExecutionState(
                     new TaskExecutionState(executionId, ExecutionState.INITIALIZING));
 
-            // make sure the user code classloader is accessible thread-locally
+            // 再次保证  把用户代码类加载器 设置给 当前执行线程
             executingThread.setContextClassLoader(userCodeClassLoader.asClassLoader());
 
             // 恢复该 invokable（任务） 的所有状态,并且开启处理信箱 run mailbox
+            // 核心
             restoreAndInvoke(invokable);
 
-            // make sure, we enter the catch block if the task leaves the invoke() method due
-            // to the fact that it has been canceled
+            //请确保, 如果任务由于被取消而离开invoke（）方法, 我们直接手动抛出异常, 进入 catch块
             if (isCanceledOrFailed()) {
                 throw new CancelTaskException();
             }
@@ -785,8 +784,7 @@ public class Task
                 }
             }
 
-            // try to mark the task as finished
-            // if that fails, the task was canceled/failed in the meantime
+            //尝试将任务标记为已完成
             if (!transitionState(ExecutionState.RUNNING, ExecutionState.FINISHED)) {
                 throw new CancelTaskException();
             }
@@ -927,16 +925,19 @@ public class Task
 
     private void restoreAndInvoke(TaskInvokable finalInvokable) throws Exception {
         try {
+            //正式执行前, 先恢复状态
             runWithSystemExitMonitoring(finalInvokable::restore);
 
             if (!transitionState(ExecutionState.INITIALIZING, ExecutionState.RUNNING)) {
                 throw new CancelTaskException();
             }
 
-            // notify everyone that we switched to running
+            // 将 task 执行状态同步更新到  JobMaster
             taskManagerActions.updateTaskExecutionState(
                     new TaskExecutionState(executionId, ExecutionState.RUNNING));
 
+            // 正式执行, 可以正式执行的实现类有
+            //  BatchTask StreamTask  DataSourceTask  DataSinkTask IterationSynchronizationSinkTask
             runWithSystemExitMonitoring(finalInvokable::invoke);
         } catch (Throwable throwable) {
             try {
@@ -968,12 +969,12 @@ public class Task
     public static void setupPartitionsAndGates(
             ResultPartitionWriter[] producedPartitions, InputGate[] inputGates) throws IOException {
 
+        // 遍历设置 结果分区写出器
         for (ResultPartitionWriter partition : producedPartitions) {
             partition.setup();
         }
 
-        // InputGates must be initialized after the partitions, since during InputGate#setup
-        // we are requesting partitions
+        // 遍历设置 输入门; 且 输入门的设置必须在  结果分区写出器 后面,顺序不能乱; 因为在设置输入门的时候，我们得请求 结果分区
         for (InputGate gate : inputGates) {
             gate.setup();
         }

@@ -76,10 +76,12 @@ public class CompositeKeySerializationUtils {
             throws IOException {
 
         int beforeWrite = keySerializationDataOutputView.length();
+        // 将 namespace 的写入 keySerializationDataOutputView
         namespaceSerializer.serialize(namespace, keySerializationDataOutputView);
 
         if (ambiguousKeyPossible) {
-            // write length of namespace
+            // 如果 key 类型  和 namespace 都是变长
+            // 将 namespace 的 长度写入 keySerializationDataOutputView
             writeLengthFrom(beforeWrite, keySerializationDataOutputView);
         }
     }
@@ -100,6 +102,9 @@ public class CompositeKeySerializationUtils {
             DataOutputView keySerializationDateDataOutputView)
             throws IOException {
         for (int i = keyGroupPrefixBytes; --i >= 0; ) {
+            // i 在 此地方必定等于 1 或者 0
+            // 相当于 把 keyGroup 以字节位单位, 切割成几块,然后按顺序依次写入
+            // write 方法会将 int 强转成 byte , 也就是取最右边 8 bit位
             keySerializationDateDataOutputView.writeByte(extractByteAtPosition(keyGroup, i));
         }
     }
@@ -151,6 +156,9 @@ public class CompositeKeySerializationUtils {
     }
 
     private static byte extractByteAtPosition(int value, int byteIdx) {
+        // 当 byteIdx =0 时  value 向右移动 0 个字节 也就是 0  个bit 位长度
+        // 当 byteIdx =1 时  value 向右移动 1 个字节 也就是 8  个bit 位长度
+        // 当 byteIdx =2 时  value 向右移动 2 个字节 也就是 16 个bit 位长度
         return (byte) ((value >>> (byteIdx << 3)));
     }
 

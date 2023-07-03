@@ -64,6 +64,8 @@ public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
             Boundedness boundedness) {
         super(
                 environment,
+                // LegacySourceTransformation 功能比 SourceTransformation少
+                // 入参 operator 就是一个SourceFunction
                 new LegacySourceTransformation<>(
                         sourceName,
                         operator,
@@ -95,6 +97,16 @@ public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
             String sourceName) {
         super(
                 environment,
+                // SourceTransformation 比 LegacySourceTransformation 复杂
+                // Source 接口有创建分片枚举器 , 分片序列化 等功能 ; 比如 KafkaSource
+
+                // 还要传入 WatermarkStrategy 策略 ,在构建StreamGraph 的时候,
+                // 会 使用 SourceTransformationTranslator 来 翻译 该 SourceTransformation
+                // 这样, 构造的StreamNode 中 包含的成员 是 SourceOperatorFactory 对象
+                // 我们的  WatermarkStrategy 策略信息就会在 SourceOperatorFactory 对象中
+
+                // 而在taskMananger 执行任务的时候, SourceOperatorFactory 工厂调用 createStreamOperator来 创建 SourceOperator对象
+                // 其内部也含有 各类水印的 组件
                 new SourceTransformation<>(
                         sourceName,
                         source,

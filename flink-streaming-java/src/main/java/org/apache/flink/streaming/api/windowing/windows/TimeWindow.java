@@ -113,6 +113,8 @@ public class TimeWindow extends Window {
      * Returns {@code true} if this window intersects the given window or if this window is just
      * after or before the given window.
      */
+    //       this.start            this.end
+    //            other.start            other.end
     public boolean intersects(TimeWindow other) {
         return this.start <= other.end && this.end >= other.start;
     }
@@ -207,11 +209,8 @@ public class TimeWindow extends Window {
      */
     public static void mergeWindows(
             Collection<TimeWindow> windows, MergingWindowAssigner.MergeCallback<TimeWindow> c) {
-
-        // sort the windows by the start time and then merge overlapping windows
-
+        // 利用 start 时间 对 windows 做排序, 并且 合并 重叠的窗口
         List<TimeWindow> sortedWindows = new ArrayList<>(windows);
-
         Collections.sort(
                 sortedWindows,
                 new Comparator<TimeWindow>() {
@@ -221,19 +220,23 @@ public class TimeWindow extends Window {
                     }
                 });
 
+        // merged 中 Tuple2 的第一个元素 f0 是合并加宽过的 窗口 , f1 是所有要被合并的窗口的集合
         List<Tuple2<TimeWindow, Set<TimeWindow>>> merged = new ArrayList<>();
         Tuple2<TimeWindow, Set<TimeWindow>> currentMerge = null;
 
         for (TimeWindow candidate : sortedWindows) {
             if (currentMerge == null) {
+                // 初次遍历
                 currentMerge = new Tuple2<>();
                 currentMerge.f0 = candidate;
                 currentMerge.f1 = new HashSet<>();
                 currentMerge.f1.add(candidate);
             } else if (currentMerge.f0.intersects(candidate)) {
+                // 如果 有重叠,  则把窗口加宽
                 currentMerge.f0 = currentMerge.f0.cover(candidate);
                 currentMerge.f1.add(candidate);
             } else {
+                // 如果没有重叠
                 merged.add(currentMerge);
                 currentMerge = new Tuple2<>();
                 currentMerge.f0 = candidate;

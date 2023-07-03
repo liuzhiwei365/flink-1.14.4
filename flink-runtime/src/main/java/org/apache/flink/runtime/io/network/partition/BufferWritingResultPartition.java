@@ -263,6 +263,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
         BufferBuilder buffer = unicastBufferBuilders[targetSubpartition];
 
         if (buffer == null) {
+            //
             buffer = requestNewUnicastBufferBuilder(targetSubpartition);
             addToSubpartition(buffer, targetSubpartition, 0);
         }
@@ -343,6 +344,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
             throws IOException {
         checkInProduceState();
         ensureUnicastMode();
+        //
         final BufferBuilder bufferBuilder = requestNewBufferBuilderFromPool(targetSubpartition);
         unicastBufferBuilders[targetSubpartition] = bufferBuilder;
 

@@ -169,6 +169,7 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
      * both are running at the same time, which is only guaranteed to be the case when both the
      * respective producer and consumer task run pipelined.
      */
+    //将任务事件向后发送到 中间结果分区 生产者
     @Override
     public void sendTaskEvent(
             ResultPartitionID partitionId, TaskEvent event, final RemoteInputChannel inputChannel)
@@ -217,7 +218,7 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
     }
 
     private void sendToChannel(ClientOutboundMessage message) {
-        /**
+        /*
          * org.apache.flink.shaded.netty4.io.netty.channel.DefaultChannelPipeline#fireUserEventTriggered(java.lang.Object)
          * org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext#invokeUserEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext,
          * java.lang.Object)
@@ -225,7 +226,7 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
          * org.apache.flink.runtime.io.network.netty.CreditBasedPartitionRequestClientHandler#userEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext,
          * java.lang.Object)
          *
-         * <p>CreditBasedPartitionRequestClientHandler的userEventTriggered会得到响应,调用处理notifyCreditAvailable逻辑
+         *  CreditBasedPartitionRequestClientHandler 的 userEventTriggered会得到响应, 调用处理notifyCreditAvailable逻辑
          */
         tcpChannel.eventLoop().execute(() -> tcpChannel.pipeline().fireUserEventTriggered(message));
     }

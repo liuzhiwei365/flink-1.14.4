@@ -331,14 +331,17 @@ public class PojoTypeInfo<T> extends CompositeType<T> {
     @PublicEvolving
     @SuppressWarnings("unchecked")
     public TypeSerializer<T> createSerializer(ExecutionConfig config) {
+        // 如果强制开启 Kryo 序列化
         if (config.isForceKryoEnabled()) {
             return new KryoSerializer<>(getTypeClass(), config);
         }
 
+        // 如果强制开启 Avro 序列化
         if (config.isForceAvroEnabled()) {
             return AvroUtils.getAvroUtils().createAvroSerializer(getTypeClass());
         }
 
+        // 使用 flink 默认的 pojo 序列化器
         return createPojoSerializer(config);
     }
 

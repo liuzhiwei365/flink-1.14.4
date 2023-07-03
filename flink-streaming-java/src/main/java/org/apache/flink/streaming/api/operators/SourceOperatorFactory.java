@@ -81,6 +81,7 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
         return source.getBoundedness();
     }
 
+    //
     @Override
     public <T extends StreamOperator<OUT>> T createStreamOperator(
             StreamOperatorParameters<OUT> parameters) {
@@ -90,7 +91,7 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
 
         final SourceOperator<OUT, ?> sourceOperator =
                 instantiateSourceOperator(
-                        source::createReader,
+                        source::createReader,  // 如果source 可以是KafkaSource 的对象
                         gateway,
                         source.getSplitSerializer(),
                         watermarkStrategy,

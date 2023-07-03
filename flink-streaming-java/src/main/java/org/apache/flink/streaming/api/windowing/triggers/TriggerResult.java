@@ -26,6 +26,8 @@ package org.apache.flink.streaming.api.windowing.triggers;
  * contain any data the window function will not be invoked, i.e. no data will be produced for the
  * window.
  */
+// 触发器方法的结果类型
+// 这决定了窗口会发生什么, 例如, 是应该调用窗口函数, 还是应该丢弃窗口
 public enum TriggerResult {
 
     /** No action is taken on the window. */

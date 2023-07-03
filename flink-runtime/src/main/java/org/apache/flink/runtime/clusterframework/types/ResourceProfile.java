@@ -61,7 +61,12 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * The extended resources are compared ordered by the resource names.
  */
 
-// 用来描述资源
+/*
+   用来描述计算资源, 主要包括cpu cores , memory size 和 外部资源
+   可以检查该配置文件是否符合另一个配置文件的要求
+   此外，当我们有很多候选插槽时，我们可以计算匹配分数来决定我们应该选择哪个配置文件
+   它应该由{@link ResourceSpec}生成，并在JobMaster中计算输入和输出内存
+ */
 public class ResourceProfile implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -152,6 +157,7 @@ public class ResourceProfile implements Serializable {
 
         this.extendedResources =
                 checkNotNull(extendedResources).entrySet().stream()
+                        // 排除掉 为0 的 Resource
                         .filter(entry -> !checkNotNull(entry.getValue()).isZero())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -380,6 +386,8 @@ public class ResourceProfile implements Serializable {
      * @param other The other resource profile to add.
      * @return The merged resource profile.
      */
+
+    //用于两个 ResourceProfile 合并
     @Nonnull
     public ResourceProfile merge(final ResourceProfile other) {
         checkNotNull(other, "Cannot merge with null resources");
@@ -392,16 +400,21 @@ public class ResourceProfile implements Serializable {
             return UNKNOWN;
         }
 
+        // copy 一下 本对象的 extendedResources
         Map<String, ExternalResource> resultExtendedResource = new HashMap<>(extendedResources);
 
+        // 把 other 的 extendedResources 对象 与 自己的 extendedResources 对象
+        // 合并成一个新的 resultExtendedResource
         other.extendedResources.forEach(
                 (String name, ExternalResource resource) -> {
+                    // Map 的 compute 方法 是计算并更新相关的value 值
                     resultExtendedResource.compute(
                             name,
                             (ignored, oldResource) ->
                                     oldResource == null ? resource : oldResource.merge(resource));
                 });
 
+        // 构造，并返回新的 ResourceProfile 对象
         return new ResourceProfile(
                 cpuCores.merge(other.cpuCores),
                 taskHeapMemory.add(other.taskHeapMemory),

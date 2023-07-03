@@ -28,6 +28,15 @@ import java.io.IOException;
  * of the memory. The view is typically backed by one or more {@link
  * org.apache.flink.core.memory.MemorySegment}.
  */
+//MemorySegment 解决了内存分块存储的问题,但如果要使用连续的MemorySegment存储数据，就需要借助DataInputView和DataOutputView
+//DataInputView  和 DataOutputView 中定义了一组MemorySegement 视图,其中DataInputView用于顺序读取内存的数据,DataOutputView用于写
+
+//  DataInputView 的主要实现类有三种 DataInputDeserializer,DataInputViewStreamWrapper,AbstractPagedInputView：
+//  （1）DataInputDeserializer实现了 实现了简单高效的反序列化器,例如对 KafkaDeserializationSchema 中接入的二进制数据进行反序列化,转化为java对象
+//  （2）DataInputViewStreamWarpper 对 DataInputStream 接口进行拓展，直接将InputStream 数据转为DataInputView 输入数据，
+//  例如读取BinaryInputFormat类型的文件，直接将FSDataInputStream 转换为DataInputView
+//  （3）AbstractPagedInputView 实现了基于多个内存页的数据输入，且具有多个子类
+
 @Public
 public interface DataInputView extends DataInput {
 
@@ -62,5 +71,6 @@ public interface DataInputView extends DataInput {
      * @return the number of read bytes or -1 if there is no more data left
      * @throws IOException
      */
+    // 入参用来存储 读进来的字节数组
     int read(byte[] b) throws IOException;
 }

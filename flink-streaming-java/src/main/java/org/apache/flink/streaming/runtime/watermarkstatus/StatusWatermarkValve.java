@@ -181,13 +181,13 @@ public class StatusWatermarkValve {
         }
     }
 
+    // 发现最小的watermark , 并将其发往下游
     private void findAndOutputNewMinWatermarkAcrossAlignedChannels(DataOutput<?> output)
             throws Exception {
         long newMinWatermark = Long.MAX_VALUE;
         boolean hasAlignedChannels = false;
 
-        // determine new overall watermark by considering only watermark-aligned channels across all
-        // channels
+        // 拿到所有 通道中 最小的watermark
         for (InputChannelStatus channelStatus : channelStatuses) {
             if (channelStatus.isWatermarkAligned) {
                 hasAlignedChannels = true;
@@ -195,8 +195,7 @@ public class StatusWatermarkValve {
             }
         }
 
-        // we acknowledge and output the new overall watermark if it really is aggregated
-        // from some remaining aligned channel, and is also larger than the last output watermark
+        // newMinWatermark > lastOutputWatermark 表面, 此次最小 要大于 上次最小
         if (hasAlignedChannels && newMinWatermark > lastOutputWatermark) {
             lastOutputWatermark = newMinWatermark;
             // 将水位线发生给DataOutPut

@@ -40,6 +40,7 @@ public class PlanTranslator implements FlinkPipelineTranslator {
 
     private static final Logger LOG = LoggerFactory.getLogger(PlanTranslator.class);
 
+    // 入口方法 , 会将 sql执行计划编译成JobGraph
     @Override
     public JobGraph translateToJobGraph(
             Pipeline pipeline, Configuration optimizerConfiguration, int defaultParallelism) {
@@ -79,11 +80,13 @@ public class PlanTranslator implements FlinkPipelineTranslator {
         return new PlanJSONDumpGenerator().getOptimizerPlanAsJSON(optPlan);
     }
 
+    // 编译sql执行计划成 JobGraph
     private JobGraph compilePlan(Plan plan, Configuration optimizerConfiguration) {
         Optimizer optimizer = new Optimizer(new DataStatistics(), optimizerConfiguration);
         OptimizedPlan optimizedPlan = optimizer.compile(plan);
 
         JobGraphGenerator jobGraphGenerator = new JobGraphGenerator(optimizerConfiguration);
+        // 利用JobGraphGenerator  来编译sql 执行计划
         return jobGraphGenerator.compileJobGraph(optimizedPlan, plan.getJobId());
     }
 

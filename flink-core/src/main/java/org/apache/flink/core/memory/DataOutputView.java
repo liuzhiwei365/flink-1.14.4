@@ -28,6 +28,18 @@ import java.io.IOException;
  * the memory. The view is typically backed by one or more {@link
  * org.apache.flink.core.memory.MemorySegment}.
  */
+
+//DataOutputView 的主要实现类有三种 DataOutputDeserializer,DataOutputViewStreamWrapper,AbstractPagedOutputView：
+
+// （1）DataOutputDeserializer 用于将原生的java类线数据高效地写入内存空间，在RocksDBMapState 和 TypeInformationSerializationSchema
+//  中都会使用到 DataOutputDeserializer
+
+// （2）DataOutputViewStreamWrapper 将内存数据转为 DataOutputStream， 例如在CollectSink算子中就利用DataOutputViewStreamWarpper
+//  实现输出内存的二进制数据
+
+// （3）AbstractPagedOutputView 定义了所有基于多个内存页的输出视图，且包含了所有的编码方法，将数据写入内存页，并能够自动发现页的边界
+
+
 @Public
 public interface DataOutputView extends DataOutput {
 

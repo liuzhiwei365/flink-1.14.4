@@ -30,6 +30,8 @@ public class BroadcastVariableKey {
 
     private final String name;
 
+    // 在迭代计算中会有所不同; 比如在 IterationHeadTask 、IterationIntermediateTask 、IterationTailTask 这三个中
+    // 在BatchTask 中 superstep 一定是1
     private final int superstep;
 
     public BroadcastVariableKey(JobVertexID vertexId, String name, int superstep) {

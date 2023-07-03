@@ -82,6 +82,11 @@ public class RemoteInputChannel extends InputChannel {
      * The received buffers. Received buffers are enqueued by the network I/O thread and the queue
      * is consumed by the receiving task thread.
      */
+    // 接收到的缓冲区    接收到的缓冲区由网络I/O线程排队, 队列由接收任务线程 消费
+    // SequenceBuffer 是对 Buffer 的包装 , 多了一个 序列号
+    // 优先级队列, 队列分 为优先级部分  和 普通部分, 优先部分在前, 普通部分在后
+
+    // getNextBuffer 方法中会消费该队列
     private final PrioritizedDeque<SequenceBuffer> receivedBuffers = new PrioritizedDeque<>();
 
     /**
@@ -102,6 +107,7 @@ public class RemoteInputChannel extends InputChannel {
     /** The number of available buffers that have not been announced to the producer yet. */
     private final AtomicInteger unannouncedCredit = new AtomicInteger(0);
 
+    // 内部的  bufferQueue 成员 维护exclusive buffers 和 floating buffers
     private final BufferManager bufferManager;
 
     @GuardedBy("receivedBuffers")
@@ -167,6 +173,7 @@ public class RemoteInputChannel extends InputChannel {
     /** Requests a remote subpartition. */
     @VisibleForTesting
     @Override
+    // 请求远程的 一个子分区
     public void requestSubpartition(int subpartitionIndex)
             throws IOException, InterruptedException {
         if (partitionRequestClient == null) {
@@ -193,6 +200,7 @@ public class RemoteInputChannel extends InputChannel {
     }
 
     /** Retriggers a remote subpartition request. */
+    // 触发 请求远程的 一个子分区
     void retriggerSubpartitionRequest(int subpartitionIndex) throws IOException {
         checkPartitionRequestQueueInitialized();
 
@@ -212,7 +220,9 @@ public class RemoteInputChannel extends InputChannel {
         final DataType nextDataType;
 
         synchronized (receivedBuffers) {
+            // 消费一个元素
             next = receivedBuffers.poll();
+            // 看一下下一个元素的类型, 如果不存在下一个元素，则返回DataType.NONE类型
             nextDataType =
                     receivedBuffers.peek() != null
                             ? receivedBuffers.peek().buffer.getDataType()
@@ -234,8 +244,11 @@ public class RemoteInputChannel extends InputChannel {
                 channelInfo,
                 channelStatePersister,
                 next.sequenceNumber);
+        // 统计消费过的字节总数
         numBytesIn.inc(next.buffer.getSize());
+        // 统计消费过的buffer 总数
         numBuffersIn.inc();
+        // 包装成  BufferAndAvailability对象返回
         return Optional.of(
                 new BufferAndAvailability(next.buffer, nextDataType, 0, next.sequenceNumber));
     }
@@ -547,12 +560,14 @@ public class RemoteInputChannel extends InputChannel {
                 DataType dataType = buffer.getDataType();
                 // 不管优先级如何,最终sequenceBuffer 都会被添加到receivedBuffers中
                 if (dataType.hasPriority()) {
+                    // 是否是添加 到 优先部分的 第一个元素
                     firstPriorityEvent = addPriorityBuffer(sequenceBuffer);
                     recycleBuffer = false;
                 } else {
                     receivedBuffers.add(sequenceBuffer);
                     recycleBuffer = false;
                     if (dataType.requiresAnnouncement()) {
+                        // 如果需要先声明,则先声明，再添加到receivedBuffers 中
                         firstPriorityEvent = addPriorityBuffer(announce(sequenceBuffer));
                     }
                 }

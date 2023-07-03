@@ -60,7 +60,8 @@ public abstract class SimpleTransformationTranslator<OUT, T extends Transformati
         checkNotNull(transformation);
         checkNotNull(context);
 
-        // translateForStreamingInternal 有很多子类实现
+        // translateForStreamingInternal 是个抽象方法, 有很多子类实现
+        // 如果是 TimestampsAndWatermarksTransformationTranslator 方法的话, 会创建 TimestampsAndWatermarksOperator
         final Collection<Integer> transformedIds =
                 translateForStreamingInternal(transformation, context);
         configure(transformation, context);

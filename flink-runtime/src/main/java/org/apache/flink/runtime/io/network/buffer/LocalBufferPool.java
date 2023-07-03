@@ -197,9 +197,13 @@ class LocalBufferPool implements BufferPool {
                 numberOfRequiredMemorySegments,
                 maxNumberOfMemorySegments);
 
+        // 全局 内存段资源池 (维护所有 LocalBufferPool, LocalBufferPool都会向 NetworkBufferPool 申请资源 )
         this.networkBufferPool = networkBufferPool;
+        //需要的内存段
         this.numberOfRequiredMemorySegments = numberOfRequiredMemorySegments;
+        //当前 内存段
         this.currentPoolSize = numberOfRequiredMemorySegments;
+        //最大 内存段
         this.maxNumberOfMemorySegments = maxNumberOfMemorySegments;
 
         if (numberOfSubpartitions > 0) {
@@ -210,6 +214,7 @@ class LocalBufferPool implements BufferPool {
         }
 
         this.subpartitionBuffersCount = new int[numberOfSubpartitions];
+        // Buffer 回收器
         subpartitionBufferRecyclers = new BufferRecycler[numberOfSubpartitions];
         for (int i = 0; i < subpartitionBufferRecyclers.length; i++) {
             subpartitionBufferRecyclers[i] = new SubpartitionBufferRecycler(i, this);
@@ -366,7 +371,7 @@ class LocalBufferPool implements BufferPool {
                 return null;
             }
 
-            segment = availableMemorySegments.poll();
+            segment = availableMemorySegments.poll(); // poll是非阻塞的
 
             if (segment == null) {
                 return null;

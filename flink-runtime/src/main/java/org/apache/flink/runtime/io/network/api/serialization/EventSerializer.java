@@ -294,6 +294,7 @@ public class EventSerializer {
     // ------------------------------------------------------------------------
 
     public static Buffer toBuffer(AbstractEvent event, boolean hasPriority) throws IOException {
+        // 将抽象事件 EndOfData  CheckpointBarrier 等 序列化
         final ByteBuffer serializedEvent = EventSerializer.toSerializedEvent(event);
 
         MemorySegment data = MemorySegmentFactory.wrap(serializedEvent.array());

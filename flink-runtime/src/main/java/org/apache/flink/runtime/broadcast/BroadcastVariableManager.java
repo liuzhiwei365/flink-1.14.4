@@ -31,8 +31,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * References to materialized broadcast variables are cached and shared between parallel subtasks. A
  * reference count is maintained to track whether the materialization may be cleaned up.
  */
+
+// BroadcastVariableManager  时 taskManager 运行时环境的成员变量
 public class BroadcastVariableManager {
 
+    // 用来存储所有的广播变量
     private final ConcurrentHashMap<BroadcastVariableKey, BroadcastVariableMaterialization<?, ?>>
             variables =
                     new ConcurrentHashMap<
@@ -45,6 +48,7 @@ public class BroadcastVariableManager {
      * iteration superstep. An existing materialization created by another parallel subtask may be
      * returned, if it hasn't expired yet.
      */
+    // 实例化一个广播变量
     public <T> BroadcastVariableMaterialization<T, ?> materializeBroadcastVariable(
             String name,
             int superstep,
@@ -52,6 +56,8 @@ public class BroadcastVariableManager {
             MutableReader<?> reader,
             TypeSerializerFactory<T> serializerFactory)
             throws IOException {
+
+        // 一个广播变量一定时隶属于一个 JobVertex 的 ； superstep 代表迭代 阶数
         final BroadcastVariableKey key =
                 new BroadcastVariableKey(holder.getEnvironment().getJobVertexId(), name, superstep);
 
@@ -67,6 +73,7 @@ public class BroadcastVariableManager {
                     (previous == null) ? newMat : (BroadcastVariableMaterialization<T, ?>) previous;
 
             try {
+                // 实例化 广播变量
                 materialization.materializeVariable(reader, serializerFactory, holder);
                 return materialization;
             } catch (MaterializationExpiredException e) {

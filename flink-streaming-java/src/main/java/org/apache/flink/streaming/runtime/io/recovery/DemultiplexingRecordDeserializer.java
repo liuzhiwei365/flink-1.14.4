@@ -51,6 +51,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * <p>It is also responsible for summarizing watermark and watermark statuses of the virtual
  * channels.
  */
+// 在子任务级别上  多路分解 buffer
 class DemultiplexingRecordDeserializer<T>
         implements RecordDeserializer<DeserializationDelegate<StreamElement>> {
     public static final DemultiplexingRecordDeserializer UNMAPPED =

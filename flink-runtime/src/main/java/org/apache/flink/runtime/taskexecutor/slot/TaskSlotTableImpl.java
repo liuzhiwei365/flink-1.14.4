@@ -333,7 +333,7 @@ public class TaskSlotTableImpl<T extends TaskSlotPayload> implements TaskSlotTab
                 new TaskSlot<>(
                         index,
                         effectiveResourceProfile,
-                        memoryPageSize,
+                        memoryPageSize, //taskmanager.memory.segment-size
                         jobId,
                         allocationId,
                         memoryVerificationExecutor);

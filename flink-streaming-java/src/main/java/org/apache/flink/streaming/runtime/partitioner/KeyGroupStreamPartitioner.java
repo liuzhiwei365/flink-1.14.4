@@ -39,7 +39,7 @@ public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T>
 
     private final KeySelector<T, K> keySelector;
 
-    private int maxParallelism;
+    private int maxParallelism; // 用来分配键组
 
     public KeyGroupStreamPartitioner(KeySelector<T, K> keySelector, int maxParallelism) {
         Preconditions.checkArgument(maxParallelism > 0, "Number of key-groups must be > 0!");
@@ -54,12 +54,14 @@ public class KeyGroupStreamPartitioner<T, K> extends StreamPartitioner<T>
     @Override
     public int selectChannel(SerializationDelegate<StreamRecord<T>> record) {
         K key;
+        // 先从数据中提取出 key
         try {
             key = keySelector.getKey(record.getInstance().getValue());
         } catch (Exception e) {
             throw new RuntimeException(
                     "Could not extract key from " + record.getInstance().getValue(), e);
         }
+        // 结果一定是在[0 , partition) 范围内  (要注意numberOfChannels 和 maxParallelism 一定不同 )
         return KeyGroupRangeAssignment.assignKeyToParallelOperator(
                 key, maxParallelism, numberOfChannels);
     }

@@ -28,19 +28,19 @@ public enum DataExchangeMode {
      * The data exchange is streamed, sender and receiver are online at the same time, and the
      * receiver back-pressures the sender.
      */
-    PIPELINED,
+    PIPELINED,// 流模式交换数据
 
     /**
      * The data exchange is decoupled. The sender first produces its entire result and finishes.
      * After that, the receiver is started and may consume the data.
      */
-    BATCH,
+    BATCH,//批模式交换数据
 
     /**
      * The data exchange starts like in {@link #PIPELINED} and falls back to {@link #BATCH} for
      * recovery runs.
      */
-    PIPELINE_WITH_BATCH_FALLBACK;
+    PIPELINE_WITH_BATCH_FALLBACK;//目前不支持；开始是流模式，后来回退到批模式 交换数据
 
     // ------------------------------------------------------------------------
 
@@ -87,10 +87,13 @@ public enum DataExchangeMode {
         }
 
         if (breakPipeline) {
+            //从 BREAKING 取 mode
             return getPipelineBreakingExchange(executionMode);
         } else if (shipStrategy == ShipStrategyType.FORWARD) {
+            //从 FORWARD  取 mode
             return getForForwardExchange(executionMode);
         } else {
+            //从 SHUFFLE  取 mode
             return getForShuffleOrBroadcast(executionMode);
         }
     }
@@ -108,6 +111,14 @@ public enum DataExchangeMode {
 
     // initialize the map between execution modes and exchange modes in
     static {
+
+        // PIPELINED           0
+        // PIPELINED_FORCED    1
+        // BATCH               2
+        // BATCH_FORCED        3
+
+        //注意 DataExchangeMode 与 ExecutionMode 的区别
+
         FORWARD[ExecutionMode.PIPELINED_FORCED.ordinal()] = PIPELINED;
         SHUFFLE[ExecutionMode.PIPELINED_FORCED.ordinal()] = PIPELINED;
         BREAKING[ExecutionMode.PIPELINED_FORCED.ordinal()] = PIPELINED;

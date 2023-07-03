@@ -32,12 +32,16 @@ public class FsCompletedCheckpointStorageLocation implements CompletedCheckpoint
 
     private static final long serialVersionUID = 1L;
 
+    // 在文件系统中的路径
     private final Path exclusiveCheckpointDir;
 
+    // 用于 操作（读取和删除） checkpoint的状态文件的  句柄
     private final FileStateHandle metadataFileHandle;
 
+    // 是 带有协议的绝对路径 的 字符串
     private final String externalPointer;
 
+    // 可以是 hdfs ,也可以是 本地文件系统
     private transient FileSystem fs;
 
     public FsCompletedCheckpointStorageLocation(

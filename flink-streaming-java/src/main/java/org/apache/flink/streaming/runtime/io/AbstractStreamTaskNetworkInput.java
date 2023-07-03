@@ -93,10 +93,13 @@ public abstract class AbstractStreamTaskNetworkInput<
     public DataInputStatus emitNext(DataOutput<T> output) throws Exception {
 
         while (true) {
-            // get the stream element from the deserializer
+            // 如果 currentRecordDeserializer 不为null
             if (currentRecordDeserializer != null) {
                 RecordDeserializer.DeserializationResult result;
                 try {
+                    // 该方法名取的非常不好, 应该取为 getNextRecordDeserializationResult
+                    // 序列化后的数据会存在于 deserializationDelegate 的成员变量 instance中
+                    // 后面processElement 方法会 拿到 instance, 然后进行处理
                     result = currentRecordDeserializer.getNextRecord(deserializationDelegate);
                 } catch (IOException e) {
                     throw new IOException(
@@ -107,9 +110,9 @@ public abstract class AbstractStreamTaskNetworkInput<
                 }
 
                 if (result.isFullRecord()) {
-                    // 数据读取完整之后，发送给DataOutput
                     // 并生产新的水位线（内部有channels数组，保存所有channel的水位线，并将最小的水位线发生到下游）
-                    // 真正处理数据
+                    // 真正处理用户数据和 watermark
+                    // 最终都会利用 output 来将数据发向下游
                     processElement(deserializationDelegate.getInstance(), output);
                     return DataInputStatus.MORE_AVAILABLE;
                 }
@@ -124,9 +127,11 @@ public abstract class AbstractStreamTaskNetworkInput<
 
                 if (bufferOrEvent.get().isBuffer()) {
                     // 如果是普通buffer(一个buffer中可能含有多条数据),buffer 会赋值给currentRecordDeserializer
+                    // 会重重设置 currentRecordDeserializer引用, 并且将buffer 赋给其相关成员
+                    // 重点来了, 这样的话, 由于是死循环的逻辑, 又得重走一遍  currentRecordDeserializer 不为空 序列化的逻辑
                     processBuffer(bufferOrEvent.get());
                 } else {
-                    // 如果是事件,返回DataInputStatus的枚举状态
+                    // event 对应的是内部运行时的事件和状态控制
                     return processEvent(bufferOrEvent.get());
                 }
             } else {
@@ -152,6 +157,7 @@ public abstract class AbstractStreamTaskNetworkInput<
             // 处理watermark推进的类
             statusWatermarkValve.inputWatermark(
                     recordOrMark.asWatermark(), flattenedChannelIndices.get(lastChannel), output);
+
         } else if (recordOrMark.isLatencyMarker()) {
             output.emitLatencyMarker(recordOrMark.asLatencyMarker());
         } else if (recordOrMark.isWatermarkStatus()) {
@@ -164,6 +170,7 @@ public abstract class AbstractStreamTaskNetworkInput<
         }
     }
 
+    //处理运行时事件, 这里的事件不包含watermark （watermark和用户数据一起）
     protected DataInputStatus processEvent(BufferOrEvent bufferOrEvent) {
         // Event received
         final AbstractEvent event = bufferOrEvent.getEvent();
@@ -189,11 +196,13 @@ public abstract class AbstractStreamTaskNetworkInput<
     protected void processBuffer(BufferOrEvent bufferOrEvent) throws IOException {
         lastChannel = bufferOrEvent.getChannelInfo();
         checkState(lastChannel != null);
+
+        // 每个channel通道中 包含一个序列化器
         currentRecordDeserializer = getActiveSerializer(bufferOrEvent.getChannelInfo());
         checkState(
                 currentRecordDeserializer != null,
                 "currentRecordDeserializer has already been released");
-
+        // 把buffer 添加到 序列化器中
         currentRecordDeserializer.setNextBuffer(bufferOrEvent.getBuffer());
     }
 

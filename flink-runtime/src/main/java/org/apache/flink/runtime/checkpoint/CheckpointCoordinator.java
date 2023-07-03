@@ -531,6 +531,7 @@ public class CheckpointCoordinator {
         return request.onCompletionPromise;
     }
 
+    //
     private void startTriggeringCheckpoint(CheckpointTriggerRequest request) {
         try {
             synchronized (lock) {
@@ -543,7 +544,10 @@ public class CheckpointCoordinator {
 
             final long timestamp = System.currentTimeMillis();
 
-            // 计算和构建一个 checkpoint 计划
+            // 计算和构建一个 checkpoint 计划, 计划中维护了有关于执行顶点的 各类状态
+            // 为什么需要这个呢？ 比如, 源头的执行顶点 finish了，这时候就没法做checkpoint了 ；
+            // 所以 知道执行顶点的状态对于 checkpoint 的来说是必要的
+            // 实现类 是 DefaultCheckpointPlan
             CompletableFuture<CheckpointPlan> checkpointPlanFuture =
                     checkpointPlanCalculator.calculateCheckpointPlan();
 
@@ -554,7 +558,7 @@ public class CheckpointCoordinator {
                                         try {
                                             CheckpointIdAndStorageLocation
                                                     checkpointIdAndStorageLocation =
-                                                    //初始化checkpoint
+                                                    //初始化checkpoint,  拿到checkpointId 和 存储地址
                                                             initializeCheckpoint(
                                                                     request.props,
                                                                     request.externalSavepointLocation);
@@ -567,7 +571,8 @@ public class CheckpointCoordinator {
                                     executor)
                             .thenApplyAsync(
                                     (checkpointInfo) ->
-                                            //创建即将执行的checkpoint
+                                            //创建即将执行的checkpoint ,并添加到运行时各类数据结构中
+                                            //  所谓pending ,就是正在进行
                                             createPendingCheckpoint(
                                                     timestamp,
                                                     request.props,
@@ -591,26 +596,23 @@ public class CheckpointCoordinator {
 
             // We have to take the snapshot of the master hooks after the coordinator checkpoints
             // has completed.
-
-            // 这是为了确保在使用ExternallyInducedSource的情况下,确保任务被checkpoint
             final CompletableFuture<?> masterStatesComplete =
                     coordinatorCheckpointsComplete.thenComposeAsync(
                             ignored -> {
-                                // If the code reaches here, the pending checkpoint is guaranteed to
-                                // be not null.
-                                // We use FutureUtils.getWithoutException() to make compiler happy
-                                // with checked exceptions in the signature.
+
                                 PendingCheckpoint checkpoint =
                                         FutureUtils.getWithoutException(
                                                 pendingCheckpointCompletableFuture);
                                 // 触发 master 端 的 checkpoint hooks
                                 // 且 这些hooks 最终在 StreamingJobGraphGenerator 的 configureCheckpointing方法中添加进来
                                 // 相关的用户函数必须得实现 WithMasterCheckpointHook   接口
+                                // 其实 这是给普通 用户留的  钩子逻辑, 让用户来扩展的
                                 return snapshotMasterState(checkpoint);
                             },
                             timer);
 
             FutureUtils.assertNoException(
+                    // 任务编排, 在进行各个子任务的checkpoint时, 事前必须先完成 master  和  各算子协调者 的checkpoint
                     CompletableFuture.allOf(masterStatesComplete, coordinatorCheckpointsComplete)
                             .handleAsync(
                                     (ignored, throwable) -> {

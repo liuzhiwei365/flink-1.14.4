@@ -407,16 +407,23 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         final Map<ExecutionVertexID, ExecutionVertexDeploymentOption> deploymentOptionsByVertex =
                 groupDeploymentOptionsByVertexId(executionVertexDeploymentOptions);
 
+        // 得到一个region中所有要部署的 ExecutionVertexID
         final List<ExecutionVertexID> verticesToDeploy =
                 executionVertexDeploymentOptions.stream()
                         .map(ExecutionVertexDeploymentOption::getExecutionVertexId)
                         .collect(Collectors.toList());
 
+        // 计算所有ExecutionVertexID 当前应该有的版本号
         final Map<ExecutionVertexID, ExecutionVertexVersion> requiredVersionByVertex =
                 executionVertexVersioner.recordVertexModifications(verticesToDeploy);
 
+        // 1 先在 executionGraph 中 Map<JobVertexID, ExecutionJobVertex> tasks 成员
+        // 2 然后 得到 ExecutionJobVertex 里面 的 ExecutionVertex[] taskVertices;
+        // 3 得到 相关 ExecutionVertex 里面的 Execution currentExecution  成员
+        // 4 最后 改变 currentExecution 对象 的 ExecutionState state  方法
         transitionToScheduled(verticesToDeploy);
 
+        // 给每个执行顶点 分配 逻辑槽位 （ 利用 ExecutionSlotAllocator 分配器（ SlotSharingExecutionSlotAllocator是实现类））
         final List<SlotExecutionVertexAssignment> slotExecutionVertexAssignments =
                 allocateSlots(executionVertexDeploymentOptions);
 
@@ -454,8 +461,11 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                                 Function.identity()));
     }
 
+    // 分配逻辑槽位
     private List<SlotExecutionVertexAssignment> allocateSlots(
             final List<ExecutionVertexDeploymentOption> executionVertexDeploymentOptions) {
+
+        //给  List<ExecutionVertexID> executionVertexIds 分配槽位
         return executionSlotAllocator.allocateSlotsFor(
                 executionVertexDeploymentOptions.stream()
                         .map(ExecutionVertexDeploymentOption::getExecutionVertexId)
@@ -482,6 +492,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 
     private void waitForAllSlotsAndDeploy(final List<DeploymentHandle> deploymentHandles) {
         FutureUtils.assertNoException(
+                // 分配计算资源和注册shuffle 信息
                 assignAllResourcesAndRegisterProducedPartitions(deploymentHandles)
                         .handle(deployAll(deploymentHandles)));
     }
@@ -517,6 +528,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
             final List<DeploymentHandle> deploymentHandles) {
         return (ignored, throwable) -> {
             propagateIfNonNull(throwable);
+            // 遍历 部署所有的执行顶点 （任务）
             for (final DeploymentHandle deploymentHandle : deploymentHandles) {
                 final SlotExecutionVertexAssignment slotExecutionVertexAssignment =
                         deploymentHandle.getSlotExecutionVertexAssignment();
@@ -525,6 +537,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                 checkState(slotAssigned.isDone());
 
                 FutureUtils.assertNoException(
+                        // deployOrHandleError 核心
                         slotAssigned.handle(deployOrHandleError(deploymentHandle)));
             }
             return null;
@@ -660,8 +673,10 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
             }
 
             if (throwable == null) {
+                // 正常情况
                 deployTaskSafe(executionVertexId);
             } else {
+                // 如果有异常
                 handleTaskDeploymentFailure(executionVertexId, throwable);
             }
             return null;
@@ -671,6 +686,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
     private void deployTaskSafe(final ExecutionVertexID executionVertexId) {
         try {
             final ExecutionVertex executionVertex = getExecutionVertex(executionVertexId);
+            // 部署执行顶点
             executionVertexOperations.deploy(executionVertex);
         } catch (Throwable e) {
             handleTaskDeploymentFailure(executionVertexId, e);

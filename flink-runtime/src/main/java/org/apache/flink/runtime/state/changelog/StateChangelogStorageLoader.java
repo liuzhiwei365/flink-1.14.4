@@ -85,6 +85,7 @@ public class StateChangelogStorageLoader {
     public static StateChangelogStorage<?> load(Configuration configuration) throws IOException {
         final String identifier =
                 configuration
+                        //state.backend.changelog.storage
                         .getString(CheckpointingOptions.STATE_CHANGE_LOG_STORAGE)
                         .toLowerCase();
 

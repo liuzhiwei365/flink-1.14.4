@@ -30,6 +30,12 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Interface for processing records by {@link org.apache.flink.streaming.runtime.tasks.StreamTask}.
  */
+
+
+// StreamTask 利用 StreamInputProcessor 来负责数据的 接入 与 流转
+
+// 目前只有两个实现 StreamMultipleInputProcessor 和 StreamOneInputProcessor
+// StreamMultipleInputProcessor 负责处理多个数据源的场景; 它内部含有多个 StreamOneInputProcessor
 @Internal
 public interface StreamInputProcessor extends AvailabilityProvider, Closeable {
     /**
@@ -40,6 +46,8 @@ public interface StreamInputProcessor extends AvailabilityProvider, Closeable {
      *     there are no more records available at the moment and the caller should check finished
      *     state and/or {@link #getAvailableFuture()}.
      */
+    // 如果有两个或两个以上的输入处理器, 此方法必须调用  InputSelectable#nextSelect方法  来选择下一个要使用的输入
+    // 返回输入状态以估计是否可以立即处理更多记录。如果目前没有更多的记录可用，调用者应该检查是否已完成
     DataInputStatus processInput() throws Exception;
 
     CompletableFuture<Void> prepareSnapshot(

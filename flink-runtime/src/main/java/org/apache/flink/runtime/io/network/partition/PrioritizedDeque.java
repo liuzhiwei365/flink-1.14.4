@@ -45,6 +45,13 @@ import java.util.stream.StreamSupport;
  *
  * @param <T> the element type.
  */
+/*
+    队列
+    * * * * *  + + + + + + + +
+    此时, numPriorityElements = 5
+
+    Deque 为 双向队列
+ */
 @Internal
 public final class PrioritizedDeque<T> implements Iterable<T> {
     private final Deque<T> deque = new ArrayDeque<>();
@@ -56,6 +63,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
      *
      * @param element the element to add
      */
+    // 添加优先元素
     public void addPriorityElement(T element) {
         // priority elements are rather rare and short-lived, so most of there are none
         if (numPriorityElements == 0) {
@@ -97,11 +105,14 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
      */
     public void add(T element, boolean priority, boolean prioritize) {
         if (!priority) {
+            // 直接添加在最后面
             add(element);
         } else {
             if (prioritize) {
+                // 把一个非优先级的元素 变成 优先级的元素
                 prioritize(element);
             } else {
+                // 添加到优先部分的 最后面
                 addPriorityElement(element);
             }
         }
@@ -115,6 +126,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
      *
      * @param element the element to prioritize.
      */
+    // 把一个非优先级的元素 变成 优先级的元素
     public void prioritize(T element) {
         final Iterator<T> iterator = deque.iterator();
         // Already prioritized? Then, do not reorder elements.

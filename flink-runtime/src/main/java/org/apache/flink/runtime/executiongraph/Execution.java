@@ -455,11 +455,13 @@ public class Execution
 
         Collection<IntermediateResultPartition> partitions =
                 vertex.getProducedPartitions().values();
+
         Collection<CompletableFuture<ResultPartitionDeploymentDescriptor>> partitionRegistrations =
                 new ArrayList<>(partitions.size());
 
         for (IntermediateResultPartition partition : partitions) {
             PartitionDescriptor partitionDescriptor = PartitionDescriptor.from(partition);
+
             int maxParallelism =
                     getPartitionMaxParallelism(
                             partition,
@@ -521,17 +523,14 @@ public class Execution
                 slot,
                 "In order to deploy the execution we first have to assign a resource via tryAssignResource.");
 
-        // Check if the TaskManager died in the meantime
-        // This only speeds up the response to TaskManagers failing concurrently to deployments.
-        // The more general check is the rpcTimeout of the deployment call
+        // 检查槽位是否活着
         if (!slot.isAlive()) {
             throw new JobException("Target slot (TaskManager) for deployment is no longer alive.");
         }
 
-        // make sure exactly one deployment call happens from the correct state
-        // note: the transition from CREATED to DEPLOYING is for testing purposes only
         ExecutionState previous = this.state;
         if (previous == SCHEDULED || previous == CREATED) {
+            // 把状态切换为 DEPLOYING 状态
             if (!transitionState(previous, DEPLOYING)) {
                 // race condition, someone else beat us to the deploying call.
                 // this should actually not happen and indicates a race somewhere else
@@ -577,7 +576,7 @@ public class Execution
                     TaskDeploymentDescriptorFactory.fromExecutionVertex(vertex, attemptNumber)
                             .createDeploymentDescriptor(
                                     slot.getAllocationId(),
-                                    taskRestore,
+                                    taskRestore, //  JobManagerTaskRestore 内部有快照和状态信息
                                     producedPartitions.values());
 
             // null taskRestore to let it be GC'ed
@@ -588,10 +587,11 @@ public class Execution
             final ComponentMainThreadExecutor jobMasterMainThreadExecutor =
                     vertex.getExecutionGraphAccessor().getJobMasterMainThreadExecutor();
 
+            // 触发 ExecutionDeploymentTrackerDeploymentListenerAdapter 的回调逻辑
             getVertex().notifyPendingDeployment(this);
-            // We run the submission in the future executor so that the serialization of large TDDs
-            // does not block
-            // the main thread and sync back to the main thread once submission is completed.
+
+            // 用future 模式来提交任务, 这样TDD (TaskDeploymentDescriptor) 的序列化不会被阻塞主线程
+            // 一旦任务提交完成, 异步返回
             CompletableFuture.supplyAsync(
                             () -> taskManagerGateway.submitTask(deployment, rpcTimeout), executor)
                     .thenCompose(Function.identity())
@@ -604,6 +604,7 @@ public class Execution
                                             ExceptionUtils.stripCompletionException(failure);
 
                                     if (actualFailure instanceof TimeoutException) {
+                                        // 如果是超时异常
                                         String taskname =
                                                 vertex.getTaskNameWithSubtaskIndex()
                                                         + " ("
@@ -620,6 +621,7 @@ public class Execution
                                                                 + rpcTimeout,
                                                         actualFailure));
                                     } else {
+                                        // 如果是其他异常
                                         markFailed(actualFailure);
                                     }
                                 }

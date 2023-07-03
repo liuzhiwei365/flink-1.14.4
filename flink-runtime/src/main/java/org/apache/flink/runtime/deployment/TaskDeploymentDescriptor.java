@@ -263,9 +263,8 @@ public final class TaskDeploymentDescriptor implements Serializable {
             Preconditions.checkNotNull(blobService);
 
             final File dataFile = blobService.getFile(jobId, jobInfoKey);
-            // NOTE: Do not delete the job info BLOB since it may be needed again during recovery.
-            //       (it is deleted automatically on the BLOB server and cache when the job
-            //       enters a terminal state)
+            //  注意：不要删除 作业信息 BLOB, 因为在恢复过程中可能再次需要它
+            // （当作业进入终端状态时，它会在BLOB服务器和缓存上自动删除）
             SerializedValue<JobInformation> serializedValue =
                     SerializedValue.fromBytes(FileUtils.readAllBytes(dataFile.toPath()));
             serializedJobInformation = new NonOffloaded<>(serializedValue);
@@ -279,9 +278,8 @@ public final class TaskDeploymentDescriptor implements Serializable {
             Preconditions.checkNotNull(blobService);
 
             final File dataFile = blobService.getFile(jobId, taskInfoKey);
-            // NOTE: Do not delete the task info BLOB since it may be needed again during recovery.
-            //       (it is deleted automatically on the BLOB server and cache when the job
-            //       enters a terminal state)
+            //  注意：不要删除 任务信息 BLOB, 因为在恢复过程中可能再次需要它
+            // （当作业进入终端状态时，它会在BLOB服务器和缓存上自动删除）
             SerializedValue<TaskInformation> serializedValue =
                     SerializedValue.fromBytes(FileUtils.readAllBytes(dataFile.toPath()));
             serializedTaskInformation = new NonOffloaded<>(serializedValue);

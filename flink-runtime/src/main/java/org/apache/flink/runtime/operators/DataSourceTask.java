@@ -154,6 +154,7 @@ public class DataSourceTask<OT> extends AbstractInvokable {
 
         ExecutionConfig executionConfig = getExecutionConfig();
 
+        // 是否开启对象重用
         boolean objectReuseEnabled = executionConfig.isObjectReuseEnabled();
 
         LOG.debug(
@@ -289,6 +290,7 @@ public class DataSourceTask<OT> extends AbstractInvokable {
                 new InputOutputFormatContainer(config, userCodeClassLoader);
         try {
             operatorIdAndInputFormat = formatContainer.getUniqueInputFormat();
+
             this.format = operatorIdAndInputFormat.getValue();
 
             // check if the class is a subclass, if the check is required

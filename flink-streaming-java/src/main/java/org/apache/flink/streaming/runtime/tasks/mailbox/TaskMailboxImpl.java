@@ -50,6 +50,7 @@ public class TaskMailboxImpl implements TaskMailbox {
     private final ReentrantLock lock = new ReentrantLock();
 
     /** Internal queue of mails. */
+    // 阻塞队列
     @GuardedBy("lock")
     private final Deque<Mail> queue = new ArrayDeque<>();
 
@@ -68,12 +69,15 @@ public class TaskMailboxImpl implements TaskMailbox {
      * The current batch of mails. A new batch can be created with {@link #createBatch()} and
      * consumed with {@link #tryTakeFromBatch()}.
      */
+    // 非阻塞队列
     private final Deque<Mail> batch = new ArrayDeque<>();
 
     /**
      * Performance optimization where hasNewMail == !queue.isEmpty(). Will not reflect the state of
      * {@link #batch}.
      */
+    // 当往 queue 队列中添加元素时, 都会将 该标志设置为 true; 相对于直接判断 !queue.isEmpty() 有性能优势
+    // 它只 反映 queue队列的状态 , 不反映 batch 队列的状态
     private volatile boolean hasNewMail = false;
 
     public TaskMailboxImpl(@Nonnull final Thread taskMailboxThread) {
@@ -107,10 +111,12 @@ public class TaskMailboxImpl implements TaskMailbox {
         }
     }
 
+    // 先尝试从 batch中拿一个元素, 如果拿不到； 再尝试从 queue中拿一个元素
     @Override
     public Optional<Mail> tryTake(int priority) {
         checkIsMailboxThread();
         checkTakeStateConditions();
+
         Mail head = takeOrNull(batch, priority);
         if (head != null) {
             return Optional.of(head);
@@ -118,6 +124,7 @@ public class TaskMailboxImpl implements TaskMailbox {
         if (!hasNewMail) {
             return Optional.empty();
         }
+
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
@@ -132,6 +139,7 @@ public class TaskMailboxImpl implements TaskMailbox {
         }
     }
 
+    // 该方法是阻塞式地拿
     @Override
     public @Nonnull Mail take(int priority) throws InterruptedException, IllegalStateException {
         checkIsMailboxThread();
@@ -144,7 +152,7 @@ public class TaskMailboxImpl implements TaskMailbox {
         lock.lockInterruptibly();
         try {
             Mail headMail;
-            while ((headMail = takeOrNull(queue, priority)) == null) {
+            while ((headMail = takeOrNull(queue, priority)) == null) { //自旋式的拿; 但是又用 await 是为了降低对cpu的消耗
                 // to ease debugging
                 notEmpty.await(1, TimeUnit.SECONDS);
             }
@@ -157,19 +165,20 @@ public class TaskMailboxImpl implements TaskMailbox {
 
     // ------------------------------------------------------------------------------------------------------------------
 
+    // batch 队列中有数据返回 true ,否则false
+    // 将 queue队列中的数据全部 移动到 batch 队列中 （queue 是阻塞队列, batch 是非阻塞队列）
     @Override
     public boolean createBatch() {
         checkIsMailboxThread();
+        // short cut, 为了性能
         if (!hasNewMail) {
-            // batch is usually depleted by previous MailboxProcessor#runMainLoop
-            // however, putFirst may add a message directly to the batch if called from mailbox
-            // thread
             return !batch.isEmpty();
         }
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
             Mail mail;
+            // 不断 从队列 queue的头部 取出数据 ,添加到 batch队列 的队列尾
             while ((mail = queue.pollFirst()) != null) {
                 batch.addLast(mail);
             }
@@ -224,6 +233,7 @@ public class TaskMailboxImpl implements TaskMailbox {
 
     // ------------------------------------------------------------------------------------------------------------------
 
+    // 从队列中, 顺位拉取第一个优先级大于 priority的 Mail对象
     @Nullable
     private Mail takeOrNull(Deque<Mail> queue, int priority) {
         if (queue.isEmpty()) {
@@ -241,6 +251,7 @@ public class TaskMailboxImpl implements TaskMailbox {
         return null;
     }
 
+    // 将batch 和 queue中的 元素 抽干, 并以一个list 的形式返回
     @Override
     public List<Mail> drain() {
         List<Mail> drainedMails = new ArrayList<>(batch);

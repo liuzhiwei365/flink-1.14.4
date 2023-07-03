@@ -41,18 +41,27 @@ import static org.apache.flink.util.Preconditions.checkState;
 /** The default implementation of he {@link CheckpointPlan}. */
 public class DefaultCheckpointPlan implements CheckpointPlan {
 
+    // 存储了触发Checkpoint操作的 节点
+    // 1 一般来说, 是Source 的 节点
+    // 2 但是万一 Source 执行完了,finish了, 那么这时候Source的下游节点有可能成了实际意义上的Source,
+    //   那么这时候这些下游的节点 就会被存储到这里了
     private final List<Execution> tasksToTrigger;
 
+    // 存储了 物理执行图中 所有的 节点,  都需要向CheckpointCoordinator 汇报ack (Acknowledge)信息
     private final List<Execution> tasksToWaitFor;
 
+    // 其实 tasksToCommitTo 中存储的 ExecutionVertex 与 tasksToWaitFor中存储的 Execution 是一一对应的
+    // ExecutionVertex 是执行图中的顶点,  而Execution 是针对 执行顶点的 一次执行尝试
     private final List<ExecutionVertex> tasksToCommitTo;
 
     private final List<Execution> finishedTasks;
 
     private final boolean mayHaveFinishedTasks;
 
+    // 维护 所有子任务 都finish 的 JobVertex
     private final Map<JobVertexID, ExecutionJobVertex> fullyFinishedOrFinishedOnRestoreVertices;
 
+    // 每个 JobVertex 下, 已经 finish 的 subtask 数量
     private final IdentityHashMap<ExecutionJobVertex, Integer> vertexOperatorsFinishedTasksCount;
 
     DefaultCheckpointPlan(

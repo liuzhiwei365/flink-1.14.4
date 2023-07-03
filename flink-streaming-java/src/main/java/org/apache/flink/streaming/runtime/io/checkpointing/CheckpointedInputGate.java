@@ -162,9 +162,10 @@ public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEven
 
         if (bufferOrEvent.isEvent()) {
             // 如果是事件
+            // 处理 CheckpointBarrier, CancelCheckpointMarker, EndOfData,EventAnnouncement 等事件
             return handleEvent(bufferOrEvent);
         } else if (bufferOrEvent.isBuffer()) {
-            // 根据buffer可以解析得到实际的用户数据
+            // 如果是buffer
             /**
              * https://issues.apache.org/jira/browse/FLINK-19537 This is not entirely true, as it's
              * ignoring the buffer/bytes accumulated in the record deserializers. If buffer is
@@ -176,7 +177,7 @@ public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEven
              * However the current is on average accurate and it might be just good enough (at least
              * for the time being).
              */
-            // 如果是普通buffer,累计数据的字节
+            // 如果是普通buffer,累计数据的字节（反序列化解码处理的逻辑不再这里）
             barrierHandler.addProcessedBytes(bufferOrEvent.getBuffer().getSize());
         }
         return next;

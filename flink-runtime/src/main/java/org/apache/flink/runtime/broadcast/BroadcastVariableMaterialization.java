@@ -100,11 +100,12 @@ public class BroadcastVariableMaterialization<T, C> {
                                 key.toString()));
             }
 
-            materializer = references.size() == 1;
+            materializer = references.size() == 1; // 引用计数为1, 判断已经实例化
         }
 
         try {
             @SuppressWarnings("unchecked")
+            // 可变记录类型 的 reader
             final MutableReader<DeserializationDelegate<T>> typedReader =
                     (MutableReader<DeserializationDelegate<T>>) reader;
 
@@ -126,6 +127,7 @@ public class BroadcastVariableMaterialization<T, C> {
                 ArrayList<T> data = new ArrayList<T>();
 
                 T element;
+                //核心
                 while ((element = readerIterator.next()) != null) {
                     data.add(element);
                 }

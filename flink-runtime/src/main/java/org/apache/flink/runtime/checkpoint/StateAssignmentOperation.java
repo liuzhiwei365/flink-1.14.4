@@ -236,6 +236,7 @@ public class StateAssignmentOperation {
                     executionJobVertex.getTaskVertices()[subTaskIndex].getCurrentExecutionAttempt();
 
             if (assignment.isFullyFinished) {
+                // 把完成的状态 分配给 task , task以后要用这些状态去启动, 内部会构造 JobManagerTaskRestore 对象
                 assignFinishedStateToTask(currentExecutionAttempt);
             } else {
                 assignNonFinishedStateToTask(

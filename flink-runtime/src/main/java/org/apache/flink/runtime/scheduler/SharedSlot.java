@@ -206,9 +206,13 @@ class SharedSlot implements SlotOwner, PhysicalSlot.Payload {
                 state == State.ALLOCATED,
                 "SharedSlot (physical request %s) has been released",
                 physicalSlotRequestId);
+
+        // 拿到执行顶点的逻辑槽位
         CompletableFuture<SingleLogicalSlot> logicalSlotFuture =
                 requestedLogicalSlots.getValueByKeyA(executionVertexID);
+
         SlotRequestId logicalSlotRequestId = requestedLogicalSlots.getKeyBByKeyA(executionVertexID);
+
         if (logicalSlotFuture != null) {
             LOG.debug(
                     "Cancel {} from {}",
@@ -217,6 +221,7 @@ class SharedSlot implements SlotOwner, PhysicalSlot.Payload {
             // If the logicalSlotFuture was not completed and now it fails, the exceptionally
             // callback will also call removeLogicalSlotRequest
             if (cause == null) {
+                // 取消 future 请求动作,  CompletableFuture.cancel
                 logicalSlotFuture.cancel(false);
             } else {
                 logicalSlotFuture.completeExceptionally(cause);

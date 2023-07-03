@@ -67,6 +67,7 @@ public abstract class SingleThreadMultiplexSourceReaderBase<
      * <p>The reader will use a handover queue sized as configured via {@link
      * SourceReaderOptions#ELEMENT_QUEUE_CAPACITY}.
      */
+    // KafkaSourceReader FileSourceReader PulsarSourceReaderBase 的父类
     public SingleThreadMultiplexSourceReaderBase(
             Supplier<SplitReader<E, SplitT>> splitReaderSupplier,
             RecordEmitter<E, T, SplitStateT> recordEmitter,
@@ -74,6 +75,7 @@ public abstract class SingleThreadMultiplexSourceReaderBase<
             SourceReaderContext context) {
         this(
                 new FutureCompletingBlockingQueue<>(
+                        // source.reader.element.queue.capacity
                         config.getInteger(SourceReaderOptions.ELEMENT_QUEUE_CAPACITY)),
                 splitReaderSupplier,
                 recordEmitter,
@@ -105,6 +107,8 @@ public abstract class SingleThreadMultiplexSourceReaderBase<
      * RecordEmitter, Configuration, SourceReaderContext)}, but accepts a specific {@link
      * FutureCompletingBlockingQueue} and {@link SingleThreadFetcherManager}.
      */
+
+    //  KafkaSourceReader 和 PulsarSourceReaderBase 在构造的时候, 也会调用它们的父类的构造方法 做一些组件的初始化准备
     public SingleThreadMultiplexSourceReaderBase(
             FutureCompletingBlockingQueue<RecordsWithSplitIds<E>> elementsQueue,
             SingleThreadFetcherManager<E, SplitT> splitFetcherManager,

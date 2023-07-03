@@ -149,6 +149,8 @@ public abstract class AbstractRocksDBState<K, N, V> implements InternalKvState<K
 
     <UK> byte[] serializeCurrentKeyWithGroupAndNamespacePlusUserKey(
             UK userKey, TypeSerializer<UK> userKeySerializer) throws IOException {
+
+        // 用 namespace 和 用户的 key 组成 一个新的序列化后的 复合key
         return sharedKeyNamespaceSerializer.buildCompositeKeyNamesSpaceUserKey(
                 currentNamespace, namespaceSerializer, userKey, userKeySerializer);
     }

@@ -56,7 +56,7 @@ public class FsStateChangelogStorage
 
     public FsStateChangelogStorage(Configuration config) throws IOException {
         this(
-                StateChangeUploader.fromConfig(config),
+                StateChangeUploader.fromConfig(config), // 从配置创建 StateChangeUploader对象
                 config.get(PREEMPTIVE_PERSIST_THRESHOLD).getBytes());
     }
 

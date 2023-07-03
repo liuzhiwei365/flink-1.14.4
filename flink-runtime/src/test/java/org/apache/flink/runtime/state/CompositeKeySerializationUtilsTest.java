@@ -66,6 +66,26 @@ public class CompositeKeySerializationUtilsTest {
     }
 
     @Test
+    public void testKeyGroupSerializationAndDeserializationLzw() throws Exception {
+        ByteArrayOutputStreamWithPos outputStream = new ByteArrayOutputStreamWithPos(8);
+        DataOutputView outputView = new DataOutputViewStreamWrapper(outputStream);
+
+            for (int orgKeyGroup = 0; orgKeyGroup < 128; ++orgKeyGroup) {
+                outputStream.reset();
+                CompositeKeySerializationUtils.writeKeyGroup(
+                        orgKeyGroup, 2, outputView);
+            }
+
+            int value = 0b11100000011;
+
+            // (byte) ((value >>> (byteIdx << 3)))
+            //
+            System.out.println( (byte)(17 >>> 2) );
+
+            System.out.println((byte)value);
+    }
+
+    @Test
     public void testKeySerializationAndDeserialization() throws Exception {
         final DataOutputSerializer outputView = new DataOutputSerializer(8);
         final DataInputDeserializer inputView = new DataInputDeserializer();

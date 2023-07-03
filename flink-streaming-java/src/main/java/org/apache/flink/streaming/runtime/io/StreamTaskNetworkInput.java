@@ -74,7 +74,7 @@ public final class StreamTaskNetworkInput<T>
                 getRecordDeserializers(checkpointedInputGate, ioManager));
     }
 
-    // Initialize one deserializer per input channel
+    // 每个 input channel 对应一个 反序列化器
     private static Map<
                     InputChannelInfo,
                     SpillingAdaptiveSpanningRecordDeserializer<

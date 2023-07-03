@@ -92,6 +92,8 @@ public class SourceCoordinatorContext<SplitT extends SourceSplit>
     private final SplitAssignmentTracker<SplitT> assignmentTracker;
     private final SourceCoordinatorProvider.CoordinatorExecutorThreadFactory
             coordinatorThreadFactory;
+
+    // SourceCoordinator 会持有本类对象的 引用, SourceCoordinator 会通过本类的  subtaskGateways数组的元素给 不同的subTask发消息
     private final OperatorCoordinator.SubtaskGateway[] subtaskGateways;
     private final String coordinatorThreadName;
     private volatile boolean closed;
@@ -172,6 +174,9 @@ public class SourceCoordinatorContext<SplitT extends SourceSplit>
         return Collections.unmodifiableMap(registeredReaders);
     }
 
+    // 将 SourceOperator 分配得到的  assignment
+    // 把 每个 subatask 分配的多个分片, 包装到AddSplitEvent 消息中
+    // 通过 各个 subtask 的 gateway 把AddSplitEvent 消息发送到 相应的 subatsk中
     @Override
     public void assignSplits(SplitsAssignment<SplitT> assignment) {
         // Ensure the split assignment is done by the the coordinator executor.
@@ -186,24 +191,34 @@ public class SourceCoordinatorContext<SplitT extends SourceSplit>
                                             registeredReaders.get(subtaskId), subtaskId));
                         }
                     }
-
+                    // （1） 添加给 assignmentTracker 的 uncheckpointedAssignments 成员 ,
+                    //      assignmentTracker 在相关的 checkpoint
                     assignmentTracker.recordSplitAssignment(assignment);
+
+                    // （2） 给每个 subtask 发送 AddSplitEvent 消息
+                    //  ***  该消息 最后会被 OperatorEventHandler 接受 和处理; OperatorEventHandler是一个接口,
+                    //       有一个 handleOperatorEvent方法
+                    //  ***  SourceOperator 和 CollectSinkOperator 都实现了 该接口
+                    //       本消息最终是由  SourceOperator 的 handleOperatorEvent方法处理的
                     assignment
                             .assignment()
                             .forEach(
                                     (id, splits) -> {
+                                        // SubtaskGateway 是对 subtask 运行实例 交互
                                         final OperatorCoordinator.SubtaskGateway gateway =
                                                 getGatewayAndCheckReady(id);
 
                                         final AddSplitEvent<SplitT> addSplitEvent;
                                         try {
+                                            // AddSplitEvent 对象是 封装了 subtask 即将要添加的数据分片信息集合 和 分片序列化器
+                                            // 构造方法中 会 将 分片信息 序列化成 byte数组
                                             addSplitEvent =
                                                     new AddSplitEvent<>(splits, splitSerializer);
                                         } catch (IOException e) {
                                             throw new FlinkRuntimeException(
                                                     "Failed to serialize splits.", e);
                                         }
-
+                                        // 发送给 taskManager 消息
                                         gateway.sendEvent(addSplitEvent);
                                     });
                     return null;
@@ -269,6 +284,7 @@ public class SourceCoordinatorContext<SplitT extends SourceSplit>
     }
 
     OperatorCoordinator.SubtaskGateway getGatewayAndCheckReady(int subtaskIndex) {
+        // SubtaskGateway 是对 subtask 运行实例 交互
         final OperatorCoordinator.SubtaskGateway gateway = subtaskGateways[subtaskIndex];
         if (gateway != null) {
             return gateway;

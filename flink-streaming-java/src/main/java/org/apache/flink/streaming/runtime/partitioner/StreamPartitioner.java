@@ -27,6 +27,8 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /** A special {@link ChannelSelector} for use in streaming programs. */
+// 所有的分区器 都继承自 ChannelSelector 接口
+// 在 ChannelSelectorRecordWriter 向下游下发数据的时候,会调用selectChannel 决定向下游的那个具体的通道发送数据
 @Internal
 public abstract class StreamPartitioner<T>
         implements ChannelSelector<SerializationDelegate<StreamRecord<T>>>, Serializable {

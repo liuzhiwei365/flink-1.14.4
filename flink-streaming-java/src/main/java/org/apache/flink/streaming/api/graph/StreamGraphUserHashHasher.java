@@ -35,9 +35,11 @@ public class StreamGraphUserHashHasher implements StreamGraphHasher {
         HashMap<Integer, byte[]> hashResult = new HashMap<>();
         for (StreamNode streamNode : streamGraph.getStreamNodes()) {
 
+            // 得到用户指定的 hash String
             String userHash = streamNode.getUserHash();
 
             if (null != userHash) {
+                // StringUtils.hexStringToByte ： jdk 工具类 将string 变成 字节数组
                 hashResult.put(streamNode.getId(), StringUtils.hexStringToByte(userHash));
             }
         }

@@ -41,6 +41,7 @@ public class ExecutionDeploymentTrackerDeploymentListenerAdapter
 
     @Override
     public void onCompletedDeployment(ExecutionAttemptID execution) {
+        //DefaultExecutionDeploymentTracker 是其实现类
         executionDeploymentTracker.completeDeploymentOf(execution);
     }
 }

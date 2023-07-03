@@ -1801,6 +1801,12 @@ public class StreamExecutionEnvironment {
         return addSource(function, sourceName, typeInfo, Boundedness.CONTINUOUS_UNBOUNDED);
     }
 
+    // 所有的  addSource 方法 都会调到这个最详细的方法
+    // 与fromSource 有很大不同
+
+    // fromSource 传入  Source 和 水印策略 （分配水印的入口之一, 另外一个是 DataStream的 assignTimestampsAndWatermarks 方法 ）
+    // addSource 传入    SourceFunction
+    // 用户 要考虑自己是想用哪个api ,重写 Source 还是  SourceFunction ？  重写SourceFunction 相对简单一些
     private <OUT> DataStreamSource<OUT> addSource(
             final SourceFunction<OUT> function,
             final String sourceName,
@@ -1817,6 +1823,11 @@ public class StreamExecutionEnvironment {
 
         clean(function);
 
+        // 把function 用 operator 包装的理由：
+
+        // 1 算子 维护了众多 运行时的系统组件 和 运行时配置, 还有环境等; 而函数只是侧重于 用户的业务逻辑的实现
+        // 2 可以将 算子 理解为 函数的 flink系统级 的 高级代理
+        // 3 在后续构建StreamNode 的时候 都会用  每个算子对应的 算子工厂作为其成员变量
         final StreamSource<OUT, ?> sourceOperator = new StreamSource<>(function);
         return new DataStreamSource<>(
                 this, resolvedTypeInfo, sourceOperator, isParallel, sourceName, boundedness);
@@ -1866,6 +1877,7 @@ public class StreamExecutionEnvironment {
      * @param typeInfo the user defined type information for the stream
      * @return the data stream constructed
      */
+    // 所有的  fromSource 方法 都会调到这个最详细的方法
     @Experimental
     public <OUT> DataStreamSource<OUT> fromSource(
             Source<OUT, ?, ?> source,
@@ -2094,6 +2106,7 @@ public class StreamExecutionEnvironment {
      * @param clearTransformations Whether or not to clear previously registered transformations
      * @return The stream graph representing the transformations
      */
+    // flink api 生成  StreamGraph
     @Internal
     public StreamGraph getStreamGraph(boolean clearTransformations) {
         final StreamGraph streamGraph = getStreamGraphGenerator(transformations).generate();

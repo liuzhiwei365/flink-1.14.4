@@ -54,17 +54,11 @@ public class MergingWindowSet<W extends Window> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MergingWindowSet.class);
 
-    /**
-     * Mapping from window to the window that keeps the window state. When we are incrementally
-     * merging windows starting from some window we keep that starting window as the state window to
-     * prevent costly state juggling.
-     */
+    //  从 窗口 映射到 保持窗口状态的窗口
+    //  当我们从某个窗口开始逐步合并窗口时, 我们将该开始窗口保留为状态窗口, 以防止代价高昂的状态操作
     private final Map<W, W> mapping;
 
-    /**
-     * Mapping when we created the {@code MergingWindowSet}. We use this to decide whether we need
-     * to persist any changes to state.
-     */
+    // 对 mapping 的初始备份
     private final Map<W, W> initialMapping;
 
     private final ListState<Tuple2<W, W>> state;
@@ -95,8 +89,11 @@ public class MergingWindowSet<W extends Window> {
     /**
      * Persist the updated mapping to the given state if the mapping changed since initialization.
      */
+    // 如果mapping 和 初始拷贝不一样, 则 把 mapping 持久化
     public void persist() throws Exception {
         if (!mapping.equals(initialMapping)) {
+            // 如果 mapping 相对于 初始备份 有了变化
+            // 则 更新 管理状态 （即由flink 内核 维护的状态 ）
             state.clear();
             for (Map.Entry<W, W> window : mapping.entrySet()) {
                 state.add(new Tuple2<>(window.getKey(), window.getValue()));
@@ -156,7 +153,15 @@ public class MergingWindowSet<W extends Window> {
         windows.addAll(this.mapping.keySet());
         windows.add(newWindow);
 
+        //最终 : key是合并加宽过的 窗口 , value 是所有要被合并的窗口的集合
         final Map<W, Collection<W>> mergeResults = new HashMap<>();
+
+        // windowAssigner 必定是如下4个实现类的一个
+        //DynamicProcessingTimeSessionWindows
+        //ProcessingTimeSessionWindows
+        //DynamicEventTimeSessionWindows
+        //EventTimeSessionWindows
+        // 这4个实现都调用了 相同的方法:  TimeWindow.mergeWindows(windows, c)
         windowAssigner.mergeWindows(
                 windows,
                 new MergingWindowAssigner.MergeCallback<W>() {
@@ -172,50 +177,50 @@ public class MergingWindowSet<W extends Window> {
         W resultWindow = newWindow;
         boolean mergedNewWindow = false;
 
-        // perform the merge
+        // 如果有合并窗口的必要
         for (Map.Entry<W, Collection<W>> c : mergeResults.entrySet()) {
-            W mergeResult = c.getKey();
-            Collection<W> mergedWindows = c.getValue();
+            W mergeResult = c.getKey(); //合并加宽过的 窗口
+            Collection<W> mergedWindows = c.getValue(); // 所有要被合并的窗口的集合
 
-            // if our new window is in the merged windows make the merge result the
-            // result window
+            // 如果我们的新窗口在合并窗口中 , 则将合并结果作为 要返回的窗口
             if (mergedWindows.remove(newWindow)) {
                 mergedNewWindow = true;
+                // 核心
                 resultWindow = mergeResult;
             }
 
-            // pick any of the merged windows and choose that window's state window
-            // as the state window for the merge result
+            // 选择mergedWindows 集合中的第一个窗口作为  该窗口的的状态窗口
+            // 因为属于同一个 mergedWindows 集合的 窗口,它们的 value ,也就是 状态窗口 一定相同
             W mergedStateWindow = this.mapping.get(mergedWindows.iterator().next());
 
-            // figure out the state windows that we are merging
+            // 拿到所有 mergedWindows 的元素 在mapping 中的 状态窗口 （保存不用再维护的 状态窗口）
             List<W> mergedStateWindows = new ArrayList<>();
-            for (W mergedWindow : mergedWindows) {
+            for (W mergedWindow : mergedWindows) { // 特别注意, 此时,mergedWindows中不含有 newWindow
+
+                // 因为已经合并了,所以不用维护了, 后续 只需 维护 合并后的结果 mergeResult
                 W res = this.mapping.remove(mergedWindow);
                 if (res != null) {
                     mergedStateWindows.add(res);
                 }
             }
 
+            // 被合并的窗口 已经在上面被删去,现在只需要维护 合并后的结果
             this.mapping.put(mergeResult, mergedStateWindow);
 
-            // don't put the target state window into the merged windows
+            // 删除 mergedStateWindow
             mergedStateWindows.remove(mergedStateWindow);
 
-            // don't merge the new window itself, it never had any state associated with it
-            // i.e. if we are only merging one pre-existing window into itself
-            // without extending the pre-existing window
             if (!(mergedWindows.contains(mergeResult) && mergedWindows.size() == 1)) {
                 mergeFunction.merge(
-                        mergeResult,
-                        mergedWindows,
-                        this.mapping.get(mergeResult),
-                        mergedStateWindows);
+                        mergeResult, // newWindow 来之后 ,最新的 合并结果
+                        mergedWindows, // 排除了 newWindow ,代表的是该newWindow 来之前, 其所属的组, 也就是 mapping 不用再继续维护的 窗口
+                        this.mapping.get(mergeResult), // newWindow 来之后 ,最新的 合并结果的 状态窗口
+                        mergedStateWindows); // mapping 不用再维护的 状态窗口
             }
         }
 
-        // the new window created a new, self-contained window without merging
         if (mergeResults.isEmpty() || (resultWindow.equals(newWindow) && !mergedNewWindow)) {
+            // 如果没有合并窗口的必要 ,新来的窗口 自己就是自己的合并后的窗口
             this.mapping.put(resultWindow, resultWindow);
         }
 

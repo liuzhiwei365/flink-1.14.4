@@ -49,6 +49,7 @@ public final class KeyGroupRangeAssignment {
      */
     public static int assignKeyToParallelOperator(Object key, int maxParallelism, int parallelism) {
         Preconditions.checkNotNull(key, "Assigned key must not be null!");
+        // 先给键 分配键组,
         return computeOperatorIndexForKeyGroup(
                 maxParallelism, parallelism, assignToKeyGroup(key, maxParallelism));
     }
@@ -62,6 +63,7 @@ public final class KeyGroupRangeAssignment {
      */
     public static int assignToKeyGroup(Object key, int maxParallelism) {
         Preconditions.checkNotNull(key, "Assigned key must not be null!");
+        // 把key 先做 java的 hash ,再做 murmurHash , 再除以 最大的并行度 取模 作为键组
         return computeKeyGroupForKeyHash(key.hashCode(), maxParallelism);
     }
 
@@ -124,6 +126,11 @@ public final class KeyGroupRangeAssignment {
      * @return The index of the operator to which elements from the given key-group should be routed
      *     under the given parallelism and maxParallelism.
      */
+    // 因为 keyGroupId <= maxParallelism
+    // 所以 keyGroupId * parallelism / maxParallelism <= maxParallelism * parallelism / maxParallelism
+    // <= parallelism
+    // 所以结果 一定落在 0 到 parallelism 范围内 , 左闭右开
+    //  且 键组id 越大 ,越落在高位
     public static int computeOperatorIndexForKeyGroup(
             int maxParallelism, int parallelism, int keyGroupId) {
         return keyGroupId * parallelism / maxParallelism;
