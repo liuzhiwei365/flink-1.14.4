@@ -300,6 +300,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     private final ThroughputCalculator throughputCalculator;
 
+    // 网络缓存消胀(Network Buffer Debloating)就是为了尽量减少in-flight数据而产生的
     private final @Nullable BufferDebloater bufferDebloater;
 
     private final long bufferDebloatPeriod;
@@ -791,6 +792,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         // final check to exit early before starting to run
         ensureNotCanceled();
 
+        // 调度 网络缓存消涨,  会动态调节上游 的 buffer size
         scheduleBufferDebloater();
 
         // 核心,  运行信箱, 内部会  处理用户数据 和 Mail元素 （封装了checkpoint 等动作）
@@ -803,12 +805,15 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         afterInvoke();
     }
 
+    //调度 网络缓存消涨
     private void scheduleBufferDebloater() {
         // See https://issues.apache.org/jira/browse/FLINK-23560
         // If there are no input gates, there is no point of calculating the throughput and running
         // the debloater. At the same time, for SourceStreamTask using legacy sources and checkpoint
         // lock, enqueuing even a single mailbox action can cause performance regression. This is
         // especially visible in batch, with disabled checkpointing and no processing time timers.
+
+        // 如果没有inputGate直接返回
         if (getEnvironment().getAllInputGates().length == 0) {
             return;
         }
@@ -817,14 +822,15 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 timestamp ->
                         mainMailboxExecutor.execute(
                                 () -> {
-                                    debloat();
-                                    scheduleBufferDebloater();
+                                    debloat();// 消涨
+                                    scheduleBufferDebloater(); // 重新调度 网络缓存消涨
                                 },
                                 "Buffer size recalculation"));
     }
 
     @VisibleForTesting
     void debloat() {
+        // 计算每毫秒的 吞吐量 统计值
         long throughput = throughputCalculator.calculateThroughput();
         if (bufferDebloater != null) {
             bufferDebloater.recalculateBufferSize(throughput);

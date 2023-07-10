@@ -201,14 +201,18 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // AddCreditMessage 是 ClientOutboundMeassage的子类
+        // ClientOutboundMeassage的子类如下:
+        //      AcknowledgeAllRecordsProcessedMessage      通知上游本 InputChannel 所有的消息处理完了
+        //      AddCreditMessage                           增加上游的 Credit值
+        //      NewBufferSizeMessage
+        //      ResumeConsumptionMessage
         if (msg instanceof ClientOutboundMessage) {
             boolean triggerWrite = clientOutboundMessages.isEmpty();
 
             clientOutboundMessages.add((ClientOutboundMessage) msg);
 
             if (triggerWrite) {
-                //  第一次
+                //  一旦 clientOutboundMessages队列中,有第一个元素;则将元素发往上游
                 writeAndFlushNextMessageIfPossible(ctx.channel());
             }
         } else {

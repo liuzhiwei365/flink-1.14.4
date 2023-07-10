@@ -178,6 +178,10 @@ class PartitionRequestServerHandler extends SimpleChannelInboundHandler<NettyMes
 
                 outboundQueue.acknowledgeAllRecordsProcessed(request.receiverId);
             } else if (msgClazz == NewBufferSize.class) {
+                // BufferDebloater 根据 下游运行时 吞吐统计量, 来计算新的 buffer size, 然后
+                // 把 NewBufferSize (包含 buffer size) 发送给上游
+
+                // 上游的这里就会处理相关的 NewBufferSize 对象, 最终会调整 BufferBuilder 的 maxCapacity的值
                 NewBufferSize request = (NewBufferSize) msg;
 
                 outboundQueue.notifyNewBufferSize(request.receiverId, request.bufferSize);

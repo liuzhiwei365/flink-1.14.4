@@ -26,6 +26,7 @@ public class ThroughputCalculator {
     private final Clock clock;
     private final ThroughputEMA throughputEMA;
 
+    // 当前累计的数量总量, 计算吞吐量后会被重新设置为 0
     private long currentAccumulatedDataSize;
     private long currentMeasurementTime;
     private long measurementStartTime = NOT_TRACKED;
@@ -71,15 +72,19 @@ public class ThroughputCalculator {
     /** @return Calculated throughput based on the collected data for the last period. */
     public long calculateThroughput() {
         if (measurementStartTime != NOT_TRACKED) {
+            // 获取当前时间
             long absoluteTimeMillis = clock.absoluteTimeMillis();
+            // 获取计量吞吐量期间时长 （单位毫秒）
             currentMeasurementTime += absoluteTimeMillis - measurementStartTime;
+            // 设置下一个计量起始时间
             measurementStartTime = absoluteTimeMillis;
         }
 
+        // 计算每毫秒 的 吞吐量, 方法参数为这段时间累积的数据量 和 时长
         long throughput =
-                throughputEMA.calculateThroughput(
-                        currentAccumulatedDataSize, currentMeasurementTime);
+                throughputEMA.calculateThroughput(currentAccumulatedDataSize, currentMeasurementTime);
 
+        // 变量重置
         currentAccumulatedDataSize = currentMeasurementTime = 0;
 
         return throughput;

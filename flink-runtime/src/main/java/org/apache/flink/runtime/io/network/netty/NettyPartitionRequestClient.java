@@ -223,11 +223,11 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
 
     private void sendToChannel(ClientOutboundMessage message) {
         /*
-         * org.apache.flink.shaded.netty4.io.netty.channel.DefaultChannelPipeline#fireUserEventTriggered(java.lang.Object)
-         * org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext#invokeUserEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext,
+         *   DefaultChannelPipeline#fireUserEventTriggered(java.lang.Object)
+         *   AbstractChannelHandlerContext#invokeUserEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext,
          * java.lang.Object)
-         * org.apache.flink.shaded.netty4.io.netty.channel.AbstractChannelHandlerContext#invokeUserEventTriggered(java.lang.Object)
-         * org.apache.flink.runtime.io.network.netty.CreditBasedPartitionRequestClientHandler#userEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext,
+         *   AbstractChannelHandlerContext#invokeUserEventTriggered(java.lang.Object)
+         *   CreditBasedPartitionRequestClientHandler#userEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext,
          * java.lang.Object)
          *
          *  CreditBasedPartitionRequestClientHandler 的 userEventTriggered会得到响应, 调用处理notifyCreditAvailable逻辑

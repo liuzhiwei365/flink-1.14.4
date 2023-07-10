@@ -65,35 +65,45 @@ public class BufferDebloater {
         checkArgument(targetTotalBufferSize.toMillis() > 0.0);
     }
 
+    // 重新计算 buffer 数量, 并发给上游
     public void recalculateBufferSize(long currentThroughput) {
+        // 每毫秒吞吐量的统计值
         long desiredTotalBufferSizeInBytes =
                 (currentThroughput * targetTotalBufferSize.toMillis()) / MILLIS_IN_SECOND;
 
+        // 测量目前所有 inputGate下 所有inputChannel使用的 buffer数量总和
         int totalNumber = 0;
         for (IndexedInputGate inputGate : inputGates) {
             totalNumber += Math.max(1, inputGate.getBuffersInUseCount());
         }
+
+        // 重新计算每个 buffer 的大小 （ 以平均每个buffer均摊的每毫秒吞吐量大小 作为上游 buffer size ）
         int newSize =
-                (int)
-                        Math.max(
-                                minBufferSize,
+                (int)Math.max(
+                                minBufferSize,//默认 1kb
                                 Math.min(
-                                        desiredTotalBufferSizeInBytes / totalNumber,
-                                        maxBufferSize));
+                                        desiredTotalBufferSizeInBytes / totalNumber,// 平均每个buffer均摊的 每毫秒 吞吐量
+                                        maxBufferSize));// 默认 32kb
+
+        // 估算buffer数据完全消费的所需时间
         lastEstimatedTimeToConsumeBuffers =
                 Duration.ofMillis(
                         newSize * totalNumber * MILLIS_IN_SECOND / Math.max(1, currentThroughput));
 
+        // 如果新计算出的大小和旧的很接近，不更新buffer大小
+        // 旧buffer大小乘以taskmanager.network.memory.buffer-debloat.threshold-percentages计算出变化量
+        // 如果newSize和旧buffer大小差异值小于变化量，则不更新buffer大小
         boolean skipUpdate = skipUpdate(newSize);
 
-        // Skip update if the new value pretty close to the old one.
         if (skipUpdate) {
+            // 如果不需要更新,返回
             return;
         }
 
         lastBufferSize = newSize;
         for (IndexedInputGate inputGate : inputGates) {
             if (!inputGate.isFinished()) {
+                // 把计算好的 buffer 的大小 通知上游
                 inputGate.announceBufferSize(newSize);
             }
         }

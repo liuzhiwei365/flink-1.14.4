@@ -29,6 +29,7 @@ public class ThroughputEMA {
     private final double alpha;
 
     public ThroughputEMA(long numberOfSamples) {
+        // numberOfSamples  默认是20
         alpha = 2.0 / (numberOfSamples + 1);
     }
 
@@ -50,13 +51,13 @@ public class ThroughputEMA {
         if (currentThroughput != 0) {
             currentThroughput += alpha * (instantThroughput(dataSize, time) - currentThroughput);
         } else {
-            // Warm-up case.
             currentThroughput = instantThroughput(dataSize, time);
         }
 
         return currentThroughput;
     }
 
+    // 计算 每秒的吞吐量
     static long instantThroughput(long dataSize, long time) {
         return (long) ((double) dataSize / time * MILLIS_IN_SECOND);
     }
