@@ -32,7 +32,9 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * The event value is the connection through which operator events are sent, from coordinator to
- * operator. It can temporarily block events from going through, buffering them, and releasing them
+ * operator.
+ *
+ * It can temporarily block events from going through, buffering them, and releasing them
  * later. It is used for "alignment" of operator event streams with checkpoint barrier injection,
  * similar to how the input channels are aligned during a common checkpoint.
  *
@@ -89,6 +91,7 @@ final class OperatorEventValve implements EventSender {
         checkRunsInMainThread();
 
         if (shut) {
+            // 阀门关了则 缓存
             blockedEvents.add(new BlockedEvent(sendAction, result));
         } else {
             callSendAction(sendAction, result);
@@ -139,6 +142,7 @@ final class OperatorEventValve implements EventSender {
         return false;
     }
 
+    // 开阀门 ,释放缓存事件
     public void openValveAndUnmarkCheckpoint(long expectedCheckpointId) {
         checkRunsInMainThread();
 
@@ -151,19 +155,23 @@ final class OperatorEventValve implements EventSender {
         openValveAndUnmarkCheckpoint();
     }
 
-    /** Opens the value, releasing all buffered events. */
+    // 开阀门 ,释放缓存事件
     public void openValveAndUnmarkCheckpoint() {
         checkRunsInMainThread();
 
         currentCheckpointId = NO_CHECKPOINT;
         if (!shut) {
+            // 如果阀门开着 ，则一定没有缓存事件,不需要处理
             return;
         }
 
+        // 如果阀门关着, 处理缓存事件
         for (BlockedEvent blockedEvent : blockedEvents) {
             callSendAction(blockedEvent.sendAction, blockedEvent.future);
         }
+        //清缓存
         blockedEvents.clear();
+        //开阀门
         shut = false;
     }
 

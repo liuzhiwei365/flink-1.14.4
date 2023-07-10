@@ -98,7 +98,7 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
      */
     @Override
     public void requestSubpartition(
-            final ResultPartitionID partitionId, // Partition编号
+            final ResultPartitionID partitionId, // ResultPartition编号
             final int subpartitionIndex, // SubPartition编号
             final RemoteInputChannel inputChannel, // inputChannel自己
             int delayMs)
@@ -141,7 +141,11 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
                     }
                 };
 
-        // 将创建好的 PartitionRequest 立即或者延迟 发送数据到 生产端所在的task 的节点,
+        // 将创建好的 PartitionRequest 立即或者延迟 发送请求（PartitionRequest）  到 生产端所在的task 的节点
+
+        //   ****
+        //  上游的 处理
+        //  PartitionRequestServerHandler.channelRead0
         if (delayMs == 0) {
             ChannelFuture f = tcpChannel.writeAndFlush(request);
             f.addListener(listener);

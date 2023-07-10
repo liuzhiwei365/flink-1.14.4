@@ -108,6 +108,7 @@ public abstract class InputGate
      *
      * @return {@code Optional.empty()} if {@link #isFinished()} returns true.
      */
+    // 阻塞获取
     public abstract Optional<BufferOrEvent> getNext() throws IOException, InterruptedException;
 
     /**
@@ -119,6 +120,7 @@ public abstract class InputGate
      * @return {@code Optional.empty()} if there is no data to return or if {@link #isFinished()}
      *     returns true.
      */
+    // 非阻塞获取
     public abstract Optional<BufferOrEvent> pollNext() throws IOException, InterruptedException;
 
     public abstract void sendTaskEvent(TaskEvent event) throws IOException;

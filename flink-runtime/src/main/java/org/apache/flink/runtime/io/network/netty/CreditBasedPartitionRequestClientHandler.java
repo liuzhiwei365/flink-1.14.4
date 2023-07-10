@@ -208,6 +208,7 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
             clientOutboundMessages.add((ClientOutboundMessage) msg);
 
             if (triggerWrite) {
+                //  第一次
                 writeAndFlushNextMessageIfPossible(ctx.channel());
             }
         } else {

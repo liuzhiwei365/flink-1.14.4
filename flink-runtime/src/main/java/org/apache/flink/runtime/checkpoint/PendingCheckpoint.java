@@ -91,6 +91,7 @@ public class PendingCheckpoint implements Checkpoint {
 
     private final CheckpointPlan checkpointPlan;
 
+    // 来源于 DefaultCheckpointPlan 的 tasksToWaitFor 集合
     private final Map<ExecutionAttemptID, ExecutionVertex> notYetAcknowledgedTasks;
 
     private final Set<OperatorID> notYetAcknowledgedOperatorCoordinators;
@@ -218,6 +219,7 @@ public class PendingCheckpoint implements Checkpoint {
         return masterStates;
     }
 
+    // 所有的 sub task 、所有的算子协调者、所有的master state 都全部接受到了 ack消息
     public boolean isFullyAcknowledged() {
         return areTasksFullyAcknowledged()
                 && areCoordinatorsFullyAcknowledged()
@@ -310,8 +312,8 @@ public class PendingCheckpoint implements Checkpoint {
                     isFullyAcknowledged(),
                     "Pending checkpoint has not been fully acknowledged yet");
 
-            // make sure we fulfill the promise with an exception if something fails
             try {
+                // 填充 operatorStates, 如果需要
                 checkpointPlan.fulfillFinishedTaskStatus(operatorStates);
 
                 // 把已经序列化好了的 算子状态 和 master状态 包装成 CheckpointMetadata 对象
@@ -323,7 +325,7 @@ public class PendingCheckpoint implements Checkpoint {
                 try (CheckpointMetadataOutputStream out =
                         targetLocation.createMetadataOutputStream()) {
 
-                    // 把 算子状态 和 master状态 持久化
+                    // 把 算子状态 和 master状态 持久化 到文件系统
                     Checkpoints.storeCheckpointMetadata(savepoint, out);
 
                     // 关流,  返回 刚刚完成的checkpoint 的存储信息
@@ -354,15 +356,17 @@ public class PendingCheckpoint implements Checkpoint {
                                     : statsCallback.getStateSize() / 1024,
                             statsCallback.getEndToEndDuration());
 
-                    // 完成statsCallback并给完成的 checkpoint 一个回调
+                    // 构造 CompletedCheckpointStats （内部含各类统计量）,交给 tracker维护
                     CompletedCheckpointStats.DiscardCallback discardCallback =
                             statsCallback.reportCompletedCheckpoint(
                                     finalizedLocation.getExternalPointer());
 
+                    // 当 completed 被丢弃时, 会调用
                     completed.setDiscardCallback(discardCallback);
                 }
 
                 // mark this pending checkpoint as disposed, but do NOT drop the state
+                // 用checkpointsCleaner 来清理 本 checkpoint ,
                 dispose(false, checkpointsCleaner, postCleanup, executor);
 
                 return completed;

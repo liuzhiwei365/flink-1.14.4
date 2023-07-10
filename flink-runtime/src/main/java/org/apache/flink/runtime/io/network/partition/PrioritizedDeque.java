@@ -105,7 +105,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
      */
     public void add(T element, boolean priority, boolean prioritize) {
         if (!priority) {
-            // 直接添加在最后面
+            // 如果没有优先级, 直接添加在最后面
             add(element);
         } else {
             if (prioritize) {
@@ -162,6 +162,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
      *
      * @return removed element
      */
+    // 拿到第一个满足条件的元素, 从队列中删除, 并作为方法的返回值
     public T getAndRemove(Predicate<T> preCondition) {
         Iterator<T> iterator = deque.iterator();
         for (int i = 0; iterator.hasNext(); i++) {

@@ -62,7 +62,9 @@ public class FileSystemStateStorageHelper<T extends Serializable>
 
             try (FSDataOutputStream outStream =
                     fs.create(filePath, FileSystem.WriteMode.NO_OVERWRITE)) {
+                // 用对象流 把 对象写出（ 持久化 ）
                 InstantiationUtil.serializeObject(outStream, state);
+                // 用文件路径和文件大小 来 创建寻回句柄
                 return new RetrievableStreamStateHandle<T>(filePath, outStream.getPos());
             } catch (Exception e) {
                 latestException = e;

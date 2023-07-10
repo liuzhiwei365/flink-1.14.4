@@ -76,6 +76,7 @@ public class RemoteInputChannel extends InputChannel {
     private final ConnectionID connectionId;
 
     /** The connection manager to use connect to the remote partition provider. */
+    // 保持与上游 partition 的连接
     private final ConnectionManager connectionManager;
 
     /**
@@ -93,18 +94,22 @@ public class RemoteInputChannel extends InputChannel {
      * Flag indicating whether this channel has been released. Either called by the receiving task
      * thread or the task manager actor.
      */
+    // 本 channel 是否已经本释放
     private final AtomicBoolean isReleased = new AtomicBoolean();
 
     /** Client to establish a (possibly shared) TCP connection and request the partition. */
+    // 与上游建立 tcp 连接的客户端
     private volatile PartitionRequestClient partitionRequestClient;
 
     /** The next expected sequence number for the next buffer. */
     private int expectedSequenceNumber = 0;
 
     /** The initial number of exclusive buffers assigned to this channel. */
+    // 分配给本channel 的 初始独占的 buffer 数量
     private final int initialCredit;
 
     /** The number of available buffers that have not been announced to the producer yet. */
+    // 还没有 向生产者 公布的 可用 buffer  数量
     private final AtomicInteger unannouncedCredit = new AtomicInteger(0);
 
     // 内部的  bufferQueue 成员 维护exclusive buffers 和 floating buffers
@@ -116,6 +121,7 @@ public class RemoteInputChannel extends InputChannel {
     @GuardedBy("receivedBuffers")
     private long lastBarrierId = NONE;
 
+    // channel 状态的 持久化器
     private final ChannelStatePersister channelStatePersister;
 
     public RemoteInputChannel(
@@ -186,6 +192,12 @@ public class RemoteInputChannel extends InputChannel {
             // Create a client and request the partition
             try {
                 // 创建 PartitionRequestClient 对象
+
+                // NettyConnectionManager.createPartitionRequestClient
+                // PartitionRequestClientFactory.createPartitionRequestClient
+                // PartitionRequestClientFactory.connectWithRetries
+                // PartitionRequestClientFactory.connect
+
                 partitionRequestClient =
                         connectionManager.createPartitionRequestClient(connectionId);
             } catch (IOException e) {
@@ -690,7 +702,11 @@ public class RemoteInputChannel extends InputChannel {
         boolean firstPriorityEvent;
         synchronized (receivedBuffers) {
             checkState(channelStatePersister.hasBarrierReceived());
+
+            // 当前 receivedBuffers 队列中, 优先元素的数量
             int numPriorityElementsBeforeRemoval = receivedBuffers.getNumPriorityElements();
+
+            // 从receivedBuffers 队列中 拿到第一个满足条件的元素, 从队列中删除, 并作为方法的返回值
             SequenceBuffer toPrioritize =
                     receivedBuffers.getAndRemove(
                             sequenceBuffer -> sequenceBuffer.sequenceNumber == sequenceNumber);
@@ -702,22 +718,29 @@ public class RemoteInputChannel extends InputChannel {
                     toPrioritize,
                     numPriorityElementsBeforeRemoval);
             // set the priority flag (checked on poll)
-            // don't convert the barrier itself (barrier controller might not have been switched
-            // yet)
+            // don't convert the barrier itself (barrier controller might not have been switched yet)
+
+            // 将 buffer 反序列化成 事件
             AbstractEvent e =
                     EventSerializer.fromBuffer(
                             toPrioritize.buffer, this.getClass().getClassLoader());
+            // buffer 有读写指针, 设置读指针为 0
             toPrioritize.buffer.setReaderIndex(0);
+            // 将反序列化得到的事件 重新序列化,不过加入了 优先 的标志
             toPrioritize =
                     new SequenceBuffer(
                             EventSerializer.toBuffer(e, true), toPrioritize.sequenceNumber);
+
+            // 将已经有了优先标志的 元素,重新添加到 receivedBuffers 队列中, 并判断该元素是不是队列中唯一的一个 优先元素
             firstPriorityEvent =
                     addPriorityBuffer(
-                            toPrioritize); // note that only position of the element is changed
+                            toPrioritize);
+            // note that only position of the element is changed
             // converting the event itself would require switching the controller sooner
         }
         if (firstPriorityEvent) {
-            notifyPriorityEventForce(); // forcibly notify about the priority event
+            notifyPriorityEventForce();
+            // forcibly notify about the priority event
             // instead of passing barrier SQN to be checked
             // because this SQN might have be seen by the input gate during the announcement
         }

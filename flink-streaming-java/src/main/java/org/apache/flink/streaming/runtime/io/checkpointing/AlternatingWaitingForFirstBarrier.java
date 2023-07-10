@@ -25,6 +25,7 @@ import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import java.io.IOException;
 
 /** We are performing aligned checkpoints with time out. We have not seen any barriers yet. */
+// 我们正在执行 超时的对齐 checkpoint , 目前还没有看到任何 barrier
 final class AlternatingWaitingForFirstBarrier
         extends AbstractAlternatingAlignedBarrierHandlerState {
     AlternatingWaitingForFirstBarrier(ChannelState state) {

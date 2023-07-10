@@ -36,6 +36,7 @@ public interface CheckpointStorageLocation extends CheckpointStreamFactory {
      * @return The output stream to persist the checkpoint metadata to.
      * @throws IOException Thrown, if the stream cannot be opened due to an I/O error.
      */
+    // 会创建 FsCheckpointMetadataOutputStream 对象, 内部包含文件系统
     CheckpointMetadataOutputStream createMetadataOutputStream() throws IOException;
 
     /**

@@ -134,7 +134,7 @@ public class DefaultCheckpointPlan implements CheckpointPlan {
         if (!mayHaveFinishedTasks) {
             return;
         }
-
+        //存储部分完成的 JobVertex
         Map<JobVertexID, ExecutionJobVertex> partlyFinishedVertex = new HashMap<>();
         for (Execution task : finishedTasks) {
             JobVertexID jobVertexId = task.getVertex().getJobvertexId();
@@ -147,7 +147,9 @@ public class DefaultCheckpointPlan implements CheckpointPlan {
         checkNoPartlyOperatorsFinishedVertexUsedUnionListState(
                 partlyFinishedVertex, operatorStates);
 
+        // 填充 已经完成的算子 的算子状态
         fulfillFullyFinishedOrFinishedOnRestoreOperatorStates(operatorStates);
+        // 填充（占位） 部分完成的算子 的  算子子任务状态
         fulfillSubtaskStateForPartiallyFinishedOperators(operatorStates);
     }
 
@@ -255,18 +257,25 @@ public class DefaultCheckpointPlan implements CheckpointPlan {
         }
     }
 
+    // 填充 部分完成的算子 的  算子子任务状态
     private void fulfillSubtaskStateForPartiallyFinishedOperators(
             Map<OperatorID, OperatorState> operatorStates) {
+
+        // finishedTasks 是运行时已经完成的节点; 根据流计算的特性, 一定是前面的节点finish, 后面的才能finish
         for (Execution finishedTask : finishedTasks) {
             ExecutionJobVertex jobVertex = finishedTask.getVertex().getJobVertex();
+
+            // JobVertex 中所有的算子
             for (OperatorIDPair operatorIDPair : jobVertex.getOperatorIDs()) {
                 OperatorState operatorState =
                         operatorStates.get(operatorIDPair.getGeneratedOperatorID());
 
+                // FullyFinishedOperatorState.isFullyFinished() 是true 和 OperatorState.isFullyFinished() 是false
                 if (operatorState != null && operatorState.isFullyFinished()) {
+                    // 如果是 FullyFinishedOperatorState对象, 直接跳过
                     continue;
                 }
-
+                //  如果operatorState为null , 则构造、 填充
                 if (operatorState == null) {
                     operatorState =
                             new OperatorState(
@@ -276,6 +285,8 @@ public class DefaultCheckpointPlan implements CheckpointPlan {
                     operatorStates.put(operatorIDPair.getGeneratedOperatorID(), operatorState);
                 }
 
+                //  FinishedOperatorSubtaskState.INSTANCE 并无实际的意义,只是占位
+                //  会被放入 operatorSubtaskStates Map 成员中
                 operatorState.putState(
                         finishedTask.getParallelSubtaskIndex(),
                         FinishedOperatorSubtaskState.INSTANCE);

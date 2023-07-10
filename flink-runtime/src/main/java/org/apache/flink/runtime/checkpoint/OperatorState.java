@@ -39,6 +39,10 @@ import static org.apache.flink.util.Preconditions.checkState;
  * from all sub tasks of an operator and therefore represents the complete state of a logical
  * operator.
  */
+
+// 算子状态是一个主从结构  包括：
+//                      算子协调者状态
+//                      算子子任务状态    , 即subtask 状态
 public class OperatorState implements CompositeStateHandle {
 
     private static final long serialVersionUID = -4845578005863201810L;
@@ -47,10 +51,11 @@ public class OperatorState implements CompositeStateHandle {
     private final OperatorID operatorID;
 
     /** The handles to states created by the parallel tasks: subtaskIndex -> subtaskstate. */
+    // 算子子任务状态
     private final Map<Integer, OperatorSubtaskState> operatorSubtaskStates;
 
     /** The state of the operator coordinator. Null, if no such state exists. */
-    // 算子协调者也有状态
+    // 算子协调者状态
     @Nullable private ByteStreamStateHandle coordinatorState;
 
     /** The parallelism of the operator when it was checkpointed. */

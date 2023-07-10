@@ -297,6 +297,7 @@ public class EventSerializer {
         // 将抽象事件 EndOfData  CheckpointBarrier 等 序列化
         final ByteBuffer serializedEvent = EventSerializer.toSerializedEvent(event);
 
+        // 包装成 内存段
         MemorySegment data = MemorySegmentFactory.wrap(serializedEvent.array());
 
         final Buffer buffer =

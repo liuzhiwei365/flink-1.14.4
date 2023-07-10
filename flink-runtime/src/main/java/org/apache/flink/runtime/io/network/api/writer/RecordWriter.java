@@ -47,6 +47,11 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  *
  * @param <T> the type of the record that can be emitted with this record writer
  */
+
+// RecordWriter 内部会将 Record 序列化成二进制数据,并向 ResultPartition申请 BufferBuilder,然后构建成Buffer数据类型
+
+// 当RecordWriter将数据写入ResultPartition时，并没有直接将buffer数据发送到下游的 InputChannel中,而是先对buffer进行本地缓存
+// 下游发送可以消费的消息后,数据才开始从 buffers 队列中读取并经过网络下发至下游.
 public abstract class RecordWriter<T extends IOReadableWritable> implements AvailabilityProvider {
 
     /** Default name for the output flush thread, if no name with a task reference is given. */

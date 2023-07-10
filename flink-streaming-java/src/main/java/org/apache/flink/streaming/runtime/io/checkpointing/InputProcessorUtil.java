@@ -103,6 +103,7 @@ public class InputProcessorUtil {
 
         Clock clock = SystemClock.getInstance();
         switch (config.getCheckpointMode()) {
+            // EXACTLY_ONCE模式, 创建 SingleCheckpointBarrierHandler对象处理 barrier
             case EXACTLY_ONCE:
                 int numberOfChannels =
                         (int)
@@ -119,6 +120,7 @@ public class InputProcessorUtil {
                         inputs,
                         clock,
                         numberOfChannels);
+                // AT_LEAST_ONCE模式, 创建 CheckpointBarrierTracker对象处理 barrier
             case AT_LEAST_ONCE:
                 if (config.isUnalignedCheckpointsEnabled()) {
                     throw new IllegalStateException(
@@ -158,6 +160,7 @@ public class InputProcessorUtil {
                         .get(ExecutionCheckpointingOptions.ENABLE_CHECKPOINTS_AFTER_TASKS_FINISH);
         // execution.checkpointing.unaligned
         if (config.isUnalignedCheckpointsEnabled()) {
+            // 非对齐
             return SingleCheckpointBarrierHandler.alternating(
                     taskName,
                     toNotifyOnCheckpoint,
@@ -168,6 +171,7 @@ public class InputProcessorUtil {
                     enableCheckpointAfterTasksFinished,
                     inputs);
         } else {
+            // 对齐
             return SingleCheckpointBarrierHandler.aligned(
                     taskName,
                     toNotifyOnCheckpoint,

@@ -35,6 +35,8 @@ import static org.apache.flink.util.Preconditions.checkState;
  * and {@link AbstractAlternatingAlignedBarrierHandlerState}.
  */
 final class ChannelState {
+
+    // InputChannelInfo代表的是指定inputGate下指定的inputChannel
     private final Map<InputChannelInfo, Integer> sequenceNumberInAnnouncedChannels =
             new HashMap<>();
 
@@ -43,6 +45,7 @@ final class ChannelState {
      * CheckpointBarrier}. {@link #sequenceNumberInAnnouncedChannels} on the other hand, are the
      * ones that we have processed announcement but not yet a barrier.
      */
+    // 代表的是已经处理了 barrier 的 inputChannel
     private final Set<InputChannelInfo> blockedChannels = new HashSet<>();
 
     private final CheckpointableInput[] inputs;
@@ -57,6 +60,7 @@ final class ChannelState {
         blockedChannels.add(channelInfo);
     }
 
+    // channel 完成了, 不需要维护channel 的状态了
     public void channelFinished(InputChannelInfo channelInfo) {
         blockedChannels.remove(channelInfo);
         sequenceNumberInAnnouncedChannels.remove(channelInfo);
@@ -66,6 +70,7 @@ final class ChannelState {
         for (Map.Entry<InputChannelInfo, Integer> announcedNumberInChannel :
                 sequenceNumberInAnnouncedChannels.entrySet()) {
             InputChannelInfo channelInfo = announcedNumberInChannel.getKey();
+            // 优先级化所有的声明
             inputs[channelInfo.getGateIdx()].convertToPriorityEvent(
                     channelInfo.getInputChannelIdx(), announcedNumberInChannel.getValue());
         }

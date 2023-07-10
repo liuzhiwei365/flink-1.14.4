@@ -51,18 +51,18 @@ import static org.apache.flink.util.Preconditions.checkState;
 // 最常用的ResultPartition的实现
 public abstract class BufferWritingResultPartition extends ResultPartition {
 
-    /** The subpartitions of this partition. At least one. */
+    //  数组长度 与下游并行度一致
     protected final ResultSubpartition[] subpartitions;
 
-    /**
-     * For non-broadcast mode, each subpartition maintains a separate BufferBuilder which might be
-     * null.
-     */
+    // 如果是单播模式, 需要 与下游并行度一样数目的 BufferBuilder, 每个subpartition 独享一个BufferBuilder
     private final BufferBuilder[] unicastBufferBuilders;
 
     /** For broadcast mode, a single BufferBuilder is shared by all subpartitions. */
+    // 如果是广播模式,只需要一个 BufferBuilder 就够了, 所有的 subpartition 共享
     private BufferBuilder broadcastBufferBuilder;
 
+    // 统计阻塞申请  BufferBuilder 的背压时长
+    // 参见 requestNewBufferBuilderFromPool 方法
     private TimerGauge backPressuredTimeMsPerSecond = new TimerGauge();
 
     public BufferWritingResultPartition(
@@ -255,6 +255,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
         super.close();
     }
 
+    //
     private BufferBuilder appendUnicastDataForNewRecord(
             final ByteBuffer record, final int targetSubpartition) throws IOException {
         if (targetSubpartition < 0 || targetSubpartition > unicastBufferBuilders.length) {
@@ -263,8 +264,10 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
         BufferBuilder buffer = unicastBufferBuilders[targetSubpartition];
 
         if (buffer == null) {
-            //
+            // 如果BufferBuilder 不存在, 重新申请 BufferBuilder
             buffer = requestNewUnicastBufferBuilder(targetSubpartition);
+
+            // 把 buffer 添加到 buffers 队列中  （会更新 Backlog值 ）
             addToSubpartition(buffer, targetSubpartition, 0);
         }
 
@@ -275,6 +278,10 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
 
     private void addToSubpartition(BufferBuilder buffer, int targetSubpartition, int i)
             throws IOException {
+        // 用申请得到的 BufferBuilder 构建 BufferConsumer对象,并且添加到指定的 targetSubpartition中
+        // 注：
+        //  ResultSubpartition有两个实现： PipilinedSubpartition 和 BoundedBlockingSubpartition
+        //  add 方法中 会调用 increaseBuffersInBacklog 来更新 积压指标
         int desirableBufferSize =
                 subpartitions[targetSubpartition].add(
                         buffer.createBufferConsumerFromBeginning(), i);
@@ -340,11 +347,12 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
         }
     }
 
+    // 申请 新的 单播 BufferBuilder
     private BufferBuilder requestNewUnicastBufferBuilder(int targetSubpartition)
             throws IOException {
         checkInProduceState();
         ensureUnicastMode();
-        //
+        //从 BufferPool 中申请
         final BufferBuilder bufferBuilder = requestNewBufferBuilderFromPool(targetSubpartition);
         unicastBufferBuilders[targetSubpartition] = bufferBuilder;
 

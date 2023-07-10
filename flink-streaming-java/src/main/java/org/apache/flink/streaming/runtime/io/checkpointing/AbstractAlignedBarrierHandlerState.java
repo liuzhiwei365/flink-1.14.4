@@ -27,6 +27,7 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /** Actions to be taken when processing aligned checkpoints. */
+// 处理 对齐的checkpoint时 要采取的操作
 abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState {
 
     protected final ChannelState state;
@@ -49,6 +50,7 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
         return this;
     }
 
+    // 每来一个 barrier, 都有可能触发 subtask 的 checkpoint
     @Override
     public final BarrierHandlerState barrierReceived(
             Controller controller,
@@ -59,10 +61,13 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
         checkState(!checkpointBarrier.getCheckpointOptions().isUnalignedCheckpoint());
 
         if (markChannelBlocked) {
+            // 阻塞消费
             state.blockChannel(channelInfo);
         }
-        // 每个inputChannel 的barrier 都到齐了
+
         if (controller.allBarriersReceived()) {
+            // 如果每个inputChannel 的barrier 都到齐了
+            // 开始本 sub task 的 checkpoint
             return triggerGlobalCheckpoint(controller, checkpointBarrier);
         }
 

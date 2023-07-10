@@ -39,6 +39,11 @@ import java.io.IOException;
  * <p>Additionally depending on the configuration we can switch between aligned and unaligned
  * actions.
  */
+
+// 屏障处理状态机
+// 接口定义的方法, 都可以看作状态机 的  状态转移方法;
+//
+
 interface BarrierHandlerState {
     BarrierHandlerState alignmentTimeout(Controller controller, CheckpointBarrier checkpointBarrier)
             throws IOException, CheckpointException;

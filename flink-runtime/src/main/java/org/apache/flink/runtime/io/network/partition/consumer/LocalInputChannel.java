@@ -51,6 +51,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /** An input channel, which requests a local subpartition. */
+
+// LocalInputChannel 本身就是一个监听器,监听数据是否可供消费,当数据可被消费时就会触发操作
 public class LocalInputChannel extends InputChannel implements BufferAvailabilityListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(LocalInputChannel.class);

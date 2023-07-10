@@ -138,7 +138,7 @@ public interface AvailabilityProvider {
          * Returns the previously not completed future and resets the constant completed {@link
          * #AVAILABLE} as the current state.
          */
-        //返回先前的状态,并且重置状态为 可用  （方法名取的有问题；不过初始状态一定是不可用的,这样一想，似乎方法名也说的通过）
+        //返回先前的availableFuture状态,并且重置availableFuture 为 可用  （方法名取的有问题；不过初始状态一定是不可用的,这样一想，似乎方法名也说的通过）
         public CompletableFuture<?> getUnavailableToResetAvailable() {
             CompletableFuture<?> toNotify = availableFuture;
             availableFuture = AVAILABLE;

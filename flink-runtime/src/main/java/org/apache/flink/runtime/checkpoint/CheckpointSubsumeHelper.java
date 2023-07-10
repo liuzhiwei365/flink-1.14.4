@@ -43,6 +43,8 @@ import java.util.Optional;
  *   <li>Except when the job is stopped with savepoint when no future checkpoints will be made.
  * </ul>
  */
+// 清理 较旧的 checkpoint, 防止内存 或者 其他存储中 膨胀
+// 通常, 只要超过state.checkpoints.num-retained, 就应该 将 久的 checkpoint清理
 class CheckpointSubsumeHelper {
     private static final Logger LOG = LoggerFactory.getLogger(CheckpointSubsumeHelper.class);
 
@@ -52,14 +54,19 @@ class CheckpointSubsumeHelper {
         if (checkpoints.isEmpty() || checkpoints.size() <= numRetain) {
             return;
         }
+
         CompletedCheckpoint latest = checkpoints.peekLast();
         Optional<CompletedCheckpoint> latestNotSavepoint = getLatestNotSavepoint(checkpoints);
         Iterator<CompletedCheckpoint> iterator = checkpoints.iterator();
+
         while (checkpoints.size() > numRetain && iterator.hasNext()) {
             CompletedCheckpoint next = iterator.next();
             if (canSubsume(next, latest, latestNotSavepoint)) {
+                // 如果能清理
+                // 从内存数据结构中清理
                 iterator.remove();
                 try {
+                    // 对next 执行清理动作, 从各类存储系统清理
                     subsumeAction.subsume(next);
                 } catch (Exception e) {
                     LOG.warn("Fail to subsume the old checkpoint.", e);
@@ -69,6 +76,7 @@ class CheckpointSubsumeHelper {
         }
     }
 
+    // 拿到最近的不属于  savepoint 类型的 checkpoint
     private static Optional<CompletedCheckpoint> getLatestNotSavepoint(
             Deque<CompletedCheckpoint> completed) {
         Iterator<CompletedCheckpoint> descendingIterator = completed.descendingIterator();
@@ -95,6 +103,7 @@ class CheckpointSubsumeHelper {
             return true;
         } else {
             // Don't remove the latest non-savepoint lest invalidate future incremental snapshots
+            // 不要删除最新的非保存点，以免将来的增量快照失效
             return latestNonSavepoint.filter(checkpoint -> checkpoint != next).isPresent();
         }
     }

@@ -89,6 +89,7 @@ public class Checkpoints {
         out.writeInt(HEADER_MAGIC_NUMBER);
 
         out.writeInt(MetadataV3Serializer.VERSION);
+        // MetadataV3Serializer 中定义了一种序列化的格式 或者 协议
         MetadataV3Serializer.serialize(checkpointMetadata, out);
     }
 

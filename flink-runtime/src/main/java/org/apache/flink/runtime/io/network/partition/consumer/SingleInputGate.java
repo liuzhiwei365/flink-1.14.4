@@ -909,6 +909,8 @@ public class SingleInputGate extends IndexedInputGate {
      * performed under lock), this buffer number allows {@link #queueChannel(InputChannel, Integer,
      * boolean)} to avoid spurious priority wake-ups.
      */
+
+    // 通知各个通道在指定缓冲区编号的开头有一个优先级事件
     void notifyPriorityEvent(InputChannel inputChannel, int prioritySequenceNumber) {
         queueChannel(checkNotNull(inputChannel), prioritySequenceNumber, false);
     }
@@ -935,6 +937,7 @@ public class SingleInputGate extends IndexedInputGate {
                 }));
     }
 
+    //将 inputChannelsWithData 添加到优先级队列中
     private void queueChannel(
             InputChannel channel, @Nullable Integer prioritySequenceNumber, boolean forcePriority) {
         try (GateNotificationHelper notification =
@@ -948,19 +951,23 @@ public class SingleInputGate extends IndexedInputGate {
                                 prioritySequenceNumber,
                                 lastPrioritySequenceNumber[channel.getChannelIndex()])) {
                     // priority event at the given offset already polled (notification is not atomic
-                    // in respect to
-                    // buffer enqueuing), so just ignore the notification
+                    // in respect to buffer enqueuing), so just ignore the notification
+                    // 序列号过期, 所以忽略该通知
                     return;
                 }
 
+                // 将 inputChannelsWithData 添加到优先级队列中
                 if (!queueChannelUnsafe(channel, priority)) {
+                    // 如果没添加成功直接返回
                     return;
                 }
 
                 if (priority && inputChannelsWithData.getNumPriorityElements() == 1) {
+                    // 队列从没有优先级元素 变成有优先级元素,  更新相关 flag
                     notification.notifyPriority();
                 }
                 if (inputChannelsWithData.size() == 1) {
+                    // 队列从没有元素 变成有元素,  更新相关 flag
                     notification.notifyDataAvailable();
                 }
             }

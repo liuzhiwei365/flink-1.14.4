@@ -56,6 +56,8 @@ public interface StateHandleStore<T extends Serializable, R extends ResourceVers
      *     caller's side.
      * @throws Exception if persisting state or writing state handle failed
      */
+    //  1  将状态          持久化到分布式系统          hdfs s3 等
+    //  2  将状态的句柄     持久化到分布式协调系统       zk k8s  等
     RetrievableStateHandle<T> addAndLock(String name, T state)
             throws PossibleInconsistentStateException, Exception;
 

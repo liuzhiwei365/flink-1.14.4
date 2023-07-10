@@ -87,10 +87,10 @@ public class NettyProtocol {
         // 出站:
         // 1 NettyMessageEncoder 编码
         return new ChannelHandler[] {
-            messageEncoder,
-            new NettyMessage.NettyMessageDecoder(),
-            serverHandler,
-            queueOfPartitionQueues
+            messageEncoder,//出站
+            new NettyMessage.NettyMessageDecoder(),//入站
+            serverHandler,//入站
+            queueOfPartitionQueues//入站
         };
     }
 

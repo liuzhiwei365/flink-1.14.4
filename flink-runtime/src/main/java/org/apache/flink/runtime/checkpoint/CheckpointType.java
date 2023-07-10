@@ -54,6 +54,13 @@ public enum CheckpointType {
     }
 
     public boolean isSynchronous() {
+        //  PostCheckpointAction枚举 只有如下三个元素
+        //        NONE,
+        //        SUSPEND,    将job 挂起
+        //        TERMINATE,  将job 终止
+
+        //  很容易理解, 无论是挂起还是终止, checkpoint 都必须同步来做
+        //  (因为异步做的话, 可能导致checkpoint还没做完,但是作业已经终止; 这导致了逻辑错误,不安全)
         return postCheckpointAction != PostCheckpointAction.NONE;
     }
 
@@ -78,9 +85,10 @@ public enum CheckpointType {
     }
 
     /** What's the intended action after the checkpoint (relevant for stopping with savepoint). */
+    // 检查点之后打算采取什么行动
     public enum PostCheckpointAction {
         NONE,
-        SUSPEND,
-        TERMINATE
+        SUSPEND,  // 将job 挂起
+        TERMINATE  //将job 终止
     }
 }

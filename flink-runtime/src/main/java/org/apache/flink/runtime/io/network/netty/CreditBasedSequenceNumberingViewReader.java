@@ -99,6 +99,12 @@ class CreditBasedSequenceNumberingViewReader
             }
         }
 
+        // 当有数据供消费时
+
+        // 调用栈：
+        //  PartitionRequestQueue.notifyReaderNonEmpty
+        //  PartitionRequestQueue.userEventTriggered
+        //  PartitionRequestQueue.enqueueAvailableReader    ,  将 指定的 reader(就是 this本对象) 添加到  availableReaders 队列中排队
         notifyDataAvailable();
     }
 
@@ -140,6 +146,7 @@ class CreditBasedSequenceNumberingViewReader
      *     that {@code getNextDataType(bufferAndBacklog) != NONE <=>
      *     AvailabilityWithBacklog#isAvailable()}!
      */
+    // 仅当下一个 缓冲区是事件或读取器 同时具有可用信用和缓冲区时, isAvailable 才返回true
     @Override
     public ResultSubpartitionView.AvailabilityWithBacklog getAvailabilityAndBacklog() {
         return subpartitionView.getAvailabilityAndBacklog(numCreditsAvailable);
@@ -193,7 +200,7 @@ class CreditBasedSequenceNumberingViewReader
     public BufferAndAvailability getNextBuffer() throws IOException {
         BufferAndBacklog next = subpartitionView.getNextBuffer();
         if (next != null) {
-            // 每消耗一条buffer(), 就会减少下游的信用值, 这样就能控制 被压
+            // 每消耗一条buffer(), 就会减少下游的信用值, 这样就能控制  背压
             if (next.buffer().isBuffer() && --numCreditsAvailable < 0) {
                 throw new IllegalStateException("no credit available");
             }
@@ -228,6 +235,8 @@ class CreditBasedSequenceNumberingViewReader
 
     @Override
     public void notifyDataAvailable() {
+        //  会调用 PartitionRequestQueue.enqueueAvailableReader 方法
+        //  将本对象添加到 PartitionRequestQueue 的 availableReaders队列中排队
         requestQueue.notifyReaderNonEmpty(this);
     }
 

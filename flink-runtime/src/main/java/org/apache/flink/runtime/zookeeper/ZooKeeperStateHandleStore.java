@@ -133,14 +133,6 @@ public class ZooKeeperStateHandleStore<T extends Serializable>
     }
 
     /**
-     * Creates a state handle, stores it in ZooKeeper and locks it. A locked node cannot be removed
-     * by another {@link ZooKeeperStateHandleStore} instance as long as this instance remains
-     * connected to ZooKeeper.
-     *
-     * <p><strong>Important</strong>: This will <em>not</em> store the actual state in ZooKeeper,
-     * but create a state handle and store it in ZooKeeper. This level of indirection makes sure
-     * that data in ZooKeeper is small.
-     *
      * <p>The operation will fail if there is already a node under the given path.
      *
      * @param pathInZooKeeper Destination path in ZooKeeper (expected to *not* exist yet)
@@ -151,6 +143,12 @@ public class ZooKeeperStateHandleStore<T extends Serializable>
      *     or not. Proper error handling has to be applied on the caller's side.
      * @throws Exception If a ZooKeeper or state handle operation fails
      */
+    // 1 创建一个状态句柄,将其存储在ZooKeeper中并锁定它.
+    // 只要本状态句柄保持于 zk 的连接, 那么, 这个被锁定的节点不能被 其他句柄删除
+
+    // 2 这将不会 将实际状态存储在 zk中, 但是创建一个状态句柄并将其存储在ZooKeeper中
+    // 这种间接手段 确保 zk 中的数据很小
+
     @Override
     public RetrievableStateHandle<T> addAndLock(String pathInZooKeeper, T state)
             throws PossibleInconsistentStateException, Exception {
@@ -161,9 +159,12 @@ public class ZooKeeperStateHandleStore<T extends Serializable>
             throw new AlreadyExistException(
                     String.format("ZooKeeper node %s already exists.", path));
         }
+        // 把状态持久化文件系统, 并返回操作句柄
         final RetrievableStateHandle<T> storeHandle = storage.store(state);
+        // 序列化操作句柄
         final byte[] serializedStoreHandle = serializeOrDiscard(storeHandle);
         try {
+            // 把序列化的状态句柄 持久化到 zk
             writeStoreHandleTransactionally(path, serializedStoreHandle);
             return storeHandle;
         } catch (KeeperException.NodeExistsException e) {

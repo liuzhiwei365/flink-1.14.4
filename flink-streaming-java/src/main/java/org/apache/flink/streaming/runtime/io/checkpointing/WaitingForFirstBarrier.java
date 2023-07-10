@@ -24,6 +24,7 @@ import org.apache.flink.runtime.io.network.partition.consumer.CheckpointableInpu
 import java.io.IOException;
 
 /** We are performing aligned checkpoints. We have not seen any barriers yet. */
+//我们正在执行 对齐的 checkpoint , 但是 目前 还没有看到任何 barrier
 final class WaitingForFirstBarrier extends AbstractAlignedBarrierHandlerState {
 
     WaitingForFirstBarrier(CheckpointableInput[] inputs) {

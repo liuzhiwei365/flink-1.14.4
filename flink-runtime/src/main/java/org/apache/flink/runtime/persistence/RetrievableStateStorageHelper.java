@@ -28,6 +28,7 @@ import java.io.Serializable;
  *
  * @param <T> The type of the data that can be stored by this storage helper.
  */
+// 目前只有 FileSystemStateStorageHelper  实现类
 public interface RetrievableStateStorageHelper<T extends Serializable> {
 
     /**

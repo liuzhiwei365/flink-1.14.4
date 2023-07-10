@@ -25,6 +25,7 @@ import java.io.IOException;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /** We are performing aligned checkpoints. We have seen at least a single aligned * barrier. */
+// 我们正在执行对齐的检查点, 目前 至少看到了 一个对齐的 barrier
 final class CollectingBarriers extends AbstractAlignedBarrierHandlerState {
 
     CollectingBarriers(ChannelState context) {

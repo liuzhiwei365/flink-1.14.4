@@ -84,10 +84,13 @@ public class PipelinedSubpartition extends ResultSubpartition
             new PrioritizedDeque<>();
 
     /** The number of non-event buffers currently in this subpartition. */
+    // Backlog , 反映了数据积压情况
+    // 向buffers  队列中添加元数的时候 会 + 1, 向队列 buffers 队列中减少元素的时候 会 -1
+    // 该积压信息还会发给下游,  以此来平衡上游的生产 和 下游的消费
     @GuardedBy("buffers")
     private int buffersInBacklog;
 
-    /** The read view to consume this subpartition. */
+    // 用来消费buffers 队列中的数据
     PipelinedSubpartitionView readView;
 
     /** Flag indicating whether the subpartition has been finished. */
@@ -114,6 +117,7 @@ public class PipelinedSubpartition extends ResultSubpartition
      * Whether this subpartition is blocked (e.g. by exactly once checkpoint) and is waiting for
      * resumption.
      */
+    // 是否阻塞 消费 buffers 队列
     @GuardedBy("buffers")
     boolean isBlocked = false;
 
@@ -179,14 +183,15 @@ public class PipelinedSubpartition extends ResultSubpartition
                 return -1;
             }
 
-            // 添加 bufferConsumer到buffer队列
+            // 添加 bufferConsumer到buffers 队列
             if (addBuffer(bufferConsumer, partialRecordLength)) {
                 prioritySequenceNumber = sequenceNumber;
             }
             // 更新buffer统计指标
             updateStatistics(bufferConsumer);
-            // 更新Backlog挤压指标
+            // 更新Backlog挤压指标, buffersInBacklog++
             increaseBuffersInBacklog(bufferConsumer);
+
             notifyDataAvailable = finish || shouldNotifyDataAvailable();
 
             isFinished |= finish;
@@ -197,6 +202,7 @@ public class PipelinedSubpartition extends ResultSubpartition
             notifyPriorityEvent(prioritySequenceNumber);
         }
         if (notifyDataAvailable) {
+            // 通知 ResultSubPartitionView的 开始消费 PipelinedSubpartition中的buffers 数据
             notifyDataAvailable();
         }
 
@@ -422,6 +428,7 @@ public class PipelinedSubpartition extends ResultSubpartition
     public ResultSubpartitionView.AvailabilityWithBacklog getAvailabilityAndBacklog(
             int numCreditsAvailable) {
         synchronized (buffers) {
+            // 仅当下一个 缓冲区是事件或读取器 同时具有可用信用和缓冲区时, isAvailable 才赋值 true
             boolean isAvailable;
             if (numCreditsAvailable > 0) {
                 isAvailable = isDataAvailableUnsafe();
@@ -552,6 +559,7 @@ public class PipelinedSubpartition extends ResultSubpartition
      * Increases the number of non-event buffers by one after adding a non-event buffer into this
      * subpartition.
      */
+    // 增加 Backlog 值
     @GuardedBy("buffers")
     private void increaseBuffersInBacklog(BufferConsumer buffer) {
         assert Thread.holdsLock(buffers);
@@ -589,6 +597,13 @@ public class PipelinedSubpartition extends ResultSubpartition
     private void notifyDataAvailable() {
         final PipelinedSubpartitionView readView = this.readView;
         if (readView != null) {
+            // readView 的创建时机:
+            // 当接受到 下游inputChannel发送的 PartitionRequest消息后,在上游生产节点中会为其请求的ResultSubpartition
+            // 创建 CreditBasedSequenceNumberingViewReader 和 PipelinedSubpartitionView对象(作为前者的一个成员)
+
+            // 1 参见 PartitionRequestServerHandler.channelRead0 方法
+            // 2 会调用 CreditBasedSequenceNumberingViewReader.notifyDataAvailable方法
+            //  将 CreditBasedSequenceNumberingViewReader  添加到  availableReaders 队列中排队
             readView.notifyDataAvailable();
         }
     }

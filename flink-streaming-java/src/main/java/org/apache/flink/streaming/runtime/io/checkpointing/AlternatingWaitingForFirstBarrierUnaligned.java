@@ -29,6 +29,7 @@ import java.io.IOException;
  * We either timed out before seeing any barriers or started unaligned. We might've seen some
  * announcements if we started aligned.
  */
+// 我们要么在看到任何barrier 之前就超时了,要么开始不对齐。   如果我们开始对齐, 我们可能会看到一些公告
 final class AlternatingWaitingForFirstBarrierUnaligned implements BarrierHandlerState {
 
     private final boolean alternating;

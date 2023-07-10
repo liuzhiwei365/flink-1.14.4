@@ -78,6 +78,7 @@ class PartitionRequestClientFactory {
 
             if (clientFuture == null) {
                 try {
+                    // 核心
                     client = connectWithRetries(connectionId);
                 } catch (Throwable e) {
                     newClientFuture.completeExceptionally(

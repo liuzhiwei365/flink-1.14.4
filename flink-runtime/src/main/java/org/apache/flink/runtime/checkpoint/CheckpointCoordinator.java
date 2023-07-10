@@ -134,6 +134,11 @@ public class CheckpointCoordinator {
      * Completed checkpoints. Implementations can be blocking. Make sure calls to methods accessing
      * this don't block the job manager actor and run asynchronously.
      */
+    // CompletedCheckpointStore 的实现类：
+    //  DeactivatedCheckpointCompletedCheckpointStore         无用实现
+    //  EmbeddedCompletedCheckpointStore                      针对MiniCluster
+    //  StandaloneCompletedCheckpointStore                    针对非高可用模式
+    //  DefaultCompletedCheckpointStore                       默认实现
     private final CompletedCheckpointStore completedCheckpointStore;
 
     /**
@@ -208,7 +213,7 @@ public class CheckpointCoordinator {
     /** A factory for SharedStateRegistry objects. */
     private final SharedStateRegistryFactory sharedStateRegistryFactory;
 
-    /** Registry that tracks state which is shared across (incremental) checkpoints. */
+    // 此注册表管理跨（增量）检查点共享的状态, 并负责删除任何有效检查点中 不再使用的共享状态
     private SharedStateRegistry sharedStateRegistry;
 
     /** Id of checkpoint for which in-flight data should be ignored on recovery. */
@@ -666,6 +671,7 @@ public class CheckpointCoordinator {
                             CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE,
                             checkpoint.getFailureCause()));
         } else {
+            //触发所有 trigger 集合中的执行节点  的 checkpoint, 并等待它们执行完
             triggerTasks(request, timestamp, checkpoint)
                     .exceptionally(
                             failure -> {
@@ -694,11 +700,21 @@ public class CheckpointCoordinator {
                                 return null;
                             });
 
+            //每个算子协调者回调, 释放 发给subtask的 缓存事件(如果需要的话)
             coordinatorsToCheckpoint.forEach(
                     (ctx) -> ctx.afterSourceBarrierInjection(checkpoint.getCheckpointID()));
-            // It is possible that the tasks has finished
-            // checkpointing at this point.
-            // So we need to complete this pending checkpoint.
+
+            //  如果 所有的 sub task 、所有的算子协调者、所有的master state 都全部接受到了 ack消息;  则执行如下逻辑：
+            //    这里的 的 sub task 不是 DefaultCheckpointPlan 的 tasksToTrigger集合 ,而是 tasksToWaitFor 集合
+            //    其实这里大概率是不会正常执行的, 因为代码在此处,只能保证收到了 tasksToTrigger集合 的 ack消息
+            //    不能保证收到了 tasksToWaitFor 集合 的ack消息
+            //    ***   这里checkpoint 收尾的逻辑 其实还有另外一个触发点,那就是 本类的 receiveAcknowledgeMessage 方法
+
+            // 1  共享状态注册
+            // 2  CheckpointMetadata 持久化  ( 包括 算子状态 和 master状态 )
+            // 3  CompletedCheckpoint 持久化  ( 信息比 CheckpointMetadata 丰富很多 )
+            // 4  各类 checkpoint 信息, 依情况清理
+            // 5  触发所有 子任务 和 算子协调者 notifyCheckpointComplete 逻辑  （子任务先, 算子协调者后）
             if (maybeCompleteCheckpoint(checkpoint)) {
                 onTriggerSuccess();
             }
@@ -718,10 +734,11 @@ public class CheckpointCoordinator {
                         unalignedCheckpointsEnabled,
                         alignedCheckpointTimeout);
 
-        // 向 所有的task 发送消息以触发它们的checkpoint
+        // 向 所有的 trigger 集合中的执行节点  发送消息以触发它们的checkpoint
         List<CompletableFuture<Acknowledge>> acks = new ArrayList<>();
         for (Execution execution : checkpoint.getCheckpointPlan().getTasksToTrigger()) {
             if (request.props.isSynchronous()) {
+                // 同步
                 acks.add(
                         execution.triggerSynchronousSavepoint(
                                 checkpointId, timestamp, checkpointOptions));
@@ -965,16 +982,20 @@ public class CheckpointCoordinator {
         }
     }
 
-    // Returns true if the checkpoint is successfully completed, false otherwise.
+    // checkpoint 成功完成则返回true, 否则 false
     private boolean maybeCompleteCheckpoint(PendingCheckpoint checkpoint) {
         synchronized (lock) {
             if (checkpoint.isFullyAcknowledged()) {
+                // 如果 所有的 sub task 、所有的算子协调者、所有的master state 都全部接受到了 ack消息
                 try {
-                    // we need to check inside the lock for being shutdown as well,
-                    // otherwise we get races and invalid error log messages.
                     if (shutdown) {
                         return false;
                     }
+                    // 1  共享状态注册
+                    // 2  CheckpointMetadata 持久化  ( 包括 算子状态 和 master状态 )
+                    // 3  CompletedCheckpoint 持久化  ( 信息比 CheckpointMetadata 丰富很多 )
+                    // 4  各类 checkpoint 信息, 依情况清理
+                    // 5  触发所有 子任务 和 算子协调者 notifyCheckpointComplete 逻辑  （子任务先, 算子协调者后）
                     completePendingCheckpoint(checkpoint);
                 } catch (CheckpointException ce) {
                     onTriggerFailure(checkpoint, ce);
@@ -1076,6 +1097,20 @@ public class CheckpointCoordinator {
      * @throws CheckpointException If the checkpoint cannot be added to the completed checkpoint
      *     store.
      */
+
+    // StreamTask.performCheckpoint
+    // SubtaskCheckpointCoordinatorImpl.checkpointState
+    // SubtaskCheckpointCoordinatorImpl.finishAndReportAsync
+    // AsyncCheckpointRunnable.run
+    // AsyncCheckpointRunnable.reportCompletedSnapshotStates
+    // TaskStateManagerImpl.reportTaskStateSnapshots
+    // RpcCheckpointResponder.acknowledgeCheckpoint
+
+    // JobMaster.acknowledgeCheckpoint
+    // SchedulerBase.acknowledgeCheckpoint
+    // ExecutionGraphHandler.acknowledgeCheckpoint
+
+    // 每来一次 ack 消息, 都有可能触发 checkpoint 的收尾逻辑
     public boolean receiveAcknowledgeMessage(
             AcknowledgeCheckpoint message, String taskManagerLocationInfo)
             throws CheckpointException {
@@ -1101,6 +1136,7 @@ public class CheckpointCoordinator {
                 return false;
             }
 
+            // 正在进行的 checkpoint
             final PendingCheckpoint checkpoint = pendingCheckpoints.get(checkpointId);
 
             if (checkpoint != null && !checkpoint.isDisposed()) {
@@ -1118,7 +1154,9 @@ public class CheckpointCoordinator {
                                 message.getJob(),
                                 taskManagerLocationInfo);
 
+                        // * * * * * *  重要
                         if (checkpoint.isFullyAcknowledged()) {
+                            // 此处也必须保证, 已经收到  所有的运行的sub task 、所有的算子协调者、所有的master state 的 ack消息
                             completePendingCheckpoint(checkpoint);
                         }
                         break;
@@ -1222,12 +1260,14 @@ public class CheckpointCoordinator {
         final long checkpointId = pendingCheckpoint.getCheckpointId();
         final CompletedCheckpoint completedCheckpoint;
 
-        // As a first step to complete the checkpoint, we register its state with the registry
+        // 注册给共享状态 注册表 （能维护增量状态）
         Map<OperatorID, OperatorState> operatorStates = pendingCheckpoint.getOperatorStates();
         sharedStateRegistry.registerAll(operatorStates.values());
 
         try {
             try {
+                // 把 算子状态 和 master状态先包装成 CheckpointMetadata ,再持久化
+                // 内部还会 用 CheckpointTracker 追踪各类 metrix, 维护各类数据结构
                 completedCheckpoint =
                         pendingCheckpoint.finalizeCheckpoint(
                                 checkpointsCleaner,
@@ -1235,6 +1275,7 @@ public class CheckpointCoordinator {
                                 executor,
                                 getStatsCallback(pendingCheckpoint));
 
+                // 处理成功后更新 各类数据结构
                 failureManager.handleCheckpointSuccess(pendingCheckpoint.getCheckpointId());
             } catch (Exception e1) {
                 // abort the current pending checkpoint if we fails to finalize the pending
@@ -1256,6 +1297,8 @@ public class CheckpointCoordinator {
             Preconditions.checkState(pendingCheckpoint.isDisposed() && completedCheckpoint != null);
 
             try {
+                // 持久化新的 completedCheckpoint 和 其句柄, 并异步删除旧的 （如果需要）
+                // 注： CompletedCheckpoint  要比 CheckpointMetadata 内容丰富很多
                 completedCheckpointStore.addCheckpoint(
                         completedCheckpoint, checkpointsCleaner, this::scheduleTriggerRequest);
             } catch (Exception exception) {
@@ -1286,11 +1329,10 @@ public class CheckpointCoordinator {
 
         rememberRecentCheckpointId(checkpointId);
 
-        // drop those pending checkpoints that are at prior to the completed one
+        //删除 位于 已完成检查点之前的  那些还挂起的检查点 （因为checkpoint 最新的能成功, 以前的哪些就没意义了）
         dropSubsumedCheckpoints(checkpointId);
 
-        // record the time when this was completed, to calculate
-        // the 'min delay between checkpoints'
+        // 最新的 checkpoint 完成时间
         lastCheckpointCompletionRelativeTime = clock.relativeTimeMillis();
 
         LOG.info(
@@ -1314,7 +1356,8 @@ public class CheckpointCoordinator {
             LOG.debug(builder.toString());
         }
 
-        // send the "notify complete" call to all vertices, coordinators, etc.
+        // 先 触发所有 子任务的 notifyCheckpointComplete 逻辑
+        // 再 触发所有 算子协调者的 notifyCheckpointComplete 逻辑
         sendAcknowledgeMessages(
                 pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
                 checkpointId,
@@ -1335,6 +1378,7 @@ public class CheckpointCoordinator {
     private void sendAcknowledgeMessages(
             List<ExecutionVertex> tasksToCommit, long checkpointId, long timestamp) {
         // commit tasks
+        // 向每个 subtask 通知 checkpoint 完成, 触发每个 subtask 的提交逻辑
         for (ExecutionVertex ev : tasksToCommit) {
             Execution ee = ev.getCurrentExecutionAttempt();
             if (ee != null) {
@@ -1343,6 +1387,7 @@ public class CheckpointCoordinator {
         }
 
         // commit coordinators
+        // 向每个算子协调者 通知  checkpoint 完成, 触发每个 算子协调者 的提交逻辑
         for (OperatorCoordinatorCheckpointContext coordinatorContext : coordinatorsToCheckpoint) {
             coordinatorContext.notifyCheckpointComplete(checkpointId);
         }

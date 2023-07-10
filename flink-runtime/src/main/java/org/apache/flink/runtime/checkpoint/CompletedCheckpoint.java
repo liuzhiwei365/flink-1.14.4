@@ -81,30 +81,39 @@ public class CompletedCheckpoint implements Serializable, Checkpoint {
     private final long checkpointID;
 
     /** The timestamp when the checkpoint was triggered. */
+    // checkpoint 被触发的时间点
     private final long timestamp;
 
     /** The timestamp when the checkpoint was completed. */
+    // checkpoint 完成的时间点
     private final long completionTimestamp;
 
     /** States of the different operator groups belonging to this checkpoint. */
+    // 所有的算子状态
     private final Map<OperatorID, OperatorState> operatorStates;
 
     /** Properties for this checkpoint. */
+    // checkpoint 的配置
     private final CheckpointProperties props;
 
     /** States that were created by a hook on the master (in the checkpoint coordinator). */
+    // 所有的 master状态
     private final Collection<MasterState> masterHookStates;
 
     /** The location where the checkpoint is stored. */
+    // 本checkpoint对象的 存储信息
     private final CompletedCheckpointStorageLocation storageLocation;
 
     /** The state handle to the externalized meta data. */
+    // 用于 操作（读取和删除） checkpoint的状态文件的  句柄
     private final StreamStateHandle metadataHandle;
 
+    // 带有协议的绝对路径 的 字符串
     /** External pointer to the completed checkpoint (for example file path). */
     private final String externalPointer;
 
     /** Optional stats tracker callback for discard. */
+    // 丢弃该 checkpoint时 的 统计和追踪逻辑
     @Nullable private transient volatile CompletedCheckpointStats.DiscardCallback discardCallback;
 
     // ------------------------------------------------------------------------

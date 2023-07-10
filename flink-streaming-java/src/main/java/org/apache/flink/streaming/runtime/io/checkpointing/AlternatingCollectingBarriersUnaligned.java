@@ -31,6 +31,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * We either timed out or started unaligned. We have seen at least one barrier and we are waiting
  * for the remaining barriers.
  */
+// 我们要么超时, 要么一开始就没对齐;   我们至少看到了一个障碍, 我们正在等待剩下的 barrier
 final class AlternatingCollectingBarriersUnaligned implements BarrierHandlerState {
 
     private final boolean alternating;

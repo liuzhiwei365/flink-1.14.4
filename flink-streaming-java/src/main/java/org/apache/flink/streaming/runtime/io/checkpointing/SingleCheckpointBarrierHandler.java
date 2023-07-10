@@ -83,6 +83,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
      */
     @Nullable private CheckpointBarrier pendingCheckpointBarrier;
 
+    // 维护当前已经对齐的 channel
     private final Set<InputChannelInfo> alignedChannels = new HashSet<>();
 
     private int targetChannelCount;
@@ -94,6 +95,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
     private CompletableFuture<Void> allBarriersReceivedFuture = new CompletableFuture<>();
 
     private BarrierHandlerState currentState;
+
     private Cancellable currentAlignmentTimer;
     private final boolean alternating;
 
@@ -240,6 +242,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
                 state -> state.barrierReceived(context, channelInfo, barrier, !isRpcTriggered));
     }
 
+    // checkpoint 对齐  和  状态转移 （ BarrierHandlerState 状态机的 状态转移 ）
     protected void markCheckpointAlignedAndTransformState(
             InputChannelInfo alignedChannel,
             CheckpointBarrier barrier,
@@ -248,6 +251,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
             throws IOException {
 
         alignedChannels.add(alignedChannel);
+
         if (alignedChannels.size() == 1) {
             if (targetChannelCount == 1) {
                 // 开始并且结束对齐
@@ -268,7 +272,8 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         }
 
         try {
-            // 如果 每个channel 的barrier 到到齐了,触发该task 的 checkpoint
+            // 调用状态机的 状态转移方法 （这个过程有可能触发 本 subtask 的 checkpoint ）
+            // 可参考 AbstractAlignedBarrierHandlerState::barrierReceived 方法
             currentState = stateTransformer.apply(currentState);
         } catch (CheckpointException e) {
             abortInternal(currentCheckpointId, e);
@@ -276,8 +281,9 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
             ExceptionUtils.rethrowIOException(e);
         }
 
-        // 执行checkpoint逻辑后的 善后工作
         if (alignedChannels.size() == targetChannelCount) {
+            // 如果在状态转移过程中实现了对齐, 那么一定触发了本task 的 checkpoint;
+            // 那么这时需要清理相关数据结构,  以便于迎接新一轮的 barrier 对齐逻辑
             alignedChannels.clear();
             lastCancelledOrCompletedCheckpointId = currentCheckpointId;
             LOG.debug(

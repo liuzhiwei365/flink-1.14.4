@@ -1153,15 +1153,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         boolean noUnfinishedInputGates =
                                 Arrays.stream(getEnvironment().getAllInputGates())
                                         .allMatch(InputGate::isFinished); // 每个 inputGate 的
-                        // 每个inputChannel都收到了 数据结束的事件
 
                         if (noUnfinishedInputGates) {
-                            // 针对批计算
+                            // 每个 inputGate 下面的 inputChannel都收到了 数据结束的事件 （ 不需要处理 barrier ）
                             result.complete(
                                     triggerCheckpointAsyncInMailbox(
                                             checkpointMetaData, checkpointOptions));
                         } else {
-                            // 针对流计算
+                            // inputGate 下面的 存在没接收到 数据结束 事件 的 inputChannel
                             result.complete(
                                     triggerUnfinishedChannelsCheckpoint(
                                             checkpointMetaData, checkpointOptions));
@@ -1232,6 +1231,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     private boolean triggerUnfinishedChannelsCheckpoint(
             CheckpointMetaData checkpointMetaData, CheckpointOptions checkpointOptions)
             throws Exception {
+        //  最开始由 InputProcessorUtil.createCheckpointBarrierHandler 方法构造
         Optional<CheckpointBarrierHandler> checkpointBarrierHandler = getCheckpointBarrierHandler();
         checkState(
                 checkpointBarrierHandler.isPresent(),
@@ -1246,6 +1246,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         for (IndexedInputGate inputGate : getEnvironment().getAllInputGates()) {
             if (!inputGate.isFinished()) {
                 for (InputChannelInfo channelInfo : inputGate.getUnfinishedChannels()) {
+                    //
                     checkpointBarrierHandler.get().processBarrier(barrier, channelInfo, true);
                 }
             }

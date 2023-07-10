@@ -52,6 +52,8 @@ public class PipelinedSubpartitionView implements ResultSubpartitionView {
 
     @Override
     public void notifyDataAvailable() {
+        // 远程情况  CreditBasedSequenceNumberingViewReader.notifyDataAvailable
+        // 本地情况  LocalInputChannel.notifyDataAvailable
         availabilityListener.notifyDataAvailable();
     }
 

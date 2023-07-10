@@ -52,7 +52,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 
 // 追踪 checkpoint 的 各类统计量
-//
+
+// 这与CheckpointCoordinator紧密集成,以便于收集细粒度的统计信息
+// 跟踪的统计数据包括摘要计数、最近和正在进行的检查点的详细历史记录,以及关于最近检查点的大小、持续时间等
 public class CheckpointStatsTracker {
 
     /**

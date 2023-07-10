@@ -31,6 +31,7 @@ import static org.apache.flink.util.Preconditions.checkState;
  * We are performing aligned checkpoints with time out. We have seen at least a single aligned
  * barrier.
  */
+// 我们正在执行 超时的对齐 checkpoint , 目前至少看到 一个 对齐的 barrier
 final class AlternatingCollectingBarriers extends AbstractAlternatingAlignedBarrierHandlerState {
 
     AlternatingCollectingBarriers(ChannelState context) {

@@ -28,6 +28,7 @@ import java.io.IOException;
  * Actions to be taken when processing aligned checkpoints and possibly switching to unaligned
  * checkpoints.
  */
+// 处理 已对齐的checkpoint 以及 可能切换到 未对齐的checkpoint
 abstract class AbstractAlternatingAlignedBarrierHandlerState implements BarrierHandlerState {
 
     protected final ChannelState state;
