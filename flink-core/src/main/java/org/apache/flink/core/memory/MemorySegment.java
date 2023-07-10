@@ -1362,9 +1362,12 @@ public final class MemorySegment {
 
     /**
      * Bulk put method. Copies {@code numBytes} bytes from the given {@code ByteBuffer}, into this
-     * memory segment. The bytes will be read from the target buffer starting at the buffer's
-     * current position, and will be written to this memory segment starting at {@code offset}. If
-     * this method attempts to read more bytes than the target byte buffer has remaining (with
+     * memory segment.
+     *
+     * The bytes will be read from the target buffer starting at the buffer's current position, and
+     * will be written to this memory segment starting at {@code offset}.
+     *
+     * If this method attempts to read more bytes than the target byte buffer has remaining (with
      * respect to {@link ByteBuffer#remaining()}), this method will cause a {@link
      * java.nio.BufferUnderflowException}.
      *

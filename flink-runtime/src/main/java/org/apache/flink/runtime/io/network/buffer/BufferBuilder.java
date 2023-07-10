@@ -33,6 +33,8 @@ import static org.apache.flink.util.Preconditions.checkState;
  * data please use {@link BufferConsumer} which allows to build {@link Buffer} instances from the
  * written data.
  */
+// 1 BufferBuilder 这个类的名字取的不好,取 BufferProxy 好些
+// 2 BufferBuilder 能构建 BufferConsumer 对象
 @NotThreadSafe
 public class BufferBuilder implements AutoCloseable {
     private final Buffer buffer;
@@ -90,11 +92,23 @@ public class BufferBuilder implements AutoCloseable {
      *
      * @return number of copied bytes
      */
+
+    // ByteBuffer 原理：
+    // 0  <= position <= limit  <= capacity
+
+    // 写模式下, position 是写入位置, limit = capacity, 就是容量
+    // 调用flip()切换为读模式,此时Postion置为已有数据的起始下标,limit置为已有数据的末尾下标
+
     public int append(ByteBuffer source) {
         checkState(!isFinished());
 
         int needed = source.remaining();
+        //  available 就是 memorySegment 还剩下的容量
+        //  当 available < needed时 , memorySegment 已经不能容纳下此条数据, 只能先写入一部分
+        //  没关系, 另一部分随后会经过复杂 的调用再次调 到本方法写入
         int available = getMaxCapacity() - positionMarker.getCached();
+
+        //  要拷贝的字节数
         int toCopy = Math.min(needed, available);
 
         memorySegment.put(positionMarker.getCached(), source, toCopy);

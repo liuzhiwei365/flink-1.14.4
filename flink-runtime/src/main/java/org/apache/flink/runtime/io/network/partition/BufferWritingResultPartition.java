@@ -142,20 +142,25 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
 
     @Override
     public void emitRecord(ByteBuffer record, int targetSubpartition) throws IOException {
+        // 1 如果 buffer 不能容纳下此条数据, 会先写入一部分
+        // 2 如果有需要,会申请新的 buffer,并交给  unicastBufferBuilders 成员维护
+        // 3 如果不需要申请新的 buffer, 直接用 unicastBufferBuilders 成员维护的已有的buffer
+
+        // 注： BufferBuilder 的类名字取的不好
         BufferBuilder buffer = appendUnicastDataForNewRecord(record, targetSubpartition);
 
         while (record.hasRemaining()) {
-            // full buffer, partial record
+            // 1 如果此条数据只写过一部分, 那么剩下的部分会再次写出;
+            // 2 这个过程会申请新的buffer, buffer 还不够用的话,会一直反复申请,只到把该条数据消耗完
+            // 3 申请的buffer 会交给相关 unicastBufferBuilders 成员维护缓存
             finishUnicastBufferBuilder(targetSubpartition);
             buffer = appendUnicastDataForRecordContinuation(record, targetSubpartition);
         }
 
         if (buffer.isFull()) {
-            // full buffer, full record
             finishUnicastBufferBuilder(targetSubpartition);
         }
 
-        // partial buffer, full record
     }
 
     @Override
@@ -255,7 +260,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
         super.close();
     }
 
-    //
+
     private BufferBuilder appendUnicastDataForNewRecord(
             final ByteBuffer record, final int targetSubpartition) throws IOException {
         if (targetSubpartition < 0 || targetSubpartition > unicastBufferBuilders.length) {
@@ -271,6 +276,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
             addToSubpartition(buffer, targetSubpartition, 0);
         }
 
+        // 将序列化的记录 追加到 buffer中
         buffer.appendAndCommit(record);
 
         return buffer;
@@ -297,12 +303,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
             final ByteBuffer remainingRecordBytes, final int targetSubpartition)
             throws IOException {
         final BufferBuilder buffer = requestNewUnicastBufferBuilder(targetSubpartition);
-        // !! Be aware, in case of partialRecordBytes != 0, partial length and data has to
-        // `appendAndCommit` first
-        // before consumer is created. Otherwise it would be confused with the case the buffer
-        // starting
-        // with a complete record.
-        // !! The next two lines can not change order.
+        
         final int partialRecordBytes = buffer.appendAndCommit(remainingRecordBytes);
         addToSubpartition(buffer, targetSubpartition, partialRecordBytes);
 
