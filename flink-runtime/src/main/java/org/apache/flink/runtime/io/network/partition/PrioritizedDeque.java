@@ -119,7 +119,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
             add(element);
         } else {
             if (prioritize) {
-                // 把一个非优先级的元素 变成 优先级的元素
+                // 把一个非优先级的元素 提升为 优先级的元素, 位置向前移动到优先级部分
                 prioritize(element);
             } else {
                 // 添加到 优先部分的 最后面

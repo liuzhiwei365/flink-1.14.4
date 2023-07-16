@@ -901,6 +901,7 @@ public class SingleInputGate extends IndexedInputGate {
     // Channel notifications
     // ------------------------------------------------------------------------
 
+    // 与 notifyPriorityEvent  唯一不同的是 少传了一个 prioritySequenceNumber
     void notifyChannelNonEmpty(InputChannel channel) {
         queueChannel(checkNotNull(channel), null, false);
     }
@@ -916,7 +917,7 @@ public class SingleInputGate extends IndexedInputGate {
      * boolean)} to avoid spurious priority wake-ups.
      */
 
-    // 通知各个通道   在指定缓冲区编号的开头有一个优先级事件
+    // 与 notifyChannelNonEmpty 唯一不同的是 多传了一个 prioritySequenceNumber
     void notifyPriorityEvent(InputChannel inputChannel, int prioritySequenceNumber) {
         queueChannel(checkNotNull(inputChannel), prioritySequenceNumber, false);
     }
@@ -1021,7 +1022,11 @@ public class SingleInputGate extends IndexedInputGate {
                 enqueuedInputChannelsWithData.get(channel.getChannelIndex());
         if (alreadyEnqueued
                 && (!priority || inputChannelsWithData.containsPriorityElement(channel))) {
-            // 如果该inputChannel 已经在队列里了, 但是又不是从 非优先 提升至优先的情况,则也没必要继续排队了
+            // 1 如果该inputChannel 已经在队列里了, 但是又不是从 非优先 提升至优先的情况,则也没必要继续排队了
+            // 2 如果该inputChannel 已经在队列里了, 且已经在优先级部分,则更没必要再排队了
+
+            // 3 其实 inputChannelsWithData队列 最终的情况一定是有界收敛的,且元素就是几个 正常存活的 InputChannel
+            //  且 每个InputChannel对象要么在 优先部分,要么在非优先部分(互斥)
             return false;
         }
 

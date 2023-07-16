@@ -542,6 +542,14 @@ public class RemoteInputChannel extends InputChannel {
      * Handles the input buffer. This method is taking over the ownership of the buffer and is fully
      * responsible for cleaning it up both on the happy path and in case of an error.
      */
+
+    // 1  本方法主要涉及到两个队列 inputChannelsWithData 和 receivedBuffers
+    // 2  inputChannelsWithData 是 inputGate 级别的;  receivedBuffers 是 inputChannel级别的
+    // 3  本方法主要逻辑就是 当netty网络来一个Buffer后, 在各类情况下,对 以上两个队列排队 (本方法是那两个队列的生产端)
+    // 4  通过队列,让Buffer的  生产和消费做到了 解耦
+    // 5  inputChannelsWithData 与 receivedBuffers 是 嵌套的关系, subtask的主逻辑在消费 Buffer的时候
+    //    会先向从inputChannelsWithData 取出 inputChannel , 再取出 inputChannel对象的 receivedBuffers队列的Buffer元素
+    //
     // 本类核心方法
     public void onBuffer(Buffer buffer, int sequenceNumber, int backlog) throws IOException {
         boolean recycleBuffer = true;
@@ -606,10 +614,14 @@ public class RemoteInputChannel extends InputChannel {
                 ++expectedSequenceNumber;
             }
 
+            // 如果本 RemoteInputChannel  是第一次添加 优先事件  (之前receivedBuffers成员队列没有 优先元素)
+            // 则把inputcahnnel 添加到  inputChannelsWithData优先级队列 的优先部分; 也就是该inputCahnnel通道将来会被优先处理消费
             if (firstPriorityEvent) {
                 notifyPriorityEvent(sequenceNumber);
             }
-            // 如果 receivedBuffers 再添加本 buffer之前是空的, inputChannelsWithData
+
+            // 如果本 RemoteInputChannel  是第一次添加 Buffer  (之前receivedBuffers成员队列没有元素),
+            // 则也把本InputChannel 添加到 inputChannelsWithData优先级队列 的非优先部分
             if (wasEmpty) {
                 notifyChannelNonEmpty();
             }
