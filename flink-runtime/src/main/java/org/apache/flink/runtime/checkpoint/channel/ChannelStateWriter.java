@@ -30,6 +30,10 @@ import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 /** Writes channel state during checkpoint/savepoint. */
+
+
+//  负责把各个input channel的inflight buffer和
+//  operator的输出缓存（ResultSubpartition）的内容记录到checkpoint
 @Internal
 public interface ChannelStateWriter extends Closeable {
 
@@ -104,6 +108,8 @@ public interface ChannelStateWriter extends Closeable {
      * @see org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter#SEQUENCE_NUMBER_RESTORED
      * @see org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter#SEQUENCE_NUMBER_UNKNOWN
      */
+    // 使用ChannelStateWriter 写入buffer 内容
+    // addInputData方法将buffer加入到ChannelStateWriter中, 等待稍后写入到checkpoint
     void addInputData(
             long checkpointId,
             InputChannelInfo info,

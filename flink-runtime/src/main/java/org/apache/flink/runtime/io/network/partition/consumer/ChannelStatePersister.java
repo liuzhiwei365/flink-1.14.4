@@ -108,23 +108,31 @@ public final class ChannelStatePersister {
     }
 
     protected void maybePersist(Buffer buffer) {
+        // 只有当buffer 的内容是用户数据的buffer时,  buffer.isBuffer() 才会返回 true
         if (checkpointStatus == CheckpointStatus.BARRIER_PENDING && buffer.isBuffer()) {
+
+            // 1 构建 InputChannel的 buffer 状态的 写出请求  （写入请求里面封装了具体的 buffer 的 checkpoint写出逻辑 ）
+            // 2 放入 ChannelStateWriteRequestExecutorImpl.deque 队列里面排队
             channelStateWriter.addInputData(
                     lastSeenBarrier,
                     channelInfo,
                     ChannelStateWriter.SEQUENCE_NUMBER_UNKNOWN,
+                    // 把一个buffer 封装到迭代器中
                     CloseableIterator.ofElement(buffer.retainBuffer(), Buffer::recycleBuffer));
         }
     }
 
+    // 返回 barrierId
     protected Optional<Long> checkForBarrier(Buffer buffer) throws IOException {
+        // 将buffer 反序列化为一个 AbstractEvent 事件
         AbstractEvent event = parseEvent(buffer);
+
+        // 事件直接就是CheckpointBarrier对象
         if (event instanceof CheckpointBarrier) {
             long barrierId = ((CheckpointBarrier) event).getId();
             long expectedBarrierId =
-                    checkpointStatus == CheckpointStatus.COMPLETED
-                            ? lastSeenBarrier + 1
-                            : lastSeenBarrier;
+                    checkpointStatus == CheckpointStatus.COMPLETED ? lastSeenBarrier + 1 : lastSeenBarrier;
+
             if (barrierId >= expectedBarrierId) {
                 logEvent("found barrier", barrierId);
                 checkpointStatus = CheckpointStatus.BARRIER_RECEIVED;
@@ -134,7 +142,9 @@ public final class ChannelStatePersister {
                 logEvent("ignoring barrier", barrierId);
             }
         }
-        if (event instanceof EventAnnouncement) { // NOTE: only remote channels
+
+        // 或者, EventAnnouncement事件内部 包裹者CheckpointBarrier对象 (only remote channels)
+        if (event instanceof EventAnnouncement) {
             EventAnnouncement announcement = (EventAnnouncement) event;
             if (announcement.getAnnouncedEvent() instanceof CheckpointBarrier) {
                 long barrierId = ((CheckpointBarrier) announcement.getAnnouncedEvent()).getId();
@@ -161,6 +171,9 @@ public final class ChannelStatePersister {
      * Parses the buffer as an event and returns the {@link CheckpointBarrier} if the event is
      * indeed a barrier or returns null in all other cases.
      */
+
+    // 1 将buffer 反序列化为一个 AbstractEvent 事件
+    // 2 如果该事件确实是一个屏障，则返回 CheckpointBarrier(也是AbstractEvent的子类),或者在所有其他情况下返回null
     @Nullable
     protected AbstractEvent parseEvent(Buffer buffer) throws IOException {
         if (buffer.isBuffer()) {

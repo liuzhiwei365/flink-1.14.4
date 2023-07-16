@@ -245,11 +245,13 @@ public class BufferManager implements BufferListener, BufferRecycler {
         Queue<Buffer> buffers;
         synchronized (bufferQueue) {
             numRequiredBuffers = 0;
+            // 先把 FloatingBuffers 从队列移除
             buffers = bufferQueue.clearFloatingBuffers();
         }
 
         // recycle all buffers out of the synchronization block to avoid dead lock
         while (!buffers.isEmpty()) {
+            // 再把 FloatingBuffers 从内存移除 （回收）
             buffers.poll().recycleBuffer();
         }
     }

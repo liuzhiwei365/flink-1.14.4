@@ -49,6 +49,9 @@ import static org.apache.flink.util.Preconditions.checkState;
 @NotThreadSafe
 public class BufferConsumerWithPartialRecordLength {
     private final BufferConsumer bufferConsumer;
+
+
+    // 是buffer中第一个残缺record 的结束位置; 没有残缺record 则为0
     private final int partialRecordLength;
 
     public BufferConsumerWithPartialRecordLength(

@@ -203,7 +203,7 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
     public void userEventTriggered(ChannelHandlerContext ctx, Object msg) throws Exception {
         // ClientOutboundMeassage的子类如下:
         //      AcknowledgeAllRecordsProcessedMessage      通知上游本 InputChannel 所有的消息处理完了
-        //      AddCreditMessage                           增加上游的 Credit值
+        //      AddCreditMessage                           增加上游的 Credit值  ****
         //      NewBufferSizeMessage
         //      ResumeConsumptionMessage
         if (msg instanceof ClientOutboundMessage) {
@@ -343,7 +343,7 @@ class CreditBasedPartitionRequestClientHandler extends ChannelInboundHandlerAdap
             // 缓存 空的 buffer
             inputChannel.onEmptyBuffer(bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
         } else if (bufferOrEvent.getBuffer() != null) {
-            // 缓存 buffer ,这个 buffer 很有可能就是 用户数据
+            // 缓存 buffer ,这个 buffer 里面包含 用户数据 和内部事件
             inputChannel.onBuffer(
                     bufferOrEvent.getBuffer(), bufferOrEvent.sequenceNumber, bufferOrEvent.backlog);
         } else {

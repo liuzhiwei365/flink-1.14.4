@@ -57,6 +57,10 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 
 /** Writes channel state for a specific checkpoint-subtask-attempt triple. */
+
+// flink 在做快照时 ，各个channel 通道也会做
+
+// 本类负责 做 channel 的快照保存
 @NotThreadSafe
 class ChannelStateCheckpointWriter {
     private static final Logger LOG = LoggerFactory.getLogger(ChannelStateCheckpointWriter.class);
@@ -134,6 +138,7 @@ class ChannelStateCheckpointWriter {
         runWithChecks(() -> serializer.writeHeader(dataStream));
     }
 
+    // 保存 inputChannel 中 暂存的buffer
     void writeInput(InputChannelInfo info, Buffer buffer) {
         write(
                 inputChannelOffsets,
@@ -143,6 +148,7 @@ class ChannelStateCheckpointWriter {
                 "ChannelStateCheckpointWriter#writeInput");
     }
 
+    // 保存 ResultSubpartition中 暂存的buffer
     void writeOutput(ResultSubpartitionInfo info, Buffer buffer) {
         write(
                 resultSubpartitionOffsets,
@@ -167,14 +173,19 @@ class ChannelStateCheckpointWriter {
                         checkState(precondition);
                         long offset = checkpointStream.getPos();
                         try (AutoCloseable ignored =
-                                NetworkActionsLogger.measureIO(action, buffer)) {
+                                NetworkActionsLogger.measureIO(action, buffer)) { // 内部会记录本次写出的花费时间
+
+                            // 核心,  将buffer 写出到 checkpoint 目录 , 该
                             serializer.writeData(dataStream, buffer);
                         }
+
+                        // 更新  offsets
                         long size = checkpointStream.getPos() - offset;
                         offsets.computeIfAbsent(key, unused -> new StateContentMetaInfo())
                                 .withDataAdded(offset, size);
-                        NetworkActionsLogger.tracePersist(
-                                action, buffer, taskName, key, checkpointId);
+
+                        // 日志
+                        NetworkActionsLogger.tracePersist( action, buffer, taskName, key, checkpointId);
                     });
         } finally {
             buffer.recycleBuffer();

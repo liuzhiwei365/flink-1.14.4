@@ -102,6 +102,8 @@ public class RemoteInputChannel extends InputChannel {
     private volatile PartitionRequestClient partitionRequestClient;
 
     /** The next expected sequence number for the next buffer. */
+    //用来保证buffer 的顺序, 在buffer中包含了 sequenceNumber,而在RemoteInputChannel本地维护 expectedSequenceNumber
+    //只有两边的序列号相同才可以证明buffer 数据的顺序是正常且可以进行处理
     private int expectedSequenceNumber = 0;
 
     /** The initial number of exclusive buffers assigned to this channel. */
@@ -121,7 +123,7 @@ public class RemoteInputChannel extends InputChannel {
     @GuardedBy("receivedBuffers")
     private long lastBarrierId = NONE;
 
-    // channel 状态的 持久化器
+    // channel 状态的 持久化器 ,用来更新 本RemoteInputChannel的内部状态
     private final ChannelStatePersister channelStatePersister;
 
     public RemoteInputChannel(
@@ -232,7 +234,7 @@ public class RemoteInputChannel extends InputChannel {
         final DataType nextDataType;
 
         synchronized (receivedBuffers) {
-            // 消费一个元素
+            // 消费队列头的第一个元素
             next = receivedBuffers.poll();
             // 看一下下一个元素的类型, 如果不存在下一个元素，则返回DataType.NONE类型
             nextDataType =
@@ -345,10 +347,10 @@ public class RemoteInputChannel extends InputChannel {
      * Enqueue this input channel in the pipeline for notifying the producer of unannounced credit.
      */
 
-    // 上报UnAnnouncedCredit 指标到 ResultPartition
     private void notifyCreditAvailable() throws IOException {
         checkPartitionRequestQueueInitialized();
-
+        //  最终会把  NettyMessage.AddCredit 对象发给上游  ResultSubpartition
+        //  上报 InputChannel 的  unAnnouncedCredit 指标
         partitionRequestClient.notifyCreditAvailable(this);
     }
 
@@ -401,6 +403,9 @@ public class RemoteInputChannel extends InputChannel {
      */
     @Override
     public void notifyBufferAvailable(int numAvailableBuffers) throws IOException {
+        // 1 unannouncedCredit 表示还没有 向生产者 公布的 可用 buffer  数量
+        // 2 如果 unannouncedCredit 大于 0 , 表明上游发生了积压, 上游的credit消耗完了,这时下游正准备把 该值通知给上游
+        // 3  getAndAdd 方法的意思是  先获取值判断是否为0 , 再把numAvailableBuffers 加给 unannouncedCredit
         if (numAvailableBuffers > 0 && unannouncedCredit.getAndAdd(numAvailableBuffers) == 0) {
             notifyCreditAvailable();
         }
@@ -436,11 +441,11 @@ public class RemoteInputChannel extends InputChannel {
 
     private void onBlockingUpstream() {
         if (initialCredit == 0) {
-            // release the allocated floating buffers so that they can be used by other channels if
-            // no exclusive buffer is configured, it is important because a blocked channel can not
-            // transmit any data so the allocated floating buffers can not be recycled, as a result,
-            // other channels may can't allocate new buffers for data transmission (an extreme case
-            // is that we only have 1 floating buffer and 0 exclusive buffer)
+
+            // 释放分配的浮动缓冲区，以便它们可以被其他通道使用，如果没有配置独占缓冲区，这很重要，
+            // 因为阻塞的通道不能传输任何数据，因此分配的浮动缓冲器不能被回收，因此，其他通道可能
+            // 无法为数据传输分配新的缓冲区
+            // （极端情况是我们只有 1个浮动缓冲区 和 0个独占缓冲区）
             bufferManager.releaseFloatingBuffers();
         }
     }
@@ -526,7 +531,9 @@ public class RemoteInputChannel extends InputChannel {
      *
      * @param backlog The number of unsent buffers in the producer's sub partition.
      */
-    // 接受到上游数据挤压的消息, 然后申请
+    // 接受到上游数据挤压的消息
+    //  1 然后申请更多的 FloatingBuffer
+    //  2 通知上游 申请成功的buffer 数量, 并把这个数据作为 credit值发给上游
     public void onSenderBacklog(int backlog) throws IOException {
         notifyBufferAvailable(bufferManager.requestFloatingBuffers(backlog + initialCredit));
     }
@@ -535,11 +542,13 @@ public class RemoteInputChannel extends InputChannel {
      * Handles the input buffer. This method is taking over the ownership of the buffer and is fully
      * responsible for cleaning it up both on the happy path and in case of an error.
      */
+    // 本类核心方法
     public void onBuffer(Buffer buffer, int sequenceNumber, int backlog) throws IOException {
         boolean recycleBuffer = true;
 
         try {
             if (expectedSequenceNumber != sequenceNumber) {
+                // 如果数据出现了乱序,报错
                 onError(new BufferReorderingException(expectedSequenceNumber, sequenceNumber));
                 return;
             }
@@ -559,9 +568,7 @@ public class RemoteInputChannel extends InputChannel {
                         channelInfo,
                         channelStatePersister,
                         sequenceNumber);
-                // Similar to notifyBufferAvailable(), make sure that we never add a buffer
-                // after releaseAllResources() released all buffers from receivedBuffers
-                // (see above for details).
+                //如果本channel 已经被释放, 不处理
                 if (isReleased.get()) {
                     return;
                 }
@@ -570,30 +577,31 @@ public class RemoteInputChannel extends InputChannel {
 
                 SequenceBuffer sequenceBuffer = new SequenceBuffer(buffer, sequenceNumber);
                 DataType dataType = buffer.getDataType();
+
                 // 不管优先级如何,最终sequenceBuffer 都会被添加到receivedBuffers中
+                // firstPriorityEvent 反映的是, 是否是添加到receivedBuffers 队列中的第一个优先元素
                 if (dataType.hasPriority()) {
-                    // 是否是添加 到 优先部分的 第一个元素
                     firstPriorityEvent = addPriorityBuffer(sequenceBuffer);
                     recycleBuffer = false;
                 } else {
                     receivedBuffers.add(sequenceBuffer);
                     recycleBuffer = false;
                     if (dataType.requiresAnnouncement()) {
-                        // 如果需要先声明,则先声明，再添加到receivedBuffers 中
+                        // 目前只有 TIMEOUTABLE_ALIGNED_CHECKPOINT_BARRIER 类型的 dataType 会走到这里,序列化后也就是 CheckpointBarrier
+                        // 如果需要先声明,则先声明, 再添加到receivedBuffers 中
                         firstPriorityEvent = addPriorityBuffer(announce(sequenceBuffer));
                     }
                 }
                 channelStatePersister
-                        .checkForBarrier(sequenceBuffer.buffer)
-                        .filter(id -> id > lastBarrierId)
+                        .checkForBarrier(sequenceBuffer.buffer)  // 返回 barrierId （如果buffer 反序列化后与 barrier相关的话,否则不处理）
+                        .filter(id -> id > lastBarrierId) // 如果这次 barrierId 大于上次的,是可以接受的
                         .ifPresent(
                                 id -> {
-                                    // checkpoint was not yet started by task thread,
-                                    // so remember the numbers of buffers to spill for the time when
-                                    // it will be started
+                                    // 跟新 Barrier 相关的状态
                                     lastBarrierId = id;
                                     lastBarrierSequenceNumber = sequenceBuffer.sequenceNumber;
                                 });
+                // 可能持久化 inputChannel的 buffer状态
                 channelStatePersister.maybePersist(buffer);
                 ++expectedSequenceNumber;
             }
@@ -601,10 +609,12 @@ public class RemoteInputChannel extends InputChannel {
             if (firstPriorityEvent) {
                 notifyPriorityEvent(sequenceNumber);
             }
+            // 如果 receivedBuffers 再添加本 buffer之前是空的, inputChannelsWithData
             if (wasEmpty) {
                 notifyChannelNonEmpty();
             }
 
+            // 处理上游积压
             if (backlog >= 0) {
                 onSenderBacklog(backlog);
             }
@@ -618,6 +628,7 @@ public class RemoteInputChannel extends InputChannel {
     /** @return {@code true} if this was first priority buffer added. */
     private boolean addPriorityBuffer(SequenceBuffer sequenceBuffer) {
         receivedBuffers.addPriorityElement(sequenceBuffer);
+        // 判断优先级部分的元素总数 是否为 1
         return receivedBuffers.getNumPriorityElements() == 1;
     }
 

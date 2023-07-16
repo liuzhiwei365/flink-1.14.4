@@ -63,22 +63,32 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
      *
      * @param element the element to add
      */
+
+    // deque 的结构如下:
+    // 0  1  2  3  4  5  6  7  8  9  10
+    // +  +  +  +  +  *  *  *  *  *  *
+    // 我们用+ 表示优先级部分, 用 * 表示非优先级部分
+    // 如果这时候我们添加一个优先元素, 则是相当于添加到索引 为 5 的位置
+
     // 添加优先元素
     public void addPriorityElement(T element) {
-        // priority elements are rather rare and short-lived, so most of there are none
+
         if (numPriorityElements == 0) {
+            // 如果是第一次添加  (short cut )
             deque.addFirst(element);
         } else if (numPriorityElements == deque.size()) {
-            // no non-priority elements
+            // 如果目前队列中只有 优先部分, 不存在非优先部分  (short cut)
             deque.add(element);
         } else {
-            // remove all priority elements
+            // 先把 deque 的下游部分全部取出 放入 priorPriority 暂存
             final ArrayDeque<T> priorPriority = new ArrayDeque<>(numPriorityElements);
             for (int index = 0; index < numPriorityElements; index++) {
                 priorPriority.addFirst(deque.poll());
             }
+            // 把新来的 element 添加到 deque队列头
             deque.addFirst(element);
-            // readd them before the newly added element
+
+            // 把暂存的优先级元素重新添加到 deque 队列头
             for (final T priorityEvent : priorPriority) {
                 deque.addFirst(priorityEvent);
             }
@@ -112,7 +122,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
                 // 把一个非优先级的元素 变成 优先级的元素
                 prioritize(element);
             } else {
-                // 添加到优先部分的 最后面
+                // 添加到 优先部分的 最后面
                 addPriorityElement(element);
             }
         }
@@ -203,6 +213,7 @@ public final class PrioritizedDeque<T> implements Iterable<T> {
     }
 
     /** Returns the current number of priority elements ([0; {@link #size()}]). */
+    // 返回优先级部分 的 元素总数
     public int getNumPriorityElements() {
         return numPriorityElements;
     }

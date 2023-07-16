@@ -56,6 +56,7 @@ interface ChannelStateWriteRequest {
 
     static ChannelStateWriteRequest write(
             long checkpointId, InputChannelInfo info, CloseableIterator<Buffer> iterator) {
+        // 构建 InputChannel的 buffer 状态的 写出请求
         return buildWriteRequest(
                 checkpointId,
                 "writeInput",
@@ -65,6 +66,7 @@ interface ChannelStateWriteRequest {
 
     static ChannelStateWriteRequest write(
             long checkpointId, ResultSubpartitionInfo info, Buffer... buffers) {
+        // 构建 ResultSubpartition的 buffer 状态的 写出请求
         return buildWriteRequest(
                 checkpointId,
                 "writeOutput",

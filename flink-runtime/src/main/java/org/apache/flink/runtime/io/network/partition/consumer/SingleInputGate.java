@@ -148,6 +148,10 @@ public class SingleInputGate extends IndexedInputGate {
     private final InputChannel[] channels; // 一个IG 对应 多个 IC
 
     /** Channels, which notified this input gate about available data. */
+    //  生产消费模式
+    //  netty 网络接受到上游的数据 inputChannel 会往 inputChannelsWithData 排队 （生产）
+    //  而task 处理用户数据的逻辑会 从 inputChannelsWithData 取出元素  （消费）
+    //  这两类逻辑 用这个队列 解耦合了
     private final PrioritizedDeque<InputChannel> inputChannelsWithData = new PrioritizedDeque<>();
 
     /**
@@ -675,6 +679,7 @@ public class SingleInputGate extends IndexedInputGate {
     }
 
     // blocking 表示 在 inputChannelsWithData队列中获取 inputChannel 的时候是否阻塞
+
     private Optional<BufferOrEvent> getNextBufferOrEvent(boolean blocking)
             throws IOException, InterruptedException {
         if (hasReceivedAllEndOfPartitionEvents) {
@@ -709,13 +714,14 @@ public class SingleInputGate extends IndexedInputGate {
             synchronized (inputChannelsWithData) {
                 // 先从inputChannelsWithData 中取出（poll）一个 inputChannel 元素
                 Optional<InputChannel> inputChannelOpt = getChannel(blocking);
+
                 if (!inputChannelOpt.isPresent()) {
                     return Optional.empty();
                 }
 
                 final InputChannel inputChannel = inputChannelOpt.get();
-                // 是RemoteInputChannel,则本方法的数据最终  来自 RemoteInputChannel的 receivedBuffers队列
-                // 如果是LocalInputChannel,则数据来源于读视图
+                // 如果是RemoteInputChannel,则本方法的数据最终  来自  receivedBuffers队列
+                // 如果是LocalInputChannel ,则数据来源于读视图
                 Optional<BufferAndAvailability> bufferAndAvailabilityOpt =
                         inputChannel.getNextBuffer();
 
@@ -910,7 +916,7 @@ public class SingleInputGate extends IndexedInputGate {
      * boolean)} to avoid spurious priority wake-ups.
      */
 
-    // 通知各个通道在指定缓冲区编号的开头有一个优先级事件
+    // 通知各个通道   在指定缓冲区编号的开头有一个优先级事件
     void notifyPriorityEvent(InputChannel inputChannel, int prioritySequenceNumber) {
         queueChannel(checkNotNull(inputChannel), prioritySequenceNumber, false);
     }
@@ -937,37 +943,44 @@ public class SingleInputGate extends IndexedInputGate {
                 }));
     }
 
-    //将 inputChannelsWithData 添加到优先级队列中
+    //
+    //  1 生产消费模式：
+    //     netty 网络接受到上游的数据 inputChannel 会往 inputChannelsWithData 排队 （生产）
+    //     而task 处理用户数据的逻辑会 从 inputChannelsWithData 取出元素  （消费）
+    //     生产和消费也是在不同的线程中进行的
+
+    //  2 可以参见 SingleInputGate.waitAndGetNextData方法, 消费 inputChannelsWithData 队列中的元素
+
+    // 将inputcahnnel 添加到  优先级队列inputChannelsWithData  中
     private void queueChannel(
             InputChannel channel, @Nullable Integer prioritySequenceNumber, boolean forcePriority) {
         try (GateNotificationHelper notification =
                 new GateNotificationHelper(this, inputChannelsWithData)) {
+
             synchronized (inputChannelsWithData) {
                 boolean priority = prioritySequenceNumber != null || forcePriority;
 
                 if (!forcePriority
                         && priority
-                        && isOutdated(
-                                prioritySequenceNumber,
+                        && isOutdated(prioritySequenceNumber,
                                 lastPrioritySequenceNumber[channel.getChannelIndex()])) {
-                    // priority event at the given offset already polled (notification is not atomic
-                    // in respect to buffer enqueuing), so just ignore the notification
-                    // 序列号过期, 所以忽略该通知
+                    // 在有优先序列化的情况下, 优先序列号过期, 忽略该通知
                     return;
                 }
 
-                // 将 inputChannelsWithData 添加到优先级队列中
+                // 核心
+                // 将channel 添加到 inputChannelsWithData 队列中
                 if (!queueChannelUnsafe(channel, priority)) {
                     // 如果没添加成功直接返回
                     return;
                 }
 
                 if (priority && inputChannelsWithData.getNumPriorityElements() == 1) {
-                    // 队列从没有优先级元素 变成有优先级元素,  更新相关 flag
+                    // 如果是队列第一次添加优先元素,  则更新相关 flag
                     notification.notifyPriority();
                 }
                 if (inputChannelsWithData.size() == 1) {
-                    // 队列从没有元素 变成有元素,  更新相关 flag
+                    // 队列是第一次添加元素,  则更新相关 flag
                     notification.notifyDataAvailable();
                 }
             }
@@ -990,12 +1003,17 @@ public class SingleInputGate extends IndexedInputGate {
      * @return true iff it has been enqueued/prioritized = some change to {@link
      *     #inputChannelsWithData} happened
      */
-    //如果尚未排队且未收到 EndOfPartition, 则对通道进行排队； 如果 nextDataType 有优先级； 则会排在优先级部分（优先级部分在前面）
+    //
+
+
+
+    //对 inputChannel 进行排队
     private boolean queueChannelUnsafe(InputChannel channel, boolean priority) {
         assert Thread.holdsLock(inputChannelsWithData);
 
         if (channelsWithEndOfPartitionEvents.get(channel.getChannelIndex())) {
-            // 如果该inputChannel 的数据已经结束了,则该inputChannel没必要继续排队了
+            // 如果该inputChannel 的数据已经结束了 （它已经收到了 EndOfPartition 事件）
+            // 则该inputChannel没必要继续排队了
             return false;
         }
 
@@ -1003,12 +1021,14 @@ public class SingleInputGate extends IndexedInputGate {
                 enqueuedInputChannelsWithData.get(channel.getChannelIndex());
         if (alreadyEnqueued
                 && (!priority || inputChannelsWithData.containsPriorityElement(channel))) {
-            // already notified / prioritized (double notification), ignore
+            // 如果该inputChannel 已经在队列里了, 但是又不是从 非优先 提升至优先的情况,则也没必要继续排队了
             return false;
         }
 
-        // 如果已经排过队,则只需提升优先级
+        // 核心
+        // 把channel 正式添加到队列中 （最一般的情况; 无论priority是否为true 都无所谓, add方式内部有判断和处理）
         inputChannelsWithData.add(channel, priority, alreadyEnqueued);
+
         if (!alreadyEnqueued) {
             enqueuedInputChannelsWithData.set(channel.getChannelIndex());
         }

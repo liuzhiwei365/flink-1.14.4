@@ -77,6 +77,7 @@ public class PipelinedSubpartition extends ResultSubpartition
      * Number of exclusive credits per input channel at the downstream tasks configured by {@link
      * org.apache.flink.configuration.NettyShuffleEnvironmentOptions#NETWORK_BUFFERS_PER_CHANNEL}.
      */
+    // 独占信誉值
     private final int receiverExclusiveBuffersPerChannel;
 
     /** All buffers of this subpartition. Access to the buffers is synchronized on this object. */
@@ -202,7 +203,7 @@ public class PipelinedSubpartition extends ResultSubpartition
             notifyPriorityEvent(prioritySequenceNumber);
         }
         if (notifyDataAvailable) {
-            // 通知 ResultSubPartitionView的 开始消费 PipelinedSubpartition中的buffers 数据
+            // 通知 ResultSubPartitionView的 开始消费 PipelinedSubpartition中的 buffers 数据
             notifyDataAvailable();
         }
 
@@ -302,80 +303,72 @@ public class PipelinedSubpartition extends ResultSubpartition
         }
     }
 
+    // buffers队列中元素为 BufferConsumerWithPartialRecordLength, 然而返回的却是 BufferAndBacklog
+    // 如何转换的 ？
     @Nullable
     BufferAndBacklog pollBuffer() {
         synchronized (buffers) {
-            if (isBlocked) {
-                return null;
-            }
+            if (isBlocked) {return null;}
 
             Buffer buffer = null;
 
             if (buffers.isEmpty()) {
+                // 如果我们抽干了所有buffers队列中的数据, 则设置 flushRequested = false
                 flushRequested = false;
             }
 
-            while (!buffers.isEmpty()) {
-                BufferConsumerWithPartialRecordLength bufferConsumerWithPartialRecordLength =
-                        buffers.peek();
-                BufferConsumer bufferConsumer =
-                        bufferConsumerWithPartialRecordLength.getBufferConsumer();
+            while (!buffers.isEmpty()) { //-->
 
+                BufferConsumerWithPartialRecordLength bufferConsumerWithPartialRecordLength = buffers.peek();
+                BufferConsumer bufferConsumer = bufferConsumerWithPartialRecordLength.getBufferConsumer();
+
+                // *** 获取原来 BufferConsumer 的 可读切片, 如此buffer 更加紧凑
                 buffer = buildSliceBuffer(bufferConsumerWithPartialRecordLength);
 
-                checkState(
-                        bufferConsumer.isFinished() || buffers.size() == 1,
+                checkState(bufferConsumer.isFinished() || buffers.size() == 1,
                         "When there are multiple buffers, an unfinished bufferConsumer can not be at the head of the buffers queue.");
 
                 if (buffers.size() == 1) {
-                    // turn off flushRequested flag if we drained all of the available data
+                    // 如果我们抽干了所有buffers队列中的数据, 则设置 flushRequested = false
                     flushRequested = false;
                 }
 
                 if (bufferConsumer.isFinished()) {
+                    // 如果buffer被消耗完了, 则从buffers队列中 取出 并且 回收
                     requireNonNull(buffers.poll()).getBufferConsumer().close();
+                    // 如果是非事件buffer, buffersInBacklog--
                     decreaseBuffersInBacklogUnsafe(bufferConsumer.isBuffer());
                 }
 
-                // if we have an empty finished buffer and the exclusive credit is 0, we just return
-                // the empty buffer so that the downstream task can release the allocated credit for
-                // this empty buffer, this happens in two main scenarios currently:
-                // 1. all data of a buffer builder has been read and after that the buffer builder
-                // is finished
-                // 2. in approximate recovery mode, a partial record takes a whole buffer builder
                 if (receiverExclusiveBuffersPerChannel == 0 && bufferConsumer.isFinished()) {
                     break;
                 }
 
-                if (buffer.readableBytes() > 0) {
+                if (buffer.readableBytes() > 0) { // 写索引 减去 读索引
                     break;
                 }
+
                 buffer.recycleBuffer();
                 buffer = null;
                 if (!bufferConsumer.isFinished()) {
                     break;
                 }
-            }
+            }  // <--
 
-            if (buffer == null) {
-                return null;
-            }
+            if (buffer == null) { return null; }
 
             if (buffer.getDataType().isBlockingUpstream()) {
                 isBlocked = true;
             }
 
             updateStatistics(buffer);
-            // Do not report last remaining buffer on buffers as available to read (assuming it's
-            // unfinished).
-            // It will be reported for reading either on flush or when the number of buffers in the
-            // queue
-            // will be 2 or more.
+
             NetworkActionsLogger.traceOutput(
                     "PipelinedSubpartition#pollBuffer",
                     buffer,
                     parent.getOwningTaskName(),
                     subpartitionInfo);
+
             return new BufferAndBacklog(
                     buffer,
                     getBuffersInBacklogUnsafe(),

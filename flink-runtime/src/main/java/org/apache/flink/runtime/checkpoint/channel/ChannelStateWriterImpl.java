@@ -156,6 +156,8 @@ public class ChannelStateWriterImpl implements ChannelStateWriter {
                 checkpointId,
                 info,
                 startSeqNum);
+        // 1 构建 InputChannel的 buffer 状态的 写出请求  （写入请求里面封装了具体的 buffer 的 checkpoint写出逻辑 ）
+        // 2 放入 ChannelStateWriteRequestExecutorImpl.deque 队列里面排队
         enqueue(write(checkpointId, info, iterator), false);
     }
 

@@ -36,8 +36,9 @@ final class ChannelStateWriteRequestDispatcherImpl implements ChannelStateWriteR
     private static final Logger LOG =
             LoggerFactory.getLogger(ChannelStateWriteRequestDispatcherImpl.class);
 
-    private final Map<Long, ChannelStateCheckpointWriter>
-            writers; // limited indirectly by results max size
+    // key 为 checkpointId
+    private final Map<Long, ChannelStateCheckpointWriter> writers; // limited indirectly by results max size
+
     private final CheckpointStorageWorkerView streamFactoryResolver;
     private final ChannelStateSerializer serializer;
     private final int subtaskIndex;
@@ -75,6 +76,8 @@ final class ChannelStateWriteRequestDispatcherImpl implements ChannelStateWriteR
             checkState(
                     !writers.containsKey(request.getCheckpointId()),
                     "writer not found for request " + request);
+
+
             writers.put(request.getCheckpointId(), buildWriter((CheckpointStartRequest) request));
         } else if (request instanceof CheckpointInProgressRequest) {
             ChannelStateCheckpointWriter writer = writers.get(request.getCheckpointId());

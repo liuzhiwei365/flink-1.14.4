@@ -193,11 +193,14 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         this.enableCheckpointAfterTasksFinished = enableCheckpointAfterTasksFinished;
     }
 
+    // 非对齐的 checkpoint启动才会调用 到这里
     private static ChannelStateWriter openChannelStateWriter(
             String taskName, CheckpointStorageWorkerView checkpointStorage, Environment env) {
         ChannelStateWriterImpl writer =
                 new ChannelStateWriterImpl(
                         taskName, env.getTaskInfo().getIndexOfThisSubtask(), checkpointStorage);
+
+        // 让 ChannelStateWriteRequestExecutorImpl 跑起来
         writer.open();
         return writer;
     }

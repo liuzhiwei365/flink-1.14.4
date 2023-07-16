@@ -203,6 +203,8 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
 
     @Override
     public void notifyCreditAvailable(RemoteInputChannel inputChannel) {
+        // 最终会把  NettyMessage.AddCredit 对象发给上游
+        // 而 NettyMessage.AddCredit 对象中的 credit 值, 是 RemoteInputChannel中 unannouncedCredit成员变量的值
         sendToChannel(new AddCreditMessage(inputChannel));
     }
 
@@ -230,8 +232,8 @@ public class NettyPartitionRequestClient implements PartitionRequestClient {
          *   CreditBasedPartitionRequestClientHandler#userEventTriggered(org.apache.flink.shaded.netty4.io.netty.channel.ChannelHandlerContext,
          * java.lang.Object)
          *
-         *  CreditBasedPartitionRequestClientHandler 的 userEventTriggered会得到响应, 调用处理notifyCreditAvailable逻辑
          */
+        // CreditBasedPartitionRequestClientHandler 的 userEventTriggered会 响应 fireUserEventTriggered方法
         tcpChannel.eventLoop().execute(() -> tcpChannel.pipeline().fireUserEventTriggered(message));
     }
 

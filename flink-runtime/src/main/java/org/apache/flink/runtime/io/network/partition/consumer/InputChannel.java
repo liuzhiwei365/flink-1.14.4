@@ -304,11 +304,13 @@ public abstract class InputChannel {
      * A combination of a {@link Buffer} and a flag indicating availability of further buffers, and
      * the backlog length indicating how many non-event buffers are available in the subpartition.
      */
+
+    // 本类对普通 Buffer对象做了包装,方便flink 内部更好的使用
     public static final class BufferAndAvailability {
 
         private final Buffer buffer;
         private final Buffer.DataType nextDataType;
-        private final int buffersInBacklog; // 挤压的 buffer 数量
+        private final int buffersInBacklog; // 积压的 buffer 数量
         private final int sequenceNumber;
 
         public BufferAndAvailability(

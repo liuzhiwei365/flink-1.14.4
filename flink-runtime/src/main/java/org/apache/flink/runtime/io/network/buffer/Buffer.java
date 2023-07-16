@@ -108,6 +108,7 @@ public interface Buffer {
      * @return <tt>this</tt> instance (for chained calls)
      * @see #recycleBuffer()
      */
+    // 增加 buffer 的引用计数
     Buffer retainBuffer();
 
     /**
@@ -131,6 +132,7 @@ public interface Buffer {
      * @param length the length of the slice
      * @return a read-only sliced buffer
      */
+    //返回此 buffer 的只读切片
     Buffer readOnlySlice(int index, int length);
 
     /**
@@ -255,6 +257,11 @@ public interface Buffer {
      * org.apache.flink.runtime.io.network.netty.NettyMessage.BufferResponse}, so the maximum number
      * of supported data types is 128.
      */
+
+
+    // 类名取的不好
+    // 应该是所有buffer 的类型, 最好改为 BufferType
+    // 描述了 上游 netty 服务端发来的 buffer
     enum DataType {
         /** {@link #NONE} indicates that there is no buffer. */
         NONE(false, false, false, false, false),
@@ -292,7 +299,7 @@ public interface Buffer {
          */
         RECOVERY_COMPLETION(false, true, true, false, false);
 
-        private final boolean isBuffer;//是否buffer
+        private final boolean isBuffer;//是否用户数据的buffer
         private final boolean isEvent;//是否事件
         private final boolean isBlockingUpstream; // 是否阻塞上游
         private final boolean hasPriority; //是否有优先级

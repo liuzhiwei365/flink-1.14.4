@@ -404,6 +404,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         this.stateBackend = createStateBackend();
         this.checkpointStorage = createCheckpointStorage(stateBackend);
 
+        // 子任务快照协调者
         // 和CheckpointCoordinator不同的是，它只负责本篇Flink新特性的Unaligned checkpoint相关的协调工作
         this.subtaskCheckpointCoordinator =
                 new SubtaskCheckpointCoordinatorImpl(

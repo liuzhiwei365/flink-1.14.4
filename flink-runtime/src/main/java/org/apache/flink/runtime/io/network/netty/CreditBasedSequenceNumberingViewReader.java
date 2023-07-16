@@ -206,6 +206,9 @@ class CreditBasedSequenceNumberingViewReader
             }
 
             final Buffer.DataType nextDataType = getNextDataType(next);
+
+            // 数据类型从 BufferAndBacklog  又变为 BufferAndAvailability
+            // flink 通信部分 数据类型做了太多的变化,能否精简 ???
             return new BufferAndAvailability(
                     next.buffer(), nextDataType, next.buffersInBacklog(), next.getSequenceNumber());
         } else {

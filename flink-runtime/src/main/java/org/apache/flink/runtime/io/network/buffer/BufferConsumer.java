@@ -85,11 +85,16 @@ public class BufferConsumer implements Closeable {
      */
     public Buffer build() {
         writerPosition.update();
+        // 写指针
         int cachedWriterPosition = writerPosition.getCached();
-        Buffer slice =
-                buffer.readOnlySlice(
+        // 返回此 buffer 的只读切片
+        Buffer slice = buffer.readOnlySlice(
                         currentReaderPosition, cachedWriterPosition - currentReaderPosition);
+
+        // 该buffer的 只读部分的数据已经被拷贝到 slice上, 读指针 移动到 写指针的地方
         currentReaderPosition = cachedWriterPosition;
+
+        // 将 slice 的引用计数加一
         return slice.retainBuffer();
     }
 

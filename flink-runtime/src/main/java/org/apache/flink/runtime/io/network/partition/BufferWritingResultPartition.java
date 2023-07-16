@@ -272,7 +272,9 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
             // 如果BufferBuilder 不存在, 重新申请 BufferBuilder
             buffer = requestNewUnicastBufferBuilder(targetSubpartition);
 
-            // 把 buffer 添加到 buffers 队列中  （会更新 Backlog值 ）
+            // 1 把 buffer 添加到 buffers 队列中  （会更新 Backlog值 ）
+            // 2 appendUnicastDataForNewRecord方法 和 appendUnicastDataForRecordContinuation方法
+            //   都有addToSubpartition的调用
             addToSubpartition(buffer, targetSubpartition, 0);
         }
 
@@ -282,6 +284,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
         return buffer;
     }
 
+    // 第三个入参: 是buffer中第一个残缺record 的结束位置; 没有残缺record 则为0 (存储一个这样的值,对后面解析来说,信息上是完备的)
     private void addToSubpartition(BufferBuilder buffer, int targetSubpartition, int i)
             throws IOException {
         // 用申请得到的 BufferBuilder 构建 BufferConsumer对象,并且添加到指定的 targetSubpartition中
@@ -303,7 +306,7 @@ public abstract class BufferWritingResultPartition extends ResultPartition {
             final ByteBuffer remainingRecordBytes, final int targetSubpartition)
             throws IOException {
         final BufferBuilder buffer = requestNewUnicastBufferBuilder(targetSubpartition);
-        
+
         final int partialRecordBytes = buffer.appendAndCommit(remainingRecordBytes);
         addToSubpartition(buffer, targetSubpartition, partialRecordBytes);
 

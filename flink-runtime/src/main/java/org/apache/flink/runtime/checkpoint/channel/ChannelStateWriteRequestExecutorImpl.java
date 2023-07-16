@@ -47,6 +47,8 @@ class ChannelStateWriteRequestExecutorImpl implements ChannelStateWriteRequestEx
             LoggerFactory.getLogger(ChannelStateWriteRequestExecutorImpl.class);
 
     private final ChannelStateWriteRequestDispatcher dispatcher;
+
+    // loop 方法中会不停地取出处理
     private final BlockingDeque<ChannelStateWriteRequest> deque;
     private final Thread thread;
     private volatile Exception thrown = null;

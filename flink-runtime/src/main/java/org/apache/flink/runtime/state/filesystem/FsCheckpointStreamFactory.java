@@ -75,9 +75,11 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
     private final int fileStateThreshold;
 
     /** The directory for checkpoint exclusive state data. */
+    // 独占状态目录
     private final Path checkpointDirectory;
 
     /** The directory for shared checkpoint data. */
+    // 共享状态目录
     private final Path sharedStateDirectory;
 
     /** Cached handle to the file system for file operations. */

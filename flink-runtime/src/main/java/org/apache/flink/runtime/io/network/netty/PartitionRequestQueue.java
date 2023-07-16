@@ -349,6 +349,8 @@ class PartitionRequestQueue extends ChannelInboundHandlerAdapter {
                     //    SequenceNumber 是 每个Subpartition 中从0 递增的 buffer 的 序号 （为了保证下游数据的顺序性,checkpoint对齐的地方有作用）
                     //    ReceiverId  就是下游的 InputChannelID
                     //    Backlog     反映了数据积压的情况, 发给下游的话,下游能根据这个值去申请buffer,以平衡上下游的数据生产和消费
+
+                    // 下游 CreditBasedPartitionRequestClientHandler.decodeMsg 会解码处理
                     BufferResponse msg =
                             new BufferResponse(
                                     next.buffer(),
