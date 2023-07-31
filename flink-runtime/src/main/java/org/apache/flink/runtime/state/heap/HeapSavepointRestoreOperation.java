@@ -110,18 +110,23 @@ public class HeapSavepointRestoreOperation<K> implements RestoreOperation<Void> 
         registeredPQStates.clear();
 
         try (ThrowingIterator<SavepointRestoreResult> restore =
-                this.savepointRestoreOperation.restore()) {
+                                                      this.savepointRestoreOperation.restore()) {
+
             while (restore.hasNext()) {
                 SavepointRestoreResult restoreResult = restore.next();
-                List<StateMetaInfoSnapshot> restoredMetaInfos =
-                        restoreResult.getStateMetaInfoSnapshots();
 
+                // 一个 StateMetaInfoSnapshot 对应 一个 状态名称
+                List<StateMetaInfoSnapshot> restoredMetaInfos = restoreResult.getStateMetaInfoSnapshots();
+
+                // 初始化 registeredKVStates和 registeredPQStates
                 final Map<Integer, StateMetaInfoSnapshot> kvStatesById =
                         this.heapMetaInfoRestoreOperation.createOrCheckStateForMetaInfo(
                                 restoredMetaInfos, registeredKVStates, registeredPQStates);
 
+                // 读回状态数据, 保存到 registeredKVStates 和 registeredPQStates
                 try (ThrowingIterator<KeyGroup> keyGroups = restoreResult.getRestoredKeyGroups()) {
                     while (keyGroups.hasNext()) {
+                        // 读回 某个 key group 的状态 数据
                         readKeyGroupStateData(
                                 keyGroups.next(),
                                 keySerializerProvider.previousSchemaSerializer(),

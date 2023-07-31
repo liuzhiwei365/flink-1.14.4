@@ -88,7 +88,7 @@ public class InflightDataRescalingDescriptor implements Serializable {
      * <p>For inputs, this mapping implies the following:
      * <li>
      *
-     *     <ul>
+     * <ul>
      *       {@link #oldSubtaskIndexes} is set when there is a rescale on this task potentially
      *       leading to different key groups. Upstream task has a corresponding {@link
      *       #rescaledChannelsMappings} where it sends data over virtual channel while specifying

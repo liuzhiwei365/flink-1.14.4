@@ -74,17 +74,31 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
             @Nonnull CheckpointOptions checkpointOptions)
             throws Exception {
         long startTime = System.currentTimeMillis();
+
+        // --------------------------同步部分-----------------------------
+
+        // SR 可以是 如下类型
+        // DefaultOperatorStateBackendSnapshotResources
+        //                        HeapSnapshotResources
+        //                 RocksDBFullSnapshotResources
+        //          IncrementalRocksDBSnapshotResources
+        //                        FullSnapshotResources
+        //  深拷贝一份状态的快照资源, 后面的 asyncSnapshot 方法会用到该资源, 为下一步写入快照数据做好资源准备
         SR snapshotResources = snapshotStrategy.syncPrepareResources(checkpointId);
         logCompletedInternal(LOG_SYNC_COMPLETED_TEMPLATE, streamFactory, startTime);
 
-        // 核心逻辑
-        // DefaultOperatorStateBackendSnapshotstrategy (org.apache.flink.runtime.state)
-        // HeapSnapshotstrategy (org.apache.flink.runtime.state.heap)
-        // RocksFullSnapshotStrategy (org.apache.flink.contrib.streaming.state.snapshot)
-        // RocksIncrementalSnapshotstrategy (org.apache.flink.contrib.streaming.state.snapshot)
-        // SavepointSnapshotStrategy (org.apache.flink.runtime.state)
 
-        // 策略模式, 根据不同的策略,做不同的快照
+        // --------------------------异步部分-----------------------------
+
+        // SnapshotStrategy 有5 个实现类:
+        // DefaultOperatorStateBackendSnapshotstrategy
+        // HeapSnapshotstrategy
+        // RocksFullSnapshotStrategy
+        // RocksIncrementalSnapshotstrategy
+        // SavepointSnapshotStrategy
+
+        //  1 将快照写入由给定 CheckpointStreamFactory 提供的输出流中 (实际写入)
+        //  2 并返回  为快照提供状态句柄 的 操作
         SnapshotStrategy.SnapshotResultSupplier<T> asyncSnapshot =
                 snapshotStrategy.asyncSnapshot(
                         snapshotResources,
@@ -95,11 +109,21 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
 
         FutureTask<SnapshotResult<T>> asyncSnapshotTask =
                 new AsyncSnapshotCallable<SnapshotResult<T>>() {
+
+                    // AsyncSnapshotCallable 的call 方法 会实际回调  callInternal
                     @Override
                     protected SnapshotResult<T> callInternal() throws Exception {
+                        //  ****   触发核心逻辑  ****
+                        //  用输出流 来持久化  状态, 并且返回 状态句柄  （这个状态句柄 回被SnapshotResul包裹）
+
+                        // 再查看源代码的跳转时, 得特别注意, 这里的 asyncSnapshot 也 必须是 DefaultOperatorStateBackendSnapshotstrategy,
+                        // HeapSnapshotstrategy,RocksFullSnapshotStrategy,RocksIncrementalSnapshotstrategy,SavepointSnapshotStrategy
+                        // 这 五个实现类返回的 匿名方法
                         return asyncSnapshot.get(snapshotCloseableRegistry);
                     }
 
+                    // AsyncSnapshotCallable 的call 方法的 finally 块中会调用cleanUp清理方法
+                    // 清理方法会回调 cleanupProvidedResources
                     @Override
                     protected void cleanupProvidedResources() {
                         if (snapshotResources != null) {
@@ -107,6 +131,7 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
                         }
                     }
 
+                    // 打印日志,无实际作用
                     @Override
                     protected void logAsyncSnapshotComplete(long startTime) {
                         logCompletedInternal(
@@ -114,7 +139,11 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
                     }
                 }.toAsyncSnapshotFutureTask(cancelStreamRegistry);
 
+
+
         if (executionType == SnapshotExecutionType.SYNCHRONOUS) {
+            // 触发 AsyncSnapshotCallable 的 callInternal 方法
+            // 在 callInternal 方法中会  用输出流 来持久化  状态, 并且返回状态句柄
             asyncSnapshotTask.run();
         }
 
@@ -127,8 +156,7 @@ public final class SnapshotStrategyRunner<T extends StateObject, SR extends Snap
 
         long duration = (System.currentTimeMillis() - startTime);
 
-        LOG.debug(
-                template, description, checkpointOutDescription, Thread.currentThread(), duration);
+        LOG.debug(template, description, checkpointOutDescription, Thread.currentThread(), duration);
     }
 
     @Override

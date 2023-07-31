@@ -20,13 +20,9 @@ package org.apache.flink.runtime.state;
 
 import java.io.IOException;
 
-/**
- * Iterator that over all key-value state entries in a {@link KeyedStateBackend}. For use during
- * snapshotting.
- *
- * <p>This is required to partition all states into contiguous key-groups. The resulting iteration
- * sequence is ordered by (key-group, kv-state).
- */
+
+// 迭代 指定状态名下 -> 指定键组编号范围下 -> 的所有 kv 状态
+// 将所有的状态划分进入连续的 键组 是有必要的;  结果迭代序列的排序规则是   先按 kg (键组), 再按 kv (键值)
 public interface KeyValueStateIterator extends AutoCloseable {
 
     /**

@@ -38,6 +38,13 @@ import java.io.IOException;
  * by the caller to write the state by key-group. As a last step, when the state is completely
  * written, the user calls {@link #release()}.
  */
+
+// 按键组分区写入 的状态快照 的 通用接口
+
+//      1 在检查点的同步部分, 为某个状态（用户指定的状态名称）生成 StateSnapshot  的实例, 并捕获此时的状态
+//      2 然后，在检查点的异步部分, 用户调用  getKeyGroupWriter()  以确保快照被划分为键组  (对于已经分区的状态，这可以是一个NOP 空实现)
+//      3 调用方可以使用返回的 StateKeyGroupWriter  按键组写入状态
+//      4 作为最后一步, 当状态被完全写入时, 用户调用  release() 方法释放资源
 @Internal
 public interface StateSnapshot {
 
@@ -45,10 +52,12 @@ public interface StateSnapshot {
      * This method returns {@link StateKeyGroupWriter} and should be called in the asynchronous part
      * of the snapshot.
      */
+    // 得到键组分区写入器
     @Nonnull
     StateKeyGroupWriter getKeyGroupWriter();
 
     /** Returns a snapshot of the state's meta data. */
+    // 得到元数据信息的快照
     @Nonnull
     StateMetaInfoSnapshot getMetaInfoSnapshot();
 
@@ -57,6 +66,7 @@ public interface StateSnapshot {
      * some implementation can only release resources after a release. Produced {@link
      * StateKeyGroupWriter} should no longer be used after calling this method.
      */
+    // 释放快照资源
     void release();
 
     /** Interface for writing a snapshot that is partitioned into key-groups. */
@@ -69,6 +79,7 @@ public interface StateSnapshot {
          * @param keyGroupId the key-group to write.
          * @throws IOException on write-related problems.
          */
+        // 按键组分区写入 的状态快照
         void writeStateInKeyGroup(@Nonnull DataOutputView dov, @Nonnegative int keyGroupId)
                 throws IOException;
     }

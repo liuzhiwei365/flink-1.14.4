@@ -57,6 +57,7 @@ public class KeyGroupPartitioner<T> {
     @Nonnegative private final int numberOfElements;
 
     /** The total number of key-groups in the job. */
+    // 全局作业 范围内, 键组的总数
     @Nonnegative private final int totalKeyGroups;
 
     /**
@@ -69,6 +70,8 @@ public class KeyGroupPartitioner<T> {
      * This is a helper array that caches the key-group for each element, so we do not have to
      * compute them twice.
      */
+    // 保存 每个编号位置的元素 所分配的  相对键组值
+    //  相对键组值 = 绝对键组值  - firstKeyGroup
     @Nonnull private final int[] elementKeyGroups;
 
     /** Cached value of keyGroupRange#firstKeyGroup. */
@@ -111,8 +114,10 @@ public class KeyGroupPartitioner<T> {
         Preconditions.checkState(partitioningDestination.length >= numberOfElements);
 
         this.partitioningSource = partitioningSource;
-        this.partitioningDestination = partitioningDestination;
         this.numberOfElements = numberOfElements;
+        this.partitioningDestination = partitioningDestination;
+
+
         this.totalKeyGroups = totalKeyGroups;
         this.keyExtractorFunction = keyExtractorFunction;
         this.elementWriterFunction = elementWriterFunction;
@@ -125,10 +130,14 @@ public class KeyGroupPartitioner<T> {
     /**
      * Partitions the data into key-groups and returns the result as a {@link PartitioningResult}.
      */
+    // 返回按 键组分区 排列 后 的结果    （注意PartitioningResult内部的 partitioningDestination成员数组）
     public PartitioningResult<T> partitionByKeyGroup() {
         if (computedResult == null) {
+            //  计算每个元素的键组 （这些键组一定是在 本 task 的 keyGroupRange 中 ）
             reportAllElementKeyGroups();
+            //  规划出每个键组将来在  partitioningDestination 数组中的 头一个索引下标
             int outputNumberOfElements = buildHistogramByAccumulatingCounts();
+            //  按照 事先的规则执行分组
             executePartitioning(outputNumberOfElements);
         }
         return computedResult;
@@ -153,14 +162,30 @@ public class KeyGroupPartitioner<T> {
      * the given key-group.
      */
     protected void reportKeyGroupOfElementAtIndex(int index, int keyGroup) {
+        // 计算相对键组值
         final int keyGroupIndex = keyGroup - firstKeyGroup;
+
+        // 缓存相对键组值
         elementKeyGroups[index] = keyGroupIndex;
+
+        // 统计 分配相对键组为 keyGroupIndex 的元素的个数
         ++counterHistogram[keyGroupIndex];
     }
 
     /**
      * This method creates a histogram from the counts per key-group in {@link #counterHistogram}.
      */
+    // 初始  counterHistogram
+    //    0   1   2   3   4
+    //    3   7   2   5   6
+    //
+    //调用本方法累计计算后,变为：
+    //    0   1   2    3    4
+    //    0   3   10   12   17
+    //    sum = 23
+
+    // 为了把 partitioningSource 中 按键组散列的元素,  按键组 分类收集在一起, 而做的事先规划工作
+    // 规划出每个键组将来在  partitioningDestination 数组中的 头一个索引下标
     private int buildHistogramByAccumulatingCounts() {
         int sum = 0;
         for (int i = 0; i < counterHistogram.length; ++i) {
@@ -171,16 +196,30 @@ public class KeyGroupPartitioner<T> {
         return sum;
     }
 
+    //  outputNumberOfElements 就是  buildHistogramByAccumulatingCounts 方法返回的 sum值;
+    //  sum值 == partitioningSource 的长度 == elementKeyGroups 的长度 == 输入元素总个数
     private void executePartitioning(int outputNumberOfElements) {
 
         // We repartition the entries by their pre-computed key-groups, using the histogram values
         // as write indexes
         for (int inIdx = 0; inIdx < outputNumberOfElements; ++inIdx) {
+
             int effectiveKgIdx = elementKeyGroups[inIdx];
+
+            //  假如 counterHistogram 是如下的结构：
+            //  相对键组编号       0   1   2    3    4
+            //  元素累计值         0   3   10   12   17         sum == 23 == outputNumberOfElements
+            //
+            //  [0,3)  [3,10)  [10,12)  [12,17)  [17,23)  这些区间中的每一个区间 必定是来自同一个键组
             int outIdx = counterHistogram[effectiveKgIdx]++;
+
+            // 相当于把partitioningSource 中属于同一个 key group 的元素紧凑地放在一起,放在partitioningDestination 数组中
             partitioningDestination[outIdx] = partitioningSource[inIdx];
         }
 
+        //  此时 counterHistogram的结构是：
+        //  相对键组编号        0   1    2     3    4
+        //  元素累计值          3   10   12   17   23
         this.computedResult =
                 new PartitioningResultImpl<>(
                         elementWriterFunction,
@@ -289,12 +328,23 @@ public class KeyGroupPartitioner<T> {
             this.elementConsumer = elementConsumer;
         }
 
+        // 读回  后台存储类型 为 PRIORITY_QUEUE 的 某个状态名称下 指定键组的下 所有状态
         @Override
         public void readMappingsInKeyGroup(@Nonnull DataInputView in, @Nonnegative int keyGroupId)
                 throws IOException {
             int numElements = in.readInt();
             for (int i = 0; i < numElements; i++) {
+
+                /* 参见 HeapPriorityQueueSnapshotRestoreWrapper.keyGroupReader 方法
+
+                     KeyGroupPartitioner.createKeyGroupPartitionReader(
+                                         elementSerializer::deserialize,
+                                         (element, keyGroupId) -> priorityQueue.add(element))
+                 */
+
+                // readerFunction 是 元素的 序列化器
                 T element = readerFunction.readElement(in);
+                // 最终会将 状态数据添加到 HeapPriorityQueueSnapshotRestoreWrapper 的 priorityQueue 中
                 elementConsumer.consume(element, keyGroupId);
             }
         }

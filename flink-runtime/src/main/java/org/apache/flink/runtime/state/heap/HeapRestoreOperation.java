@@ -191,9 +191,9 @@ public class HeapRestoreOperation<K> implements RestoreOperation<Void> {
             boolean isCompressed)
             throws IOException {
 
+        // 指定压缩装饰器
         final StreamCompressionDecorator streamCompressionDecorator =
-                isCompressed
-                        ? SnappyStreamCompressionDecorator.INSTANCE
+                isCompressed? SnappyStreamCompressionDecorator.INSTANCE
                         : UncompressedStreamCompressionDecorator.INSTANCE;
 
         for (Tuple2<Integer, Long> groupOffset : keyGroupOffsets) {
@@ -210,19 +210,23 @@ public class HeapRestoreOperation<K> implements RestoreOperation<Void> {
 
             fsDataInputStream.seek(offset);
 
+            // inView 包含 fsDataInputStream 对象, 操作inView  就等于在操作fsDataInputStream
             int writtenKeyGroupIndex = inView.readInt();
             Preconditions.checkState(
                     writtenKeyGroupIndex == keyGroupIndex, "Unexpected key-group in restore.");
 
+            // 返回 SnappyFramedInputStream （提供了 snapyy 格式的解压缩格式）
             try (InputStream kgCompressionInStream =
                     streamCompressionDecorator.decorateWithCompression(fsDataInputStream)) {
 
+                //读取 一个键组下, 各个状态名称的 所有状态
                 readKeyGroupStateData(
                         kgCompressionInStream, kvStatesById, keyGroupIndex, numStates, readVersion);
             }
         }
     }
 
+     //读取 一个键组下, 各个状态名称的 所有状态
     private void readKeyGroupStateData(
             InputStream inputStream,
             Map<Integer, StateMetaInfoSnapshot> kvStatesById,
@@ -233,6 +237,7 @@ public class HeapRestoreOperation<K> implements RestoreOperation<Void> {
 
         DataInputViewStreamWrapper inView = new DataInputViewStreamWrapper(inputStream);
 
+        // 遍历所有 状态名称
         for (int i = 0; i < numStates; i++) {
 
             final int kvStateId = inView.readShort();
@@ -253,8 +258,11 @@ public class HeapRestoreOperation<K> implements RestoreOperation<Void> {
                                     + ".");
             }
 
-            StateSnapshotKeyGroupReader keyGroupReader =
-                    registeredState.keyGroupReader(readVersion);
+            // 两种实现：
+            // PartitioningResultKeyGroupReader   对应  PRIORITY_QUEUE
+            // StateTableByKeyGroupReaderV1       对应    KEY_VALUE
+            StateSnapshotKeyGroupReader keyGroupReader = registeredState.keyGroupReader(readVersion);
+            // 读回  " 后台存储类型 为 PRIORITY_QUEUE 或者 KEY_VALUE "  的 某个状态名称下 指定键组的下 所有状态
             keyGroupReader.readMappingsInKeyGroup(inView, keyGroupIndex);
         }
     }

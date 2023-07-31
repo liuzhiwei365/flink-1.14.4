@@ -227,6 +227,8 @@ public class StreamOperatorStateHandler {
 
             if (null != operatorStateBackend) {
                 snapshotInProgress.setOperatorStateManagedFuture(
+                        // 算子状态目前只有一个后端:   DefaultOperatorStateBackend
+                        //
                         operatorStateBackend.snapshot(
                                 checkpointId, timestamp, factory, checkpointOptions));
             }

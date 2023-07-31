@@ -91,6 +91,8 @@ public class StateAssignmentOperation {
 
     // 状态重新分配的算法
     public void assignStates() {
+
+        // 复制一份 operatorStates
         Map<OperatorID, OperatorState> localOperators = new HashMap<>(operatorStates);
 
         checkStateMappingCompleteness(allowNonRestoredState, operatorStates, tasks);
@@ -98,9 +100,15 @@ public class StateAssignmentOperation {
         // find the states of all operators belonging to this task and compute additional
         // information in first pass
         for (ExecutionJobVertex executionJobVertex : tasks) {
+
+            // 一个ExecutionJobVertex 包含多个算子, 它们以后会运行在同一个 sub task中
             List<OperatorIDPair> operatorIDPairs = executionJobVertex.getOperatorIDs();
+            // operatorStates 用来存储 本ExecutionJobVertex 下 所有的算子状态
             Map<OperatorID, OperatorState> operatorStates = new HashMap<>(operatorIDPairs.size());
+
+
             for (OperatorIDPair operatorIDPair : operatorIDPairs) {
+
                 OperatorID operatorID =
                         operatorIDPair
                                 .getUserDefinedOperatorID()
@@ -109,8 +117,8 @@ public class StateAssignmentOperation {
 
                 OperatorState operatorState = localOperators.remove(operatorID);
                 if (operatorState == null) {
-                    operatorState =
-                            new OperatorState(
+                    // 构造一个新的 OperatorState,不过此时内部的成员变量 没有维护实际的状态
+                    operatorState = new OperatorState(
                                     operatorID,
                                     executionJobVertex.getParallelism(),
                                     executionJobVertex.getMaxParallelism());
@@ -130,7 +138,7 @@ public class StateAssignmentOperation {
             }
         }
 
-        // repartition state
+        // 将状态重新分区
         for (TaskStateAssignment stateAssignment : vertexAssignments.values()) {
             if (stateAssignment.hasNonFinishedState) {
                 // 一个ExecutionJobVertex 对应 一个TaskStateAssignment
@@ -155,42 +163,27 @@ public class StateAssignmentOperation {
         /**
          * 键组的解释:
          *
-         * <p>hash(key) % maxParalleism 一定是一个 [ 0 , maxParalleism ) 范围内的数 (key为数据的key)
+         *   hash(key) % maxParalleism 一定是一个 [ 0 , maxParalleism ) 范围内的数 (key为数据的key)
          *
-         * <p>比如最大并行度 maxParalleism = 10 那么总共有10个键组: kg-0,kg-1,kg-2 ... kg-9 (键组个数只与最大并行度一致)
+         *   比如最大并行度 maxParalleism = 10 那么总共有10个键组: kg-0,kg-1,kg-2 ... kg-9 (键组个数只与最大并行度一致)
          *
-         * <p>那么KeyGroupRange 就 相当于 把上面的10个键组按 range的方式分区
+         *   那么KeyGroupRange 就 相当于 把上面的10个键组按 range的方式分区
          *
-         * <p>比如: KeyGroupRange1 = [kg-0,kg-1,kg-2,kg-3] KeyGroupRange2 = [kg-4,kg-5,kg-6,kg-7]
-         * KeyGroupRange3 = [kg-8,kg-9]
+         *   比如: KeyGroupRange1 = [kg-0,kg-1,kg-2,kg-3] KeyGroupRange2 = [kg-4,kg-5,kg-6,kg-7]
+         *   KeyGroupRange3 = [kg-8,kg-9]
          *
-         * <p>https://www.jianshu.com/p/595ba0a2760b?hmsr=toutiao.io
+         *   简书的链接             https://www.jianshu.com/p/595ba0a2760b?hmsr=toutiao.io
          */
+
+        // 计算在新的并行度下,  每个sub task 的 键组range划分
+        // 该List 长度 等于 当前新的并行度
         List<KeyGroupRange> keyGroupPartitions =
                 createKeyGroupPartitions(
                         taskStateAssignment.executionJobVertex.getMaxParallelism(),
                         taskStateAssignment.newParallelism);
 
-        /*
-         * Redistribute ManagedOperatorStates and RawOperatorStates from old parallelism to new parallelism.
-         *
-         * The old ManagedOperatorStates with old parallelism 3:
-         *
-         * 		parallelism0 parallelism1 parallelism2
-         * op0   states0,0    state0,1	   state0,2
-         * op1
-         * op2   states2,0    state2,1	   state1,2
-         * op3   states3,0    state3,1     state3,2
-         *
-         * The new ManagedOperatorStates with new parallelism 4:
-         *
-         * 		parallelism0 parallelism1 parallelism2 parallelism3
-         * op0   state0,0	  state0,1 	   state0,2		state0,3
-         * op1
-         * op2   state2,0	  state2,1 	   state2,2		state2,3
-         * op3   state3,0	  state3,1 	   state3,2		state3,3
-         */
-        // 重新分布管理状态
+
+        // 重新分布 管理状态
         reDistributePartitionableStates(
                 taskStateAssignment.oldState,
                 taskStateAssignment.newParallelism,
@@ -198,7 +191,7 @@ public class StateAssignmentOperation {
                 RoundRobinOperatorStateRepartitioner.INSTANCE,
                 taskStateAssignment.subManagedOperatorState);
 
-        // 重新分布原始状态
+        // 重新分布 原始状态
         reDistributePartitionableStates(
                 taskStateAssignment.oldState,
                 taskStateAssignment.newParallelism,
@@ -206,12 +199,13 @@ public class StateAssignmentOperation {
                 RoundRobinOperatorStateRepartitioner.INSTANCE,
                 taskStateAssignment.subRawOperatorState);
 
-        // 重新分布InputChannel状态
+        // 重新分布InputChannel 状态
         reDistributeInputChannelStates(taskStateAssignment);
 
-        // 重新分布ResultSubpartition状态
+        // 重新分布ResultSubpartition 状态
         reDistributeResultSubpartitionStates(taskStateAssignment);
 
+        // 重新分布 Keyed State 状态
         reDistributeKeyedStates(keyGroupPartitions, taskStateAssignment);
     }
 
@@ -235,10 +229,12 @@ public class StateAssignmentOperation {
             Execution currentExecutionAttempt =
                     executionJobVertex.getTaskVertices()[subTaskIndex].getCurrentExecutionAttempt();
 
+            // 把完成的状态 分配给 task
             if (assignment.isFullyFinished) {
-                // 把完成的状态 分配给 task , task以后要用这些状态去启动, 内部会构造 JobManagerTaskRestore 对象
+                // 特殊情况
                 assignFinishedStateToTask(currentExecutionAttempt);
             } else {
+                // 一般情况
                 assignNonFinishedStateToTask(
                         assignment, operatorIDs, subTaskIndex, currentExecutionAttempt);
             }
@@ -271,6 +267,7 @@ public class StateAssignmentOperation {
 
         JobManagerTaskRestore taskRestore =
                 new JobManagerTaskRestore(restoreCheckpointId, taskState);
+
         currentExecutionAttempt.setInitialState(taskRestore);
     }
 
@@ -353,11 +350,10 @@ public class StateAssignmentOperation {
             OperatorStateRepartitioner<T> stateRepartitioner,
             Map<OperatorInstanceID, List<T>> result) {
 
-        // The nested list wraps as the level of operator -> subtask -> state object collection
-
-        // 外层list 的 容量 与 OperatorState对象 的并行度有关,也与 OperatorSubtaskState对象 的数量一样
-        // 内层list 的 容量 通常为 1 ,特殊情况下,如并行度等缩小.
-        // T 的类型是 OperatorStateHandle
+        // 1  外层List 的 容量 与 OperatorState对象 的并行度有关
+        // 2  外层List 的 每个元素 是 OperatorSubtaskState对象的 某类状态列表
+        // 3  oldStates 反映的是在原来的并行度下的 某种状态的 状态分布
+        // 4  T 的类型是 OperatorStateHandle
         Map<OperatorID, List<List<T>>> oldStates =
                 splitManagedAndRawOperatorStates(
                         oldOperatorStates,
@@ -366,13 +362,13 @@ public class StateAssignmentOperation {
         oldOperatorStates.forEach(
                 (operatorID, oldOperatorState) ->
                         result.putAll(
+                                //  利用状态重分区器
                                 applyRepartitioner(
                                         operatorID,
-                                        stateRepartitioner, // 维护重分区策略
-                                        oldStates.get(
-                                                operatorID), // List<List<OperatorStateHandle>>
-                                        oldOperatorState.getParallelism(), // 旧并行度
-                                        newParallelism))); // 新并行度
+                                        stateRepartitioner,                 // 重分区的 分区器
+                                        oldStates.get(operatorID),          // List<List<OperatorStateHandle>>
+                                        oldOperatorState.getParallelism(),  // 旧并行度
+                                        newParallelism)));                  // 新并行度
     }
 
     public <I, T extends AbstractChannelStateHandle<I>> void reDistributeResultSubpartitionStates(
@@ -528,11 +524,14 @@ public class StateAssignmentOperation {
                 .collect(Collectors.toList());
     }
 
+    //
     private static <T extends StateObject>
             Map<OperatorID, List<List<T>>> splitManagedAndRawOperatorStates(
                     Map<OperatorID, OperatorState> operatorStates,
                     Function<OperatorSubtaskState, StateObjectCollection<T>> extractHandle) {
-        // operator -> subtask -> state object collection
+
+        // 通过 operatorStates map 对象, 得到一个新的 map
+        // key 还是原来的 key, value 是原来的value 通过 splitBySubtasks 方法计算得到
         return operatorStates.entrySet().stream()
                 .collect(
                         Collectors.toMap(
@@ -542,15 +541,19 @@ public class StateAssignmentOperation {
                                                 operatorIdAndState.getValue(), extractHandle)));
     }
 
+
+    // 用抽取函数 extractHandle 抽取 operatorState 中某类状态  （返回的List长度为 算子的并行度）
     private static <T extends StateObject> List<List<T>> splitBySubtasks(
             OperatorState operatorState,
             Function<OperatorSubtaskState, StateObjectCollection<T>> extractHandle) {
 
-        // 外层list 的 容量 与 OperatorState对象 的并行度有关,也与 OperatorSubtaskState对象 的数量一样
-        // 内层list 的 容量 通常是 1 , 特殊情况下才不为 1 ,比如并行度缩小.
-        // T 的类型是 OperatorStateHandle
+
+        //返回每个 sub task 下 的 某类状态对象的 集合, 比如管理状态
         List<List<T>> statePerSubtask = new ArrayList<>(operatorState.getParallelism());
 
+        // 1  用extractHandle 抽取某类状态对象,并转化成list, 最后填充到 statePerSubtask 中
+        // 2  所谓抽取就是 在这里就是针对 OperatorSubtaskState 对象, 提取其 某个成员变量
+        // 3  具体的提取方法 由 传入的 函数对象 extractHandle 决定 , extractHandle 可以是 OperatorSubtaskState::getManagedOperatorState
         for (int subTaskIndex = 0; subTaskIndex < operatorState.getParallelism(); subTaskIndex++) {
 
             OperatorSubtaskState subtaskState = operatorState.getState(subTaskIndex);
@@ -663,26 +666,18 @@ public class StateAssignmentOperation {
         }
     }
 
-    /**
-     * Groups the available set of key groups into key group partitions. A key group partition is
-     * the set of key groups which is assigned to the same task. Each set of the returned list
-     * constitutes a key group partition.
-     *
-     * <p><b>IMPORTANT</b>: The assignment of key groups to partitions has to be in sync with the
-     * KeyGroupStreamPartitioner.
-     *
-     * @param numberKeyGroups Number of available key groups (indexed from 0 to numberKeyGroups - 1)
-     * @param parallelism Parallelism to generate the key group partitioning for
-     * @return List of key group partitions
-     */
+
+
     // 键组分区 是 被分配给相同task的 键组的集合
     public static List<KeyGroupRange> createKeyGroupPartitions(
             int numberKeyGroups, int parallelism) {
         Preconditions.checkArgument(numberKeyGroups >= parallelism);
+
         List<KeyGroupRange> result = new ArrayList<>(parallelism);
 
         for (int i = 0; i < parallelism; ++i) {
             result.add(
+                     // 规划指定 subtask （i） 的 键组 编号的 range
                     KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(
                             numberKeyGroups, parallelism, i));
         }
@@ -779,20 +774,23 @@ public class StateAssignmentOperation {
         }
     }
 
+    // 利用 OperatorStateRepartitioner 进行状态重分区
     public static <T> Map<OperatorInstanceID, List<T>> applyRepartitioner(
             OperatorID operatorID,
             OperatorStateRepartitioner<T> opStateRepartitioner,
-            List<List<T>>
-                    chainOpParallelStates, // List<List<OperatorStateHandle>> , 且外层List容量与老的并行度一致
+            List<List<T>> chainOpParallelStates,
             int oldParallelism,
             int newParallelism) {
 
-        // applyRepartitioner 方法的  入参chainOpParallelStates 和 states 的结构完全一样
+        // 1 applyRepartitioner 方法的主要逻辑是
+        //     把 老的状态结构 chainOpParallelStates  装换成 新的状态结构 states
+        // 2 chainOpParallelStates  外层List容量与老的并行度一致
+        //    states                外层List容量与新的并行度一致
+        // 3  且 结构都为  List<List<OperatorStateHandle>>
         List<List<T>> states =
                 applyRepartitioner(
-                        opStateRepartitioner, // 封装了状态重分布策略
-                        chainOpParallelStates, // List<List<OperatorStateHandle>> ,
-                        // 且外层List容量与老的并行度一致
+                        opStateRepartitioner,   // 封装了状态重分布策略
+                        chainOpParallelStates,
                         oldParallelism,
                         newParallelism);
 
@@ -823,11 +821,10 @@ public class StateAssignmentOperation {
      */
     // TODO rewrite based on operator id
 
-    // 状态重 分区 的最核心方法
+    // 状态重分区 , 核心方法封装在OperatorStateRepartitioner 中
     public static <T> List<List<T>> applyRepartitioner(
-            OperatorStateRepartitioner<T> opStateRepartitioner, // 封装了状态重分布策略
-            List<List<T>>
-                    chainOpParallelStates, // List<List<OperatorStateHandle>> , 且外层List容量与老的并行度一致
+            OperatorStateRepartitioner<T> opStateRepartitioner,
+            List<List<T>> chainOpParallelStates,       // List<List<OperatorStateHandle>> , 且外层List容量与老的并行度一致
             int oldParallelism,
             int newParallelism) {
 
@@ -835,6 +832,8 @@ public class StateAssignmentOperation {
             return emptyList();
         }
 
+        // OperatorStateRepartitioner 有两个实现：
+        //  1  MappingBasedRepartitioner         2  RoundRobinOperatorStateRepartitioner
         return opStateRepartitioner.repartitionState(
                 chainOpParallelStates, oldParallelism, newParallelism);
     }

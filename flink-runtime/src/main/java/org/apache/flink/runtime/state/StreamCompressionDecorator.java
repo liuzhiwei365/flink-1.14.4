@@ -31,6 +31,10 @@ import java.io.Serializable;
  * Implementations of this interface decorate streams with a compression scheme. Subclasses should
  * be stateless.
  */
+
+//  流的压缩装饰器 目前只有两个实现
+//         UncompressedStreamCompressionDecorator  空实现
+//         SnappyStreamCompressionDecorator      snappy 压缩
 @Internal
 public abstract class StreamCompressionDecorator implements Serializable {
 

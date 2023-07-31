@@ -76,9 +76,7 @@ public class HeapPriorityQueueSnapshotRestoreWrapper<T extends HeapPriorityQueue
     public StateSnapshotKeyGroupReader keyGroupReader(int readVersionHint) {
         final TypeSerializer<T> elementSerializer = metaInfo.getElementSerializer();
         return KeyGroupPartitioner.createKeyGroupPartitionReader(
-                elementSerializer
-                        ::deserialize, // we know that this does not deliver nulls, because we never
-                // write nulls
+                elementSerializer::deserialize,
                 (element, keyGroupId) -> priorityQueue.add(element));
     }
 

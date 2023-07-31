@@ -102,6 +102,8 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
         this.isTaskRunning = isTaskRunning;
     }
 
+
+    //  执行  subtask 的  所有相关  后端快照的  异步部分
     @Override
     public void run() {
         final long asyncStartNanos = System.nanoTime();
@@ -118,21 +120,24 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
             SnapshotsFinalizeResult snapshotsFinalizeResult =
                     isTaskDeployedAsFinished
                             ? new SnapshotsFinalizeResult(
-                                    TaskStateSnapshot.FINISHED_ON_RESTORE,
-                                    TaskStateSnapshot.FINISHED_ON_RESTORE,
-                                    0L)
-                            : finalizeNonFinishedSnapshots();
+                             TaskStateSnapshot.FINISHED_ON_RESTORE,
+                             TaskStateSnapshot.FINISHED_ON_RESTORE, // FINISHED_ON_RESTORE 是空实现
+                            0L)
+                            : finalizeNonFinishedSnapshots(); // 一般情况
 
             final long asyncEndNanos = System.nanoTime();
             final long asyncDurationMillis = (asyncEndNanos - asyncConstructionNanos) / 1_000_000L;
 
+            // 统计在对齐过程中的 被持久化的字节数
             checkpointMetrics.setBytesPersistedDuringAlignment(
                     snapshotsFinalizeResult.bytesPersistedDuringAlignment);
+            // 统计对齐花费的 毫秒数
             checkpointMetrics.setAsyncDurationMillis(asyncDurationMillis);
 
             if (asyncCheckpointState.compareAndSet(
                     AsyncCheckpointState.RUNNING, AsyncCheckpointState.COMPLETED)) {
 
+                // 核心,  向CheckpointCoodinator 汇报
                 reportCompletedSnapshotStates(
                         snapshotsFinalizeResult.jobManagerTaskOperatorSubtaskStates,
                         snapshotsFinalizeResult.localTaskOperatorSubtaskStates,
@@ -161,6 +166,8 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
     }
 
     private SnapshotsFinalizeResult finalizeNonFinishedSnapshots() throws Exception {
+
+        // In Progress 和 In Flight 是一个意思
         TaskStateSnapshot jobManagerTaskOperatorSubtaskStates =
                 new TaskStateSnapshot(operatorSnapshotsInProgress.size(), isTaskFinished);
         TaskStateSnapshot localTaskOperatorSubtaskStates =
@@ -168,7 +175,7 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
 
         long bytesPersistedDuringAlignment = 0;
         for (Map.Entry<OperatorID, OperatorSnapshotFutures> entry :
-                operatorSnapshotsInProgress.entrySet()) {
+                                                            operatorSnapshotsInProgress.entrySet()) {
 
             OperatorID operatorID = entry.getKey();
             OperatorSnapshotFutures snapshotInProgress = entry.getValue();
@@ -214,12 +221,23 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
                 "Found cached state but no corresponding primary state is reported to the job "
                         + "manager. This indicates a problem.");
 
-        // we signal stateless tasks by reporting null, so that there are no attempts to assign
-        // empty state
-        // to stateless tasks on restore. This enables simple job modifications that only concern
-        // stateless without the need to assign them uids to match their (always empty) states.
         taskEnvironment
                 .getTaskStateManager()
+                // StreamTask.performCheckpoint
+                // SubtaskCheckpointCoordinatorImpl.checkpointState
+                // SubtaskCheckpointCoordinatorImpl.finishAndReportAsync
+                // AsyncCheckpointRunnable.run
+                // AsyncCheckpointRunnable.reportCompletedSnapshotStates
+                // TaskStateManagerImpl.reportTaskStateSnapshots   **********
+                // RpcCheckpointResponder.acknowledgeCheckpoint
+
+                // JobMaster.acknowledgeCheckpoint
+                // SchedulerBase.acknowledgeCheckpoint
+                // ExecutionGraphHandler.acknowledgeCheckpoint
+                // CheckpointCoordinator.receiveAcknowledgeMessage
+
+                // reportTaskStateSnapshots 方法在 整个 StreamTask 执行checkpoint ,
+                // 然后给CheckpointCoodinator汇报 ack 调用栈中的位置;  如下:
                 .reportTaskStateSnapshots(
                         checkpointMetaData,
                         checkpointMetrics
@@ -228,6 +246,8 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
                                 .build(),
                         hasAckState ? acknowledgedTaskStateSnapshot : null,
                         hasLocalState ? localTaskStateSnapshot : null);
+                // 我们通过报告null来向无状态任务发出信号, 这样就不会试图在恢复时将空状态分配给无状态任务
+
 
         LOG.debug(
                 "{} - finished asynchronous part of checkpoint {}. Asynchronous duration: {} ms",
@@ -399,6 +419,7 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
                 TaskStateSnapshot jobManagerTaskOperatorSubtaskStates,
                 TaskStateSnapshot localTaskOperatorSubtaskStates,
                 long bytesPersistedDuringAlignment) {
+
             this.jobManagerTaskOperatorSubtaskStates = jobManagerTaskOperatorSubtaskStates;
             this.localTaskOperatorSubtaskStates = localTaskOperatorSubtaskStates;
             this.bytesPersistedDuringAlignment = bytesPersistedDuringAlignment;

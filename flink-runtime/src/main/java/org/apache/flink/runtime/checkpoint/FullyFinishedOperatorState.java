@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
  * A special operator state implementation representing the operators whose instances are all
  * finished.
  */
+// 一种特殊的 算子状态实现, 表示其算子全部的实例都已经 运算完成, 流处理的情况不可能
 public class FullyFinishedOperatorState extends OperatorState {
 
     private static final long serialVersionUID = 1L;

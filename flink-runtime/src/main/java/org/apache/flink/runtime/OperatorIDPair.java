@@ -30,7 +30,10 @@ public class OperatorIDPair implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    // flink 内部自己分配的 算子 id
     private final OperatorID generatedOperatorID;
+
+    // 用户人为指定的算子 id  （仅用来展示）
     private final OperatorID userDefinedOperatorID;
 
     private OperatorIDPair(

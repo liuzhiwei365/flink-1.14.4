@@ -335,11 +335,18 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
             synchronized (this) {
                 if (!closed) {
                     if (outStream == null && pos <= localStateThreshold) {
+                        // 特殊情况
                         closed = true;
+                        // 将 writeBuffer 中的有效数据截取拷贝出来
                         byte[] bytes = Arrays.copyOf(writeBuffer, pos);
                         pos = writeBuffer.length;
+                        // 1 在 flink 的设计中, 状态句柄都得实现 openInputStream 方法,打开一个输入流来读回状态
+                        // 而这里的状态就在内存中,不能是文件流 或网络流
+                        // 2 所以 flink 设计 ByteStreamStateHandle 能打开一个 自己实现的 内存输入流
+                        // 3 为了面向对象多态的实现 , 为了保证返回对象的统一和一致, 强行实现了 StreamStateHandle  接口
                         return new ByteStreamStateHandle(createStatePath().toString(), bytes);
                     } else {
+                        // 一般情况
                         try {
                             flushToFile();
 
@@ -355,6 +362,8 @@ public class FsCheckpointStreamFactory implements CheckpointStreamFactory {
 
                             outStream.close();
 
+                            // 如果支持相对路径,构建 RelativeFileStateHandle 对象; 否则,构建 FileStateHandle 对象
+                            // RelativeFileStateHandle 是 FileStateHandle的子类
                             return allowRelativePaths
                                     ? new RelativeFileStateHandle(
                                             statePath, relativeStatePath, size)

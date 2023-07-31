@@ -24,11 +24,11 @@ import org.apache.flink.util.Preconditions;
 import java.io.IOException;
 import java.util.Optional;
 
-/**
- * A handle to the partitioned stream operator state after it has been checkpointed. This state
- * consists of a range of key group snapshots. A key group is subset of the available key space. The
- * key groups are identified by their key group indices.
- */
+
+// 1 StreamStateHandle 能直接读回远程状态; 但是没有关于key group 的功能
+
+// 2  KeyGroupsStateHandle 采用组合的方式, 即持有 StreamStateHandle 成员,来获得 读取 实际状态的能力
+//    而且还维护关于 各个键组编号 在其他存储介质中的 偏移量信息
 public class KeyGroupsStateHandle implements StreamStateHandle, KeyedStateHandle {
 
     private static final long serialVersionUID = -8070326169926626355L;

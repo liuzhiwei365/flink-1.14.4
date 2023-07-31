@@ -61,6 +61,7 @@ public abstract class FSDataOutputStream extends OutputStream {
      * @throws IOException Thrown if an I/O error occurs while obtaining the position from the
      *     stream implementation.
      */
+    // 获取流的位置（非负数）, 定义为从文件开头到当前写入位置的字节数
     public abstract long getPos() throws IOException;
 
     /**

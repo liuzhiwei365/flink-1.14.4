@@ -82,18 +82,27 @@ class ChannelStateHandleSerializer {
                 context);
     }
 
+    //AbstractChannelStateHandle 有两个实现类：
+    //   InputChannelStateHandle
+    //   ResultSubpartitionStateHandle
+    //
     private static <I> void serializeChannelStateHandle(
             AbstractChannelStateHandle<I> handle,
             DataOutputStream dos,
             BiConsumerWithException<I, DataOutputStream, IOException> infoWriter)
             throws IOException {
         dos.writeInt(handle.getSubtaskIndex());
+        // 1 如果 handle 是 InputChannelStateHandle 类型, accept 方法将写入 GateIdx 和 InputChannelIdx
+        // 2 如果 handle 是 ResultSubpartitionStateHandle类型, accept 方法将写入 PartitionIdx 和 SubPartitionIdx
         infoWriter.accept(handle.getInfo(), dos);
+
         dos.writeInt(handle.getOffsets().size());
         for (long offset : handle.getOffsets()) {
+            // 写入偏移量数组
             dos.writeLong(offset);
         }
         dos.writeLong(handle.getStateSize());
+        // 序列化 代理 句柄
         serializeStreamStateHandle(handle.getDelegate(), dos);
     }
 

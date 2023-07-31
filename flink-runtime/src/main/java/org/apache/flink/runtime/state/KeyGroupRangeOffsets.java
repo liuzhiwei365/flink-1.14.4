@@ -43,6 +43,8 @@ public class KeyGroupRangeOffsets implements Iterable<Tuple2<Integer, Long>>, Se
     private static final long serialVersionUID = 6595415219136429696L;
 
     /** the range of key-groups */
+    // 如果  offsets成员 =  {7,8,9,10}
+    // 那么 keyGroupRange内部  startKeyGroup = 7  , endKeyGroup = 10
     private final KeyGroupRange keyGroupRange;
 
     /** the aligned array of offsets for the key-groups */

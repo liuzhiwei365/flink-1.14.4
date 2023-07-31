@@ -57,22 +57,24 @@ public class PrioritizedOperatorSubtaskState {
                             EMPTY_JM_STATE_STATE, Collections.emptyList(), null)
                     .build();
 
+
+    // 总共 6个集合
+    // 管理算子状态  管理key状态
+    // 原始算子状态  原始key状态
+    // inputChannel状态 和 ResultSubpartition状态
     /** List of prioritized snapshot alternatives for managed operator state. */
     private final List<StateObjectCollection<OperatorStateHandle>> prioritizedManagedOperatorState;
-
     /** List of prioritized snapshot alternatives for raw operator state. */
     private final List<StateObjectCollection<OperatorStateHandle>> prioritizedRawOperatorState;
-
     /** List of prioritized snapshot alternatives for managed keyed state. */
     private final List<StateObjectCollection<KeyedStateHandle>> prioritizedManagedKeyedState;
-
     /** List of prioritized snapshot alternatives for raw keyed state. */
     private final List<StateObjectCollection<KeyedStateHandle>> prioritizedRawKeyedState;
 
-    private final List<StateObjectCollection<InputChannelStateHandle>> prioritizedInputChannelState;
 
-    private final List<StateObjectCollection<ResultSubpartitionStateHandle>>
-            prioritizedResultSubpartitionState;
+    private final List<StateObjectCollection<InputChannelStateHandle>> prioritizedInputChannelState;
+    private final List<StateObjectCollection<ResultSubpartitionStateHandle>> prioritizedResultSubpartitionState;
+
 
     /** Checkpoint id for a restored operator or null if not restored. */
     private final @Nullable Long restoredCheckpointId;
@@ -294,10 +296,12 @@ public class PrioritizedOperatorSubtaskState {
                             jobManagerState.getRawKeyedState(),
                             rawKeyedAlternatives,
                             eqStateApprover(KeyedStateHandle::getKeyGroupRange)),
+
                     resolvePrioritizedAlternatives(
                             jobManagerState.getManagedOperatorState(),
                             managedOperatorAlternatives,
                             eqStateApprover(OperatorStateHandle::getStateNameToPartitionOffsets)),
+
                     resolvePrioritizedAlternatives(
                             jobManagerState.getRawOperatorState(),
                             rawOperatorAlternatives,
@@ -327,8 +331,7 @@ public class PrioritizedOperatorSubtaskState {
             // Nothing to resolve if there are no alternatives, or the ground truth has already no
             // state, or if we can
             // assume that a rescaling happened because we find more than one handle in the JM state
-            // (this is more a sanity
-            // check).
+            // (this is more a sanity check).
             if (alternativesByPriority == null
                     || alternativesByPriority.isEmpty()
                     || !jobManagerState.hasState()
@@ -345,15 +348,12 @@ public class PrioritizedOperatorSubtaskState {
                     new ArrayList<>(1 + alternativesByPriority.size());
 
             for (StateObjectCollection<T> alternative : alternativesByPriority) {
-
                 // We found an alternative to the JM state if it has state, we have a 1:1
-                // relationship, and the
-                // approve-function signaled true.
+                // relationship, and the approve-function signaled true.
                 if (alternative != null
                         && alternative.hasState()
                         && alternative.size() == 1
-                        && BooleanUtils.isTrue(
-                                approveFun.apply(reference, alternative.iterator().next()))) {
+                        && BooleanUtils.isTrue(approveFun.apply(reference, alternative.iterator().next()))) {
 
                     approved.add(alternative);
                 }

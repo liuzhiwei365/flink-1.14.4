@@ -60,6 +60,9 @@ public interface SnapshotStrategy<S extends StateObject, SR extends SnapshotReso
      * @param checkpointOptions Options for how to perform this checkpoint.
      * @return A supplier that will yield a {@link StateObject}.
      */
+
+    //  将快照写入由给定 CheckpointStreamFactory 提供的输出流中，
+    //  并返回  为快照提供 状态句柄 的 操作
     SnapshotResultSupplier<S> asyncSnapshot(
             SR syncPartResource,
             long checkpointId,

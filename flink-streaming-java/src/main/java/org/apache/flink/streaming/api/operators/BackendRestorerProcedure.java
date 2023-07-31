@@ -90,10 +90,18 @@ public class BackendRestorerProcedure<T extends Closeable & Disposable, S extend
      * @return the created (and restored) state backend.
      * @throws Exception if the backend could not be created or restored.
      */
+    // 这里 T 为  KeyedStateBackend 或者 OperatorStateBackend 的其中一个子类
+    //
+    //  只有 StreamTaskStateInitializerImpl.operatorStateBackend 或者
+    //  StreamTaskStateInitializerImpl.keyedStatedBackend 才会调用到本方法
+
+    // restoreOptions 是一个 有两次嵌套的集合
+    // 外层集合长度 是 算子数 ; 内层集合长度 是 一个算子下 句柄的个数,通常是 1
     @Nonnull
     public T createAndRestore(@Nonnull List<? extends Collection<S>> restoreOptions)
             throws Exception {
 
+        // short cut
         if (restoreOptions.isEmpty()) {
             restoreOptions = Collections.singletonList(Collections.emptyList());
         }
@@ -102,8 +110,12 @@ public class BackendRestorerProcedure<T extends Closeable & Disposable, S extend
 
         Exception collectedException = null;
 
+        // 遍历  restoreOptions  集合
+        // OperatorSubtaskState
         while (alternativeIdx < restoreOptions.size()) {
 
+            // 参见 OperatorSubtaskState类
+            // 其实 这个状态句柄的 集合绝大多数情况下  length == 1
             Collection<S> restoreState = restoreOptions.get(alternativeIdx);
 
             ++alternativeIdx;
@@ -132,6 +144,7 @@ public class BackendRestorerProcedure<T extends Closeable & Disposable, S extend
             }
 
             try {
+                // 核心, 创建
                 return attemptCreateAndRestore(restoreState);
             } catch (Exception ex) {
 

@@ -27,6 +27,7 @@ import java.util.Objects;
 /** Unique identifier for registered state in this backend. */
 final class StateUID {
 
+    // 其实就是 kv 状态的 名称 （名称用户可以指定输入）
     @Nonnull private final String stateName;
 
     @Nonnull private final StateMetaInfoSnapshot.BackendStateType stateType;

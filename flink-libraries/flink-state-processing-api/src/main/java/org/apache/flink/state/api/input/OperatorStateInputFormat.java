@@ -128,6 +128,8 @@ abstract class OperatorStateInputFormat<OT> extends RichInputFormat<OT, Operator
     private OperatorStateInputSplit[] getOperatorStateInputSplits(int minNumSplits) {
         Map<OperatorInstanceID, List<OperatorStateHandle>> newManagedOperatorStates =
                 new HashMap<>();
+
+        // 重新分布管理状态
         reDistributePartitionableStates(
                 singletonMap(operatorState.getOperatorID(), operatorState),
                 minNumSplits,

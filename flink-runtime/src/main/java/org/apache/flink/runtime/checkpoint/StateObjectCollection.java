@@ -39,6 +39,10 @@ import java.util.function.Predicate;
  *
  * @param <T> type of the contained state objects.
  */
+
+
+// 实现了java Collection 接口
+// 简单地 可以看成 一个list
 public class StateObjectCollection<T extends StateObject> implements Collection<T>, StateObject {
 
     private static final long serialVersionUID = 1L;

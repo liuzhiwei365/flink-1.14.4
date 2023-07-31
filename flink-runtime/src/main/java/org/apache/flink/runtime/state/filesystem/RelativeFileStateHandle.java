@@ -29,6 +29,7 @@ import org.apache.flink.runtime.state.StreamStateHandle;
 public class RelativeFileStateHandle extends FileStateHandle {
     private static final long serialVersionUID = 1L;
 
+    // 相对路径
     private final String relativePath;
 
     public RelativeFileStateHandle(Path path, String relativePath, long stateSize) {

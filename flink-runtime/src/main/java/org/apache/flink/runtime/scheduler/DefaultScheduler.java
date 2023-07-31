@@ -327,6 +327,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                                         () -> {
                                             archiveFromFailureHandlingResult(
                                                     failureHandlingResultSnapshot);
+                                            // 核心
                                             restartTasks(executionVertexVersions, globalRecovery);
                                         },
                                         getMainThreadExecutor())),
@@ -358,7 +359,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         resetForNewExecutions(verticesToRestart);
 
         try {
-            //重启所有的任务的时候得 恢复状态
+            //核心, 重启所有的任务的时候得 恢复状态
             restoreState(verticesToRestart, isGlobalRecovery);
         } catch (Throwable t) {
             handleGlobalFailure(t);

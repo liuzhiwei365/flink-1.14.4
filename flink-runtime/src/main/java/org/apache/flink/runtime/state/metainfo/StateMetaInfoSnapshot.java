@@ -37,11 +37,12 @@ import java.util.Map;
 public class StateMetaInfoSnapshot {
 
     /** Enum that defines the different types of state that live in Flink backends. */
+    // 定义了Flink 后台存储的 4 类状态
     public enum BackendStateType {
         KEY_VALUE(0),
         OPERATOR(1),
         BROADCAST(2),
-        PRIORITY_QUEUE(3);
+        PRIORITY_QUEUE(3);  // list state 等
         private final byte code;
 
         BackendStateType(int code) {

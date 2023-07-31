@@ -101,11 +101,14 @@ class InputChannelRecoveredStateHandler
         try {
             if (buffer.readableBytes() > 0) {
                 for (final RecoveredInputChannel channel : getMappedChannels(channelInfo)) {
+
+                    // 重新恢复到 receivedBuffers 中
                     channel.onRecoveredStateBuffer(
                             EventSerializer.toBuffer(
                                     new SubtaskConnectionDescriptor(
                                             oldSubtaskIndex, channelInfo.getInputChannelIdx()),
                                     false));
+
                     channel.onRecoveredStateBuffer(buffer.retainBuffer());
                 }
             }

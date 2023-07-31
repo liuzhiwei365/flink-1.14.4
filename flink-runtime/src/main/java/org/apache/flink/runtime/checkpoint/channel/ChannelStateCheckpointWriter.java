@@ -284,6 +284,7 @@ class ChannelStateCheckpointWriter {
                     new ByteStreamStateHandle(
                             randomUUID().toString(),
                             serializer.extractAndMerge(bytes.get(), contentMetaInfo.getOffsets()));
+
             return handleFactory.create(
                     subtaskIndex,
                     channelInfo,

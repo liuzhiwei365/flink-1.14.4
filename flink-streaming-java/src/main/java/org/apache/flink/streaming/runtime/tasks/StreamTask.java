@@ -696,6 +696,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         ? new FinishedOperatorChain<>(this, recordWriter) // 批计算
                         : new RegularOperatorChain<>(this, recordWriter); // 实时计算
 
+        // 算子链的第一个算子
         mainOperator = operatorChain.getMainOperator();
 
         getEnvironment()
@@ -737,11 +738,14 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         isRunning = true;
     }
 
+    //
     private CompletableFuture<Void> restoreGates() throws Exception {
         SequentialChannelStateReader reader =
                 getEnvironment().getTaskStateManager().getSequentialChannelStateReader();
+
         reader.readOutputData(
                 getEnvironment().getAllWriters(), !configuration.isGraphContainingLoops());
+
 
         // 核心
         //    FinishedOperatorChain   批计算
@@ -787,6 +791,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         if (!isRunning) {
             LOG.debug("Restoring during invoke will be called.");
             // 初始化 input output operatorChain 等组件  ,算子状态恢复
+            // 注意, 无论如何 restoreInternal 只会被调用一次;
             restoreInternal();
         }
 
@@ -1167,7 +1172,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                                     triggerCheckpointAsyncInMailbox(
                                             checkpointMetaData, checkpointOptions));
                         } else {
-                            // inputGate 下面的 存在没接收到 数据结束 事件 的 inputChannel
+                            // inputGate 下面的 存在没接收到 数据结束 事件 的 inputChannel （一般情况，常态）
                             result.complete(
                                     triggerUnfinishedChannelsCheckpoint(
                                             checkpointMetaData, checkpointOptions));

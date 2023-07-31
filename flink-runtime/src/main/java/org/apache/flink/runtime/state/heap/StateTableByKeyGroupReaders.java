@@ -83,6 +83,7 @@ public class StateTableByKeyGroupReaders {
                         stateTable.put(element.f1, keyGroupId1, element.f0, element.f2));
     }
 
+    //  对于后台存储类型 为  BackendStateType.KEY_VALUE 的状态  的 读取器
     static final class StateTableByKeyGroupReaderV1<K, N, S>
             implements StateSnapshotKeyGroupReader {
 
@@ -94,10 +95,12 @@ public class StateTableByKeyGroupReaders {
             this.keySerializer = stateTable.keySerializer;
         }
 
+        // 核心方法 读会指定 键组下的 状态到 stateTable 成员中
         @Override
         public void readMappingsInKeyGroup(
                 @Nonnull DataInputView inView, @Nonnegative int keyGroupId) throws IOException {
 
+            // short cut
             if (inView.readByte() == 0) {
                 return;
             }
@@ -106,12 +109,19 @@ public class StateTableByKeyGroupReaders {
             final TypeSerializer<S> stateSerializer = stateTable.getStateSerializer();
 
             // V1 uses kind of namespace compressing format
+
+            // 遍历所有的namespace
             int numNamespaces = inView.readInt();
             for (int k = 0; k < numNamespaces; k++) {
+
                 N namespace = namespaceSerializer.deserialize(inView);
+
+                //  遍历指定 namespace下, 所有的  key state 条目
+                //  由此可见,同一个 namespace 的数据是挨在一起的
                 int numEntries = inView.readInt();
                 for (int l = 0; l < numEntries; l++) {
                     K key = keySerializer.deserialize(inView);
+
                     S state = stateSerializer.deserialize(inView);
                     stateTable.put(key, keyGroupId, namespace, state);
                 }

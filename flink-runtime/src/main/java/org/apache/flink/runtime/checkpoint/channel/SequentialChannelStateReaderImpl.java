@@ -56,6 +56,7 @@ public class SequentialChannelStateReaderImpl implements SequentialChannelStateR
         chunkReader = new ChannelStateChunkReader(serializer);
     }
 
+    // 恢复 inputGates 的状态
     @Override
     public void readInputData(InputGate[] inputGates) throws IOException, InterruptedException {
         try (InputChannelRecoveredStateHandler stateHandler =
@@ -68,19 +69,19 @@ public class SequentialChannelStateReaderImpl implements SequentialChannelStateR
         }
     }
 
+    // 恢复 ResultPartitionWriters 的状态
     @Override
     public void readOutputData(ResultPartitionWriter[] writers, boolean notifyAndBlockOnCompletion)
             throws IOException, InterruptedException {
         try (ResultSubpartitionRecoveredStateHandler stateHandler =
                 new ResultSubpartitionRecoveredStateHandler(
                         writers,
-                        notifyAndBlockOnCompletion,
+                        notifyAndBlockOnCompletion, // 完成恢复的时候通知和阻塞
                         taskStateSnapshot.getOutputRescalingDescriptor())) {
             read(
                     stateHandler,
                     groupByDelegate(
-                            streamSubtaskStates(),
-                            OperatorSubtaskState::getResultSubpartitionState));
+                            streamSubtaskStates(), OperatorSubtaskState::getResultSubpartitionState));
         }
     }
 
@@ -88,22 +89,28 @@ public class SequentialChannelStateReaderImpl implements SequentialChannelStateR
             RecoveredChannelStateHandler<Info, Context> stateHandler,
             Map<StreamStateHandle, List<Handle>> streamStateHandleListMap)
             throws IOException, InterruptedException {
+
+        //这里的Handle 范形 是 InputChannelStateHandle 或者 ResultSubpartitionStateHandle
         for (Map.Entry<StreamStateHandle, List<Handle>> delegateAndHandles :
                 streamStateHandleListMap.entrySet()) {
+
             readSequentially(
                     delegateAndHandles.getKey(), delegateAndHandles.getValue(), stateHandler);
         }
     }
 
+    // 被read 方法所调用
     private <Info, Context, Handle extends AbstractChannelStateHandle<Info>> void readSequentially(
             StreamStateHandle streamStateHandle,
             List<Handle> channelStateHandles,
             RecoveredChannelStateHandler<Info, Context> stateHandler)
             throws IOException, InterruptedException {
+
         try (FSDataInputStream is = streamStateHandle.openInputStream()) {
             serializer.readHeader(is);
+
             for (RescaledOffset<Info> offsetAndChannelInfo :
-                    extractOffsetsSorted(channelStateHandles)) {
+                                                    extractOffsetsSorted(channelStateHandles)) {
                 chunkReader.readChunk(
                         is,
                         offsetAndChannelInfo.offset,
@@ -112,6 +119,7 @@ public class SequentialChannelStateReaderImpl implements SequentialChannelStateR
                         offsetAndChannelInfo.oldSubtaskIndex);
             }
         }
+
     }
 
     private Stream<OperatorSubtaskState> streamSubtaskStates() {
@@ -120,12 +128,15 @@ public class SequentialChannelStateReaderImpl implements SequentialChannelStateR
 
     private static <Info, Handle extends AbstractChannelStateHandle<Info>>
             Map<StreamStateHandle, List<Handle>> groupByDelegate(
-                    Stream<OperatorSubtaskState> states,
+                    Stream<OperatorSubtaskState> states, // 本subtask下 所有算子的 OperatorSubtaskState状态集合
                     Function<OperatorSubtaskState, StateObjectCollection<Handle>>
                             stateHandleExtractor) {
-        return states.map(stateHandleExtractor)
-                .flatMap(Collection::stream)
-                .peek(validate())
+
+        return states.map(stateHandleExtractor)// // 本subtask下 所有算子的 OperatorSubtaskState状态集合中 的某个被抽取的成员,比如 inputChannelState 成员
+                .flatMap(Collection::stream) // inputChannelState 成员是一个实现了 java  Collection 的对象,和List 差不多, 所有可以用flatMap 方法
+                 //在此处类型变为 Stream<AbstractChannelStateHandle>
+                .peek(validate()) // 每个元素校验
+                 // 用 AbstractChannelStateHandle 的 delegate 成员来分组,最终形成map
                 .collect(groupingBy(AbstractChannelStateHandle::getDelegate));
     }
 
@@ -135,6 +146,8 @@ public class SequentialChannelStateReaderImpl implements SequentialChannelStateR
         // expect each channel/subtask to be described only once; otherwise, buffers in channel
         // could be
         // re-ordered
+
+        //保证没有重复的 通道
         return handle -> {
             if (!seen.add(new Tuple2<>(handle.getInfo(), handle.getSubtaskIndex()))) {
                 throw new IllegalStateException("Duplicate channel info: " + handle);
@@ -193,15 +206,18 @@ class ChannelStateChunkReader {
             source.seek(sourceOffset);
         }
         int length = serializer.readLength(source);
+
         while (length > 0) {
             RecoveredChannelStateHandler.BufferWithContext<Context> bufferWithContext =
                     stateHandler.getBuffer(channelInfo);
             try (Closeable ignored =
                     NetworkActionsLogger.measureIO(
                             "ChannelStateChunkReader#readChunk", bufferWithContext.buffer)) {
+
                 while (length > 0 && bufferWithContext.buffer.isWritable()) {
                     length -= serializer.readData(source, bufferWithContext.buffer, length);
                 }
+
             } catch (Exception e) {
                 bufferWithContext.close();
                 throw e;

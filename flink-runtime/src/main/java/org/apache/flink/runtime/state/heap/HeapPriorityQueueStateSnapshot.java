@@ -87,14 +87,14 @@ public class HeapPriorityQueueStateSnapshot<T> implements StateSnapshot {
     private PartitioningResult<T> getPartitioningResult() {
         if (partitioningResult == null) {
 
-            T[] partitioningOutput =
-                    (T[])
-                            Array.newInstance(
+            // 创建空数组
+            T[] partitioningOutput = (T[]) Array.newInstance(
                                     heapArrayCopy.getClass().getComponentType(),
                                     heapArrayCopy.length);
 
             final TypeSerializer<T> elementSerializer = metaInfo.getElementSerializer();
 
+            // 即使不是 keyed state , 我们也做键组分区
             KeyGroupPartitioner<T> keyGroupPartitioner =
                     new KeyGroupPartitioner<>(
                             heapArrayCopy,

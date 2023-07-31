@@ -74,6 +74,7 @@ public class SavepointSnapshotStrategy<K>
             return registry -> SnapshotResult.empty();
         }
 
+
         final SupplierWithException<CheckpointStreamWithResultProvider, Exception>
                 checkpointStreamSupplier = () -> createSimpleStream(streamFactory);
 

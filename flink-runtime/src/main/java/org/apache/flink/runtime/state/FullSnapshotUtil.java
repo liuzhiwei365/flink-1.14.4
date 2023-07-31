@@ -24,8 +24,10 @@ package org.apache.flink.runtime.state;
  */
 public class FullSnapshotUtil {
 
+    //  0100  0000
     public static final int FIRST_BIT_IN_BYTE_MASK = 0x80;
 
+    //  1111  1111   1111  1111
     public static final int END_OF_KEY_GROUP_MARK = 0xFFFF;
 
     public static void setMetaDataFollowsFlagInKey(byte[] key) {

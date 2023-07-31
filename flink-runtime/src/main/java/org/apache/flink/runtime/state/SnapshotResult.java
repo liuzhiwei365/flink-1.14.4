@@ -43,16 +43,12 @@ public class SnapshotResult<T extends StateObject> implements StateObject {
     /** An singleton instance to represent an empty snapshot result. */
     private static final SnapshotResult<?> EMPTY = new SnapshotResult<>(null, null);
 
-    /**
-     * This is the state snapshot that will be reported to the Job Manager to acknowledge a
-     * checkpoint.
-     */
+    //  泛型 T 在这里 就是 StreamStateHandle 类型
+
+    // 将会写入我们配置checkpoint存储的写入地方, 可能是远端HDFS、JobManager等
     private final T jobManagerOwnedSnapshot;
 
-    /**
-     * This is the state snapshot that will be reported to the Job Manager to acknowledge a
-     * checkpoint.
-     */
+    // 将会写入到本地、TaskManager等,用于本地恢复 ; 一般正常情况下, 内容与  jobManagerOwnedSnapshot 完全一致
     private final T taskLocalSnapshot;
 
     /**

@@ -84,8 +84,10 @@ public class OperatorSubtaskState implements CompositeStateHandle {
      */
     private final StateObjectCollection<KeyedStateHandle> rawKeyedState;
 
+    // 维护 subtask 的 InputChannel 状态
     private final StateObjectCollection<InputChannelStateHandle> inputChannelState;
 
+    // 维护 subtask 的 ResultSubpartition 状态
     private final StateObjectCollection<ResultSubpartitionStateHandle> resultSubpartitionState;
 
     /**

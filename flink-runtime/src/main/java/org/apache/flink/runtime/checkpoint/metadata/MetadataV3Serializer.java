@@ -105,18 +105,28 @@ public class MetadataV3Serializer extends MetadataV2V3SerializerBase implements 
         dos.writeInt(operatorState.getMaxParallelism());
 
         // Coordinator state
+        // 算子协调者状态,  一定是一个 ByteStreamStateHandle对象, 可以是空
         serializeStreamStateHandle(operatorState.getCoordinatorState(), dos);
 
         // Sub task states
         if (operatorState.isFullyFinished()) {
+            // 一般不会走这里 , operatorState 是 FullyFinishedOperatorState 对象才会走这里
+            // FullyFinishedOperatorState  是 一种特殊的 算子状态实现, 表示其算子全部的实例都已经 运算完成, 流处理的情况不可能
             dos.writeInt(-1);
         } else {
+            // 大多数情况会走这里
             final Map<Integer, OperatorSubtaskState> subtaskStateMap =
                     operatorState.getSubtaskStates();
             dos.writeInt(subtaskStateMap.size());
+
             for (Map.Entry<Integer, OperatorSubtaskState> entry : subtaskStateMap.entrySet()) {
                 boolean isFinished = entry.getValue().isFinished();
+
+                // 如果任务没完成, 写入子任务编号 (一般情况)
+                // 如果任务完成了, 写入子任务编号的相反数
+                // 若子任务编号为 0 , 则相反数是 -1 ; 0 对应 -1 ; 1 对应 -2 ; 2 对应 -3
                 serializeSubtaskIndexAndFinishedState(entry.getKey(), isFinished, dos);
+
                 if (!isFinished) {
                     serializeSubtaskState(entry.getValue(), dos);
                 }
@@ -139,8 +149,16 @@ public class MetadataV3Serializer extends MetadataV2V3SerializerBase implements 
     protected void serializeSubtaskState(OperatorSubtaskState subtaskState, DataOutputStream dos)
             throws IOException {
         super.serializeSubtaskState(subtaskState, dos);
+
+        // 序列化 InputChannel
+        //     1 要序列化 这样一个集合: StateObjectCollection<InputChannelStateHandle>  集合
+        //     2  集合中每个元素的序列化, 用传入的 serializeInputChannelStateHandle 方法来 做序列化
         serializeCollection(
                 subtaskState.getInputChannelState(), dos, this::serializeInputChannelStateHandle);
+
+        // 序列化 ResultSubpartition
+        //     1 要序列化 这样一个集合: StateObjectCollection<ResultSubpartitionStateHandle>   集合
+        //     2  集合中每个元素的序列化, 用传入的 serializeResultSubpartitionStateHandle 方法来 做序列化
         serializeCollection(
                 subtaskState.getResultSubpartitionState(),
                 dos,

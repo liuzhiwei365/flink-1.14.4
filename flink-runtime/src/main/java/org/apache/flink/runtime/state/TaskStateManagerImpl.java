@@ -67,9 +67,11 @@ public class TaskStateManagerImpl implements TaskStateManager {
      * The data given by the job manager to restore the job. This is null for a new job without
      * previous state.
      */
+    // job manager 提供的用于恢复作业的数据。 对于 没有以前状态的 新作业，此值为null
     @Nullable private final JobManagerTaskRestore jobManagerTaskRestore;
 
     /** The local state store to which this manager reports local state snapshots. */
+    // 存储 task 的本地状态
     private final TaskLocalStateStore localStateStore;
 
     /** The changelog storage where the manager reads and writes the changelog */
@@ -128,6 +130,7 @@ public class TaskStateManagerImpl implements TaskStateManager {
 
         localStateStore.storeLocalState(checkpointId, localState);
 
+        // 向 CheckpointCoordinator 汇报
         checkpointResponder.acknowledgeCheckpoint(
                 jobId, executionAttemptID, checkpointId, checkpointMetrics, acknowledgedState);
     }
@@ -174,23 +177,28 @@ public class TaskStateManagerImpl implements TaskStateManager {
         return Optional.of(jobManagerTaskRestore.getRestoreCheckpointId());
     }
 
+    //  把远程的 subtask state   和 本地的 subtask state  整合打包在一起
     @Override
     public PrioritizedOperatorSubtaskState prioritizedOperatorState(OperatorID operatorID) {
 
+        // short cut
         if (jobManagerTaskRestore == null) {
             return PrioritizedOperatorSubtaskState.emptyNotRestored();
         }
 
+        // step1 从jobManagerTaskRestore 获取 来自与远程 jobManager 的 subtask state
         TaskStateSnapshot jobManagerStateSnapshot = jobManagerTaskRestore.getTaskStateSnapshot();
 
         OperatorSubtaskState jobManagerSubtaskState =
                 jobManagerStateSnapshot.getSubtaskStateByOperatorID(operatorID);
 
+        // short cut
         if (jobManagerSubtaskState == null) {
             return PrioritizedOperatorSubtaskState.empty(
                     jobManagerTaskRestore.getRestoreCheckpointId());
         }
 
+        // step2  从localStateStore 获取 本地的 subtask state
         long restoreCheckpointId = jobManagerTaskRestore.getRestoreCheckpointId();
 
         TaskStateSnapshot localStateSnapshot =
@@ -205,6 +213,7 @@ public class TaskStateManagerImpl implements TaskStateManager {
             OperatorSubtaskState localSubtaskState =
                     localStateSnapshot.getSubtaskStateByOperatorID(operatorID);
 
+            // 从本地 copy 一份 给 alternativesByPriority
             if (localSubtaskState != null) {
                 alternativesByPriority = Collections.singletonList(localSubtaskState);
             }
@@ -218,6 +227,7 @@ public class TaskStateManagerImpl implements TaskStateManager {
                 alternativesByPriority,
                 localStateStore);
 
+        //  把远程的 subtask state   和 本地的 subtask state  整合打包在一起
         PrioritizedOperatorSubtaskState.Builder builder =
                 new PrioritizedOperatorSubtaskState.Builder(
                         jobManagerSubtaskState,

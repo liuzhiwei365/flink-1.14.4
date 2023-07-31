@@ -75,6 +75,7 @@ final class HeapSnapshotResources<K> implements FullSnapshotResources<K> {
             TypeSerializer<K> keySerializer,
             int totalKeyGroups) {
 
+        // short cut
         if (registeredKVStates.isEmpty() && registeredPQStates.isEmpty()) {
             return new HeapSnapshotResources<>(
                     Collections.emptyList(),
@@ -96,10 +97,15 @@ final class HeapSnapshotResources<K> implements FullSnapshotResources<K> {
                         + Short.MAX_VALUE
                         + " states are supported");
 
+        // 状态元数据信息的快照
         final List<StateMetaInfoSnapshot> metaInfoSnapshots = new ArrayList<>(numStates);
+        // 状态名 -> 状态id
         final Map<StateUID, Integer> stateNamesToId = new HashMap<>(numStates);
+        // 状态名 -> 该状态名 在 指定 subtask下（它拥有自己的 键组范围） 指定算子的 状态快照
         final Map<StateUID, StateSnapshot> cowStateStableSnapshots = new HashMap<>(numStates);
 
+
+        // 用 registeredKVStates 的信息来填充 上面三个数据结构
         processSnapshotMetaInfoForAllStates(
                 metaInfoSnapshots,
                 cowStateStableSnapshots,
@@ -107,6 +113,7 @@ final class HeapSnapshotResources<K> implements FullSnapshotResources<K> {
                 registeredKVStates,
                 StateMetaInfoSnapshot.BackendStateType.KEY_VALUE);
 
+        // 用 registeredPQStates 的信息来填充 上面三个数据结构
         processSnapshotMetaInfoForAllStates(
                 metaInfoSnapshots,
                 cowStateStableSnapshots,
@@ -114,6 +121,7 @@ final class HeapSnapshotResources<K> implements FullSnapshotResources<K> {
                 registeredPQStates,
                 StateMetaInfoSnapshot.BackendStateType.PRIORITY_QUEUE);
 
+        // 把填充好的  三个结构 打包在 HeapSnapshotResources 中
         return new HeapSnapshotResources<>(
                 metaInfoSnapshots,
                 cowStateStableSnapshots,
@@ -132,12 +140,21 @@ final class HeapSnapshotResources<K> implements FullSnapshotResources<K> {
             StateMetaInfoSnapshot.BackendStateType stateType) {
 
         for (Map.Entry<String, ? extends StateSnapshotRestore> kvState :
-                registeredStates.entrySet()) {
+                                                               registeredStates.entrySet()) {
+
             final StateUID stateUid = StateUID.of(kvState.getKey(), stateType);
             stateNamesToId.put(stateUid, stateNamesToId.size());
+
             StateSnapshotRestore state = kvState.getValue();
             if (null != state) {
+                // 在这里只有如下三个实现:
+                // HeapPriorityQueueSnapshotRestoreWrapper    针对 用户的 list state
+                // CopyOnWriteStateTable                      针对 用户的 map state
+                // NestedMapsStateTable                       针对 用户的 嵌套的 map state
+
+                // 这三个是在内存中 存储状态的三种结构,  现在从内存中 dump 一份快照
                 final StateSnapshot stateSnapshot = state.stateSnapshot();
+
                 metaInfoSnapshots.add(stateSnapshot.getMetaInfoSnapshot());
                 cowStateStableSnapshots.put(stateUid, stateSnapshot);
             }

@@ -62,6 +62,7 @@ public class MappingBasedRepartitioner<T> implements OperatorStateRepartitioner<
         // 用来存储结果
         List<List<T>> repartitioned = new ArrayList<>();
 
+
         for (int newIndex = 0; newIndex < newParallelism; newIndex++) {
             repartitioned.add(
                     extractOldState(

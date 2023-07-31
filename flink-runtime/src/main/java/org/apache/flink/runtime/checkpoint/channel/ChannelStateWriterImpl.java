@@ -64,7 +64,11 @@ public class ChannelStateWriterImpl implements ChannelStateWriter {
     // mailbox)
 
     private final String taskName;
+    // 实现类是  ChannelStateWriteRequestExecutorImpl , 内部有个双向队列
     private final ChannelStateWriteRequestExecutor executor;
+
+    // ChannelStateWriteResult 类中维护着 某checkpointId 下,
+    // 该subtask 的所有InputChannel 和 ResultSubpartition 的状态句柄
     private final ConcurrentMap<Long, ChannelStateWriteResult> results;
     private final int maxCheckpoints;
 
@@ -118,6 +122,7 @@ public class ChannelStateWriterImpl implements ChannelStateWriter {
     @Override
     public void start(long checkpointId, CheckpointOptions checkpointOptions) {
         LOG.debug("{} starting checkpoint {} ({})", taskName, checkpointId, checkpointOptions);
+        //
         ChannelStateWriteResult result = new ChannelStateWriteResult();
         ChannelStateWriteResult put =
                 results.computeIfAbsent(

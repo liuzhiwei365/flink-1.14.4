@@ -34,11 +34,8 @@ import java.util.concurrent.ExecutionException;
 import static org.apache.flink.runtime.checkpoint.StateObjectCollection.emptyIfNull;
 import static org.apache.flink.runtime.checkpoint.StateObjectCollection.singletonOrEmpty;
 
-/**
- * This class finalizes {@link OperatorSnapshotFutures}. Each object is created with a {@link
- * OperatorSnapshotFutures} that is executed. The object can then deliver the results from the
- * execution as {@link OperatorSubtaskState}.
- */
+// 本类用来 执行终止 OperatorSnapshotFutures 中所有的 future对象, 结果是各类状态句柄
+// 并把结果封装到  jobManagerOwnedState 和  taskLocalState 成员变量中
 public class OperatorSnapshotFinalizer {
 
     /** Primary replica of the operator subtask state for report to JM. */
@@ -50,6 +47,7 @@ public class OperatorSnapshotFinalizer {
     public OperatorSnapshotFinalizer(@Nonnull OperatorSnapshotFutures snapshotFutures)
             throws ExecutionException, InterruptedException {
 
+        //  6  类  状态
         SnapshotResult<KeyedStateHandle> keyedManaged =
                 FutureUtils.runIfNotDoneAndGet(snapshotFutures.getKeyedStateManagedFuture());
 

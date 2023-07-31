@@ -21,22 +21,7 @@ package org.apache.flink.runtime.state.heap;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
-import org.apache.flink.runtime.state.CheckpointStreamFactory;
-import org.apache.flink.runtime.state.CheckpointStreamWithResultProvider;
-import org.apache.flink.runtime.state.CheckpointedStateScope;
-import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.KeyGroupRangeOffsets;
-import org.apache.flink.runtime.state.KeyGroupsStateHandle;
-import org.apache.flink.runtime.state.KeyedBackendSerializationProxy;
-import org.apache.flink.runtime.state.KeyedStateHandle;
-import org.apache.flink.runtime.state.LocalRecoveryConfig;
-import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.SnapshotStrategy;
-import org.apache.flink.runtime.state.StateSerializerProvider;
-import org.apache.flink.runtime.state.StateSnapshot;
-import org.apache.flink.runtime.state.StreamCompressionDecorator;
-import org.apache.flink.runtime.state.StreamStateHandle;
-import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
+import org.apache.flink.runtime.state.*;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.util.function.SupplierWithException;
 
@@ -58,6 +43,7 @@ class HeapSnapshotStrategy<K>
 
     private final Map<String, StateTable<K, ?, ?>> registeredKVStates;
     private final Map<String, HeapPriorityQueueSnapshotRestoreWrapper<?>> registeredPQStates;
+
     private final StreamCompressionDecorator keyGroupCompressionDecorator;
     private final LocalRecoveryConfig localRecoveryConfig;
     private final KeyGroupRange keyGroupRange;
@@ -101,6 +87,7 @@ class HeapSnapshotStrategy<K>
             @Nonnull CheckpointOptions checkpointOptions) {
 
         List<StateMetaInfoSnapshot> metaInfoSnapshots = syncPartResource.getMetaInfoSnapshots();
+        // short cut
         if (metaInfoSnapshots.isEmpty()) {
             return snapshotCloseableRegistry -> SnapshotResult.empty();
         }
@@ -108,8 +95,7 @@ class HeapSnapshotStrategy<K>
         final KeyedBackendSerializationProxy<K> serializationProxy =
                 new KeyedBackendSerializationProxy<>(
                         // TODO: this code assumes that writing a serializer is threadsafe, we
-                        // should support to
-                        // get a serialized form already at state registration time in the future
+                        // should support to get a serialized form already at state registration time in the future
                         syncPartResource.getKeySerializer(),
                         metaInfoSnapshots,
                         !Objects.equals(
@@ -136,21 +122,24 @@ class HeapSnapshotStrategy<K>
                                                 CheckpointedStateScope.EXCLUSIVE, streamFactory);
 
         return (snapshotCloseableRegistry) -> {
+
             final Map<StateUID, Integer> stateNamesToId = syncPartResource.getStateNamesToId();
-            final Map<StateUID, StateSnapshot> cowStateStableSnapshots =
-                    syncPartResource.getCowStateStableSnapshots();
+
+            final Map<StateUID, StateSnapshot> cowStateStableSnapshots = syncPartResource.getCowStateStableSnapshots();
+
             final CheckpointStreamWithResultProvider streamWithResultProvider =
                     checkpointStreamSupplier.get();
 
             snapshotCloseableRegistry.registerCloseable(streamWithResultProvider);
 
-            // 输出数据流
+            // 输出数据流 可能是下面两种实现:
+            //  1  CheckpointStreamFactory.CheckpointStateOutputStream
+            //  2  DuplicatingCheckpointOutputStream 是前者的子类
             final CheckpointStreamFactory.CheckpointStateOutputStream localStream =
                     streamWithResultProvider.getCheckpointOutputStream();
 
             // jdk DataOutputStream 的子类
-            final DataOutputViewStreamWrapper outView =
-                    new DataOutputViewStreamWrapper(localStream);
+            final DataOutputViewStreamWrapper outView = new DataOutputViewStreamWrapper(localStream);
 
             // 使用KeyedBackendSerializationProxy写cp数据
             serializationProxy.write(outView);
@@ -158,28 +147,39 @@ class HeapSnapshotStrategy<K>
             // 存储每一个键组在流中的偏移量
             final long[] keyGroupRangeOffsets = new long[keyGroupRange.getNumberOfKeyGroups()];
 
-            for (int keyGroupPos = 0;
-                    keyGroupPos < keyGroupRange.getNumberOfKeyGroups();
-                    ++keyGroupPos) {
-                // keyGroupId 是该子任务分配到的 真正的键组
+            // 先按 键组 range 中的 所有键组编号 遍历
+            for (int keyGroupPos = 0;keyGroupPos < keyGroupRange.getNumberOfKeyGroups(); ++keyGroupPos) {
+
+                // keyGroupId 是该子任务分配到的 真正的键组编号
                 int keyGroupId = keyGroupRange.getKeyGroupId(keyGroupPos);
+
+                // 1 由于持久化状态时, 是先按键组编号（然后再按状态名称） 分组写入的; 所有我们有必要记录每个键组的偏移量
+                // 2
                 keyGroupRangeOffsets[keyGroupPos] = localStream.getPos();
 
                 outView.writeInt(keyGroupId);
 
-                for (Map.Entry<StateUID, StateSnapshot> stateSnapshot :
-                        cowStateStableSnapshots.entrySet()) {
-                    StateSnapshot.StateKeyGroupWriter partitionedSnapshot =
-                            stateSnapshot.getValue().getKeyGroupWriter();
+                // 再按 每个状态名称 遍历
+                // cowStateStableSnapshots 的来源 在 HeapSnapshotResources.create 方法中可以追查
+                for (Map.Entry<StateUID, StateSnapshot> stateSnapshot :cowStateStableSnapshots.entrySet()) {
 
-                    try (OutputStream kgCompressionOut =
-                            keyGroupCompressionDecorator.decorateWithCompression(localStream)) {
+                    StateSnapshot.StateKeyGroupWriter partitionedSnapshot = stateSnapshot.getValue().getKeyGroupWriter();
+
+                    try (OutputStream kgCompressionOut = keyGroupCompressionDecorator.decorateWithCompression(localStream)) {
+
                         DataOutputViewStreamWrapper kgCompressionView =
-                                new DataOutputViewStreamWrapper(kgCompressionOut);
+                                                             new DataOutputViewStreamWrapper(kgCompressionOut);
 
+                        // 将 StateUID （内含 状态名称, 后端状态类型信息）写入 kgCompressionView中
                         kgCompressionView.writeShort(stateNamesToId.get(stateSnapshot.getKey()));
+
+                        // 1 StateKeyGroupWriter 只不过提供了一种 "格式排版而已" ,数据还是会写到view中
+                        // 2 StateKeyGroupWriter 在这里有三个实现
+                        //                          PartitioningResultImpl
+                        //                          CopyOnWriterStateTableSnapshot
+                        //                          NestedMapsStateTableSnapshot
                         partitionedSnapshot.writeStateInKeyGroup(kgCompressionView, keyGroupId);
-                    } // this will just close the outer compression stream
+                    }
                 }
             }
 

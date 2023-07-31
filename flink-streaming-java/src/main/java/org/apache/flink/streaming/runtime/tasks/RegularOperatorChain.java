@@ -179,10 +179,13 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
             ChannelStateWriter.ChannelStateWriteResult channelStateWriteResult,
             CheckpointStreamFactory storage)
             throws Exception {
+
+        // StreamOperatorWrapper 是为了帮助算子维护 链状结构;  netty 的 handle中 也有着类似的设计
         for (StreamOperatorWrapper<?, ?> operatorWrapper : getAllOperators(true)) {
             if (!operatorWrapper.isClosed()) {
                 operatorSnapshotsInProgress.put(
                         operatorWrapper.getStreamOperator().getOperatorID(),
+                        // 核心逻辑, 构建 OperatorSnapshotFutures 对象, 并放入到operatorSnapshotsInProgress 中
                         buildOperatorSnapshotFutures(
                                 checkpointMetaData,
                                 checkpointOptions,
@@ -202,9 +205,13 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
             ChannelStateWriter.ChannelStateWriteResult channelStateWriteResult,
             CheckpointStreamFactory storage)
             throws Exception {
+        // 调用栈前面 是对  整个算子链做 快照
+        // 这里是对  单个的算子做快照  ****  注意区别
         OperatorSnapshotFutures snapshotInProgress =
                 checkpointStreamOperator(
                         op, checkpointMetaData, checkpointOptions, storage, isRunning);
+
+        // 如果算子是算子链中的 头算子; 设置 InputChannel 的状态句柄
         if (op == getMainOperator()) {
             snapshotInProgress.setInputChannelStateFuture(
                     channelStateWriteResult
@@ -212,6 +219,7 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
                             .thenApply(StateObjectCollection::new)
                             .thenApply(SnapshotResult::of));
         }
+        // 如果算子是算子链中的 尾算子; 设置 ResultSubpartition  的状态句柄
         if (op == getTailOperator()) {
             snapshotInProgress.setResultSubpartitionStateFuture(
                     channelStateWriteResult

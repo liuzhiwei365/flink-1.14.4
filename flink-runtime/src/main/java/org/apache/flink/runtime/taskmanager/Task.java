@@ -736,7 +736,7 @@ public class Task
             // 在实例化可调用程序之前，我们将设置正确的上下文类加载器，以便可调用程序在其整个生命周期内都可以使用它
             executingThread.setContextClassLoader(userCodeClassLoader.asClassLoader());
 
-           // 监控用户是否 调用 System.exit 方法, 拦截该方法
+           // 监控 用户代码中 是否 调用 System.exit 方法, 拦截该方法
             FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
             try {
                 // 主节点在向 TaskExecutor提交 任务的时候用的是 Task类来封装的 ,在这里才会进一步被细化成  TaskInvokable 的各个子类,有很多种
@@ -765,7 +765,7 @@ public class Task
             executingThread.setContextClassLoader(userCodeClassLoader.asClassLoader());
 
             // 恢复该 invokable（任务） 的所有状态,并且开启处理信箱 run mailbox
-            // 核心
+            // 核心 *************************************************************************
             restoreAndInvoke(invokable);
 
             //请确保, 如果任务由于被取消而离开invoke（）方法, 我们直接手动抛出异常, 进入 catch块
@@ -923,6 +923,7 @@ public class Task
         }
     }
 
+    // 恢复状态 和 执行用户逻辑
     private void restoreAndInvoke(TaskInvokable finalInvokable) throws Exception {
         try {
             //正式执行前, 先恢复状态

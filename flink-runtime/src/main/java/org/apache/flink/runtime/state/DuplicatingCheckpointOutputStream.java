@@ -32,9 +32,16 @@ import java.io.IOException;
  * of dual-method calling. Furthermore, exceptions that happen in interactions with the secondary
  * stream are not exposed, until the user calls {@link #closeAndGetSecondaryHandle()}. In contrast
  * to that, exceptions from interactions with the primary stream are immediately returned to the
- * user. This class is used to write state for local recovery as a local (secondary) copy of the
+ * user.
+ *
+ * This class is used to write state for local recovery as a local (secondary) copy of the
  * (primary) state snapshot that is written to a (slower but highly-available) remote filesystem.
  */
+
+
+
+// 1 该类的写操作, 会同时先写入主流 , 再写入副流中 ( 写入两个流的内容完全一样)
+// 2
 public class DuplicatingCheckpointOutputStream
         extends CheckpointStreamFactory.CheckpointStateOutputStream {
 

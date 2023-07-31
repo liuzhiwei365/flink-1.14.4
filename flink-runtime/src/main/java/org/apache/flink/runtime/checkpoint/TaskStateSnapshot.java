@@ -57,10 +57,12 @@ public class TaskStateSnapshot implements CompositeStateHandle {
 
     private static final long serialVersionUID = 1L;
 
+    // 空实现
     public static final TaskStateSnapshot FINISHED_ON_RESTORE =
             new TaskStateSnapshot(new HashMap<>(), true, true);
 
     /** Mapping from an operator id to the state of one subtask of this operator. */
+    //  key为算子id   val 为 这个算子在 本sub task 下的 所有状态
     private final Map<OperatorID, OperatorSubtaskState> subtaskStatesByOperatorID;
 
     private final boolean isTaskDeployedAsFinished;

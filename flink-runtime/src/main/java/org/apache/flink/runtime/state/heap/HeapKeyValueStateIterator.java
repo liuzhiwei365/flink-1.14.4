@@ -55,8 +55,10 @@ public final class HeapKeyValueStateIterator implements KeyValueStateIterator {
 
     private static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
+    // 一个 StateUID 对应 一个 kv状态的 名称
     private final Map<StateUID, Integer> stateNamesToId;
     private final Map<StateUID, StateSnapshot> stateStableSnapshots;
+
     private final int keyGroupPrefixBytes;
 
     private boolean isValid;
@@ -65,14 +67,15 @@ public final class HeapKeyValueStateIterator implements KeyValueStateIterator {
     private byte[] currentKey;
     private byte[] currentValue;
 
-    /** Iterator over the key groups of the corresponding key group range. */
+    // 键组编号 的 迭代器
     private final Iterator<Integer> keyGroupIterator;
-    /** The current value of the keyGroupIterator. */
+
     private int currentKeyGroup;
 
-    /** Iterator over all states present in the snapshots. */
+    // 一个 StateUID 对应 一个 状态名称 （用户指定）
+    // key 的 迭代器
     private Iterator<StateUID> statesIterator;
-    /** The current value of the statesIterator. */
+
     private StateUID currentState;
     /**
      * An iterator over the values of the current state. It can be one of three:
@@ -187,6 +190,7 @@ public final class HeapKeyValueStateIterator implements KeyValueStateIterator {
             return false;
         }
 
+        //  获取指定 kv状态名 的  状态快照
         StateSnapshot stateSnapshot = this.stateStableSnapshots.get(currentState);
         setCurrentStateIterator(stateSnapshot);
 
@@ -201,6 +205,7 @@ public final class HeapKeyValueStateIterator implements KeyValueStateIterator {
 
     @SuppressWarnings("unchecked")
     private void setCurrentStateIterator(StateSnapshot stateSnapshot) throws IOException {
+
         if (stateSnapshot instanceof IterableStateSnapshot) {
             RegisteredKeyValueStateBackendMetaInfo<Object, Object> metaInfo =
                     new RegisteredKeyValueStateBackendMetaInfo<>(
@@ -208,6 +213,7 @@ public final class HeapKeyValueStateIterator implements KeyValueStateIterator {
             Iterator<? extends StateEntry<?, ?, ?>> snapshotIterator =
                     ((IterableStateSnapshot<?, ?, ?>) stateSnapshot).getIterator(currentKeyGroup);
             this.currentStateIterator = new StateTableIterator(snapshotIterator, metaInfo);
+
         } else if (stateSnapshot instanceof HeapPriorityQueueStateSnapshot) {
             Iterator<Object> snapshotIterator =
                     ((HeapPriorityQueueStateSnapshot<Object>) stateSnapshot)
@@ -215,7 +221,9 @@ public final class HeapKeyValueStateIterator implements KeyValueStateIterator {
             RegisteredPriorityQueueStateBackendMetaInfo<Object> metaInfo =
                     new RegisteredPriorityQueueStateBackendMetaInfo<>(
                             stateSnapshot.getMetaInfoSnapshot());
+
             this.currentStateIterator = new QueueIterator<>(snapshotIterator, metaInfo);
+
         } else {
             throw new IllegalStateException("Unknown snapshot type: " + stateSnapshot);
         }

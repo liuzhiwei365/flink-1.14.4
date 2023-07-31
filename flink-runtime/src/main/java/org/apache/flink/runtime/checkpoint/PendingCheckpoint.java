@@ -325,7 +325,7 @@ public class PendingCheckpoint implements Checkpoint {
                 try (CheckpointMetadataOutputStream out =
                         targetLocation.createMetadataOutputStream()) {
 
-                    // 把 算子状态 和 master状态 持久化 到文件系统
+                    // 把 算子状态 和 master状态的 元数据 持久化 到文件系统
                     Checkpoints.storeCheckpointMetadata(savepoint, out);
 
                     // 关流,  返回 刚刚完成的checkpoint 的存储信息

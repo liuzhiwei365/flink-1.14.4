@@ -125,6 +125,16 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
     // -----------------------------------------------------------------------------------------------------------------
 
+
+    // 调用链
+
+    // StreamTask # restoreInternal
+    // StreamTask # restoreGates
+    // RegularOperatorChain # initializeStateAndOpenOperators
+    // AbstractStreamOperator # initializeState
+    // StreamTaskStateInitializerImpl # streamOperatorStateContext  本方法
+
+    //  本类的核心方法
     @Override
     public StreamOperatorStateContext streamOperatorStateContext(
             @Nonnull OperatorID operatorID,
@@ -148,9 +158,9 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
         final String operatorIdentifierText = operatorSubtaskDescription.toString();
 
-        // taskStateManager 根据OperatorId 获取的算子历史状态,可以通过prioritizedOperatorSubtaskStates
-        // 获取当前算子的PrioritizedManagedKeyedState ,并基于这些状态数据恢复算子的状态
-
+        //  1 把远程的 subtask state   和 本地的 subtask state  整合打包在一起
+        //  2 获取 指定subtask下 指定算子下 的 整合状态 （这里的状态还是 以状态句柄的形式呈现 ）
+        //  3 TaskStateManagerImpl.prioritizedOperatorState
         final PrioritizedOperatorSubtaskState prioritizedOperatorSubtaskStates =
                 taskStateManager.prioritizedOperatorState(operatorID);
 
@@ -161,8 +171,10 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         InternalTimeServiceManager<?> timeServiceManager;
 
         try {
+            // 关于各 状态后端 的分类 参见图片：  flink-1.14.4/学习资料/flink各类后端分类.png
 
             // -------------- Keyed State Backend --------------
+            // 创建 Keyed State Backend, 并且恢复 Keyed State 到 内存
             keyedStatedBackend =
                     keyedStatedBackend(
                             keySerializer,
@@ -173,6 +185,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                             managedMemoryFraction);
 
             // -------------- Operator State Backend --------------
+            // 创建 Operator State Backend ,并且恢复 Operator State 到内存
             operatorStateBackend =
                     operatorStateBackend(
                             operatorIdentifierText,
@@ -259,6 +272,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         }
     }
 
+    // 要注意  这里的 OperatorStateBackend 是针对单个 算子的,而不是针对 task
+    // 创建   OperatorStateBackend 对象,并且恢复应该有的 状态
     protected OperatorStateBackend operatorStateBackend(
             String operatorIdentifierText,
             PrioritizedOperatorSubtaskState prioritizedOperatorSubtaskStates,
@@ -295,6 +310,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         }
     }
 
+    // 要注意  这里的 KeyedStateBackend 是针对单个 算子的,而不是针对 task
+    // 创建  KeyedStateBackend 对象,并且恢复应该有的 状态
     protected <K> CheckpointableKeyedStateBackend<K> keyedStatedBackend(
             TypeSerializer<K> keySerializer,
             String operatorIdentifierText,
@@ -304,6 +321,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             double managedMemoryFraction)
             throws Exception {
 
+        // 如果不是 KeyedStream 直接就返回，即：不创建 keyedStatedBackend
         if (keySerializer == null) {
             return null;
         }
@@ -312,6 +330,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
         TaskInfo taskInfo = environment.getTaskInfo();
 
+        // 计算当前 subtask 负责的 KeyGroupRange
         final KeyGroupRange keyGroupRange =
                 KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(
                         taskInfo.getMaxNumberOfParallelSubtasks(),
@@ -343,7 +362,13 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                 logDescription);
 
         try {
-            // 创建keyedStateBackend, 同时对数据进行恢复; prioritizedOperatorSubtaskStates包含当前的状态
+            // 1 创建keyedStateBackend, 同时对数据进行恢复
+            // 2 我们这里只传入 管理的keyed状态
+            // 3 如果 stateBackend 是 RocksDBStateBackend, 就会创建出 RocksDBKeyedStateBackend
+            //   如果是 Memory 或 Fs 则会创建出 HeapKeyedStateBackend
+            //   在创建完 KeyedStateBackend 的过程中，会恢复 管理的 keyed  state 到flink 内存
+
+            //  也就是一个算子下的所有 管理 keyed状态 的 状态名称
             return backendRestorer.createAndRestore(
                     prioritizedOperatorSubtaskStates.getPrioritizedManagedKeyedState());
         } finally {

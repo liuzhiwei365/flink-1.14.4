@@ -26,19 +26,20 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
 
-/** Interface of a state handle for operator state. */
+
+//算子状态句柄, 它不是实际的状态,但是可以读回状态, 操作状态
 public interface OperatorStateHandle extends StreamStateHandle {
 
     /** Returns a map of meta data for all contained states by their name. */
 
-    // 容量为 unionState.size(), broadcastState.size() 或者 nameToDistributeState.size()
+    // 每个状态名称 到 状态元数据 的映射
     Map<String, StateMetaInfo> getStateNameToPartitionOffsets();
 
-    /** Returns an input stream to read the operator state information. */
+    //返回  用于读取  算子状态信息的 输入流
     @Override
     FSDataInputStream openInputStream() throws IOException;
 
-    /** Returns the underlying stream state handle that points to the state data. */
+    // 返回 指向状态数据的 底层的 状态句柄
     StreamStateHandle getDelegateStateHandle();
 
     /**
@@ -58,6 +59,7 @@ public interface OperatorStateHandle extends StreamStateHandle {
 
         private static final long serialVersionUID = 3593817615858941166L;
 
+        // 一个offsets数组的 元素 就代表 最小的状态粒度（不可再分割）
         private final long[] offsets;
         private final Mode distributionMode;
 

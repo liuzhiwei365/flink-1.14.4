@@ -94,10 +94,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                     .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
 
     // 在HeapKeyedStateBackend中,来存储StateName 与StateTable之间的映射关系
-    // 前者key为状态名称,后者value为状态数据    StateTable有CopyOnWriteStateTable 和 NestedMapsStateTable 两种实现
-    // 1 CopyOnWriteStateTable 底层借助 CopyOnWriteStateMap  存储数据元素,checkpoint过程支持异步
-    // 2 NestedMapsStateTable 底层借助 NestedStateMap  存储数据元素,checkpoint过程只支持同步 (NestedStateMap
-    // 通过两侧HashMap实现)
+    //   key为状态名称,   value为具体状态数据使用的状态表, 每个状态都会创建 各自的 StateTable 来存储数据
     private final Map<String, StateTable<K, ?, ?>> registeredKVStates;
 
     /** The configuration for local recovery. */

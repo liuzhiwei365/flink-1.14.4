@@ -324,9 +324,10 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
 
         // Step (4): Take the state snapshot. This should be largely asynchronous, to not impact
         // progress of the streaming topology
+
         // 第4步，异步执行checkpoint操作，checkpoint数据落地
-        Map<OperatorID, OperatorSnapshotFutures> snapshotFutures =
-                new HashMap<>(operatorChain.getNumberOfOperators());
+        Map<OperatorID, OperatorSnapshotFutures> snapshotFutures = new HashMap<>(operatorChain.getNumberOfOperators());
+
         try {
             // Task 利用operatorChain链,来具体到每个 算子的快照; takeSnapshotSync是核心
             if (takeSnapshotSync(
@@ -413,6 +414,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
     public void initInputsCheckpoint(long id, CheckpointOptions checkpointOptions)
             throws CheckpointException {
         if (checkpointOptions.isUnalignedCheckpoint()) {
+            // ChannelStateWriterImpl  对象
             channelStateWriter.start(id, checkpointOptions);
 
             prepareInflightDataSnapshot(id);
@@ -585,8 +587,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         registerAsyncCheckpointRunnable(
                 asyncCheckpointRunnable.getCheckpointId(), asyncCheckpointRunnable);
 
-        // we are transferring ownership over snapshotInProgressList for cleanup to the thread,
-        // active on submit
+        // 核心, 执行  AsyncCheckpointRunnable的 run 方法
         asyncOperationsThreadPool.execute(asyncCheckpointRunnable);
     }
 
@@ -604,23 +605,28 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
             Supplier<Boolean> isRunning)
             throws Exception {
 
-        checkState(
-                !operatorChain.isClosed(),
+        checkState(!operatorChain.isClosed(),
                 "OperatorChain and Task should never be closed at this point");
 
         long checkpointId = checkpointMetaData.getCheckpointId();
         long started = System.nanoTime();
 
+        // 1  ChannelStateWriteResult 类中维护着 某checkpointId 下,
+        //     该subtask 的所有InputChannel 和 ResultSubpartition 的状态句柄
+        // 2  如果 checkpoint 是非对齐的模式, 才需要 InputChannel 和 ResultSubpartition 的状态句柄
+        //    否则, 不需要, 返回一个内容为空的ChannelStateWriteResult 对象
         ChannelStateWriteResult channelStateWriteResult =
                 checkpointOptions.isUnalignedCheckpoint()
                         ? channelStateWriter.getAndRemoveWriteResult(checkpointId)
                         : ChannelStateWriteResult.EMPTY;
 
+        //  创建 checkpoint 输出流的工厂,  该输出流是用来 持久化状态的
         CheckpointStreamFactory storage =
                 checkpointStorage.resolveCheckpointStorageLocation(
                         checkpointId, checkpointOptions.getTargetLocation());
 
         try {
+            //  做算子链 的  状态快照;  内部会填充 operatorSnapshotsInProgress   map集合
             operatorChain.snapshotState(
                     operatorSnapshotsInProgress,
                     checkpointMetaData,

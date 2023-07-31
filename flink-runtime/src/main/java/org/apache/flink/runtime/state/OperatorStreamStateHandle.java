@@ -26,15 +26,16 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * State handle for partitionable operator state. Besides being a {@link StreamStateHandle}, this
- * also provides a map that contains the offsets to the partitions of named states in the stream.
+ *
+ * State handle for partitionable operator state. Besides being a {@link StreamStateHandle},
+ * this also provides a map that contains the offsets to the partitions of named states in the stream.
  */
+
 public class OperatorStreamStateHandle implements OperatorStateHandle {
 
     private static final long serialVersionUID = 35876522969227335L;
 
     /** unique state name -> offsets for available partitions in the handle stream */
-    // 容量为 unionState.size(), broadcastState.size() 或者 nameToDistributeState.size()
     private final Map<String, StateMetaInfo> stateNameToPartitionOffsets;
 
     private final StreamStateHandle delegateStateHandle;

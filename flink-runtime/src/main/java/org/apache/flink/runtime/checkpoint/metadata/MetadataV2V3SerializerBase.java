@@ -97,11 +97,17 @@ public abstract class MetadataV2V3SerializerBase {
     private static final byte FILE_STREAM_STATE_HANDLE = 2;
     private static final byte KEY_GROUPS_HANDLE = 3;
     private static final byte PARTITIONABLE_OPERATOR_STATE_HANDLE = 4;
+    // 增量键组句柄
     private static final byte INCREMENTAL_KEY_GROUPS_HANDLE = 5;
+    // 相对流状态句柄
     private static final byte RELATIVE_STREAM_STATE_HANDLE = 6;
+    // savepoint 键组句柄
     private static final byte SAVEPOINT_KEY_GROUPS_HANDLE = 7;
+    // 变更日志句柄
     private static final byte CHANGELOG_HANDLE = 8;
+    // 变更日志字节增量句柄
     private static final byte CHANGELOG_BYTE_INCREMENT_HANDLE = 9;
+    // 变更日志文件增量句柄
     private static final byte CHANGELOG_FILE_INCREMENT_HANDLE = 10;
 
     // ------------------------------------------------------------------------
@@ -113,14 +119,14 @@ public abstract class MetadataV2V3SerializerBase {
         // first: checkpoint ID
         dos.writeLong(checkpointMetadata.getCheckpointId());
 
-        // second: master state
+        // second: master state  序列化 master状态,写入 入参 dos流中
         final Collection<MasterState> masterStates = checkpointMetadata.getMasterStates();
         dos.writeInt(masterStates.size());
         for (MasterState ms : masterStates) {
             serializeMasterState(ms, dos);
         }
 
-        // third: operator states
+        // third: operator states   序列化多个算子状态 ,写入 入参 dos流中
         Collection<OperatorState> operatorStates = checkpointMetadata.getOperatorStates();
         dos.writeInt(operatorStates.size());
 
@@ -173,24 +179,28 @@ public abstract class MetadataV2V3SerializerBase {
 
     protected void serializeMasterState(MasterState state, DataOutputStream dos)
             throws IOException {
-        // magic number for error detection
+        // master state 的魔数
         dos.writeInt(MASTER_STATE_MAGIC_NUMBER);
 
-        // for safety, we serialize first into an array and then write the array and its
-        // length into the checkpoint
+        // 构建临时输出流
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final DataOutputStream out = new DataOutputStream(baos);
 
+        // master state 的版本
         out.writeInt(state.version());
+        // master state 的名称
         out.writeUTF(state.name());
 
+        // master state 的字节数组  （实际内容）
         final byte[] bytes = state.bytes();
         out.writeInt(bytes.length);
         out.write(bytes, 0, bytes.length);
 
         out.close();
+        // 取出已经写入临时输出流的所有内容
         byte[] data = baos.toByteArray();
 
+        // 把内容写入 入参中 ,  先写内容长度 ,后写实际内容
         dos.writeInt(data.length);
         dos.write(data, 0, data.length);
     }
@@ -585,6 +595,7 @@ public abstract class MetadataV2V3SerializerBase {
             dos.writeUTF(fileStateHandle.getFilePath().toString());
 
         } else if (stateHandle instanceof ByteStreamStateHandle) {
+            // 算子协调者的状态 对应 ByteStreamStateHandle 状态句柄
             dos.writeByte(BYTE_STREAM_STATE_HANDLE);
             ByteStreamStateHandle byteStreamStateHandle = (ByteStreamStateHandle) stateHandle;
             dos.writeUTF(byteStreamStateHandle.getHandleName());

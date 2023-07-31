@@ -1109,6 +1109,7 @@ public class CheckpointCoordinator {
     // JobMaster.acknowledgeCheckpoint
     // SchedulerBase.acknowledgeCheckpoint
     // ExecutionGraphHandler.acknowledgeCheckpoint
+    // CheckpointCoordinator.receiveAcknowledgeMessage
 
     // 每来一次 ack 消息, 都有可能触发 checkpoint 的收尾逻辑
     public boolean receiveAcknowledgeMessage(
@@ -1481,8 +1482,7 @@ public class CheckpointCoordinator {
         //     state, if there is was no checkpoint yet.
         return restoreLatestCheckpointedStateInternal(
                 tasks,
-                OperatorCoordinatorRestoreBehavior
-                        .SKIP, // local/regional recovery does not reset coordinators
+                OperatorCoordinatorRestoreBehavior.SKIP, // local/regional recovery does not reset coordinators
                 false, // recovery might come before first successful checkpoint
                 true,
                 false); // see explanation above
@@ -1516,9 +1516,7 @@ public class CheckpointCoordinator {
         final OptionalLong restoredCheckpointId =
                 restoreLatestCheckpointedStateInternal(
                         tasks,
-                        OperatorCoordinatorRestoreBehavior
-                                .RESTORE_OR_RESET, // global recovery restores coordinators, or
-                        // resets them to empty
+                        OperatorCoordinatorRestoreBehavior.RESTORE_OR_RESET, // global recovery restores coordinators, or resets them to empty
                         false, // recovery might come before first successful checkpoint
                         allowNonRestoredState,
                         false);
@@ -1569,46 +1567,33 @@ public class CheckpointCoordinator {
                 throw new IllegalStateException("CheckpointCoordinator is shut down");
             }
 
-            // We create a new shared state registry object, so that all pending async disposal
-            // requests from previous runs will go against the old object (were they can do no
-            // harm). This must happen under the checkpoint lock.
+            // step1 我们创建了一个新的共享状态注册表对象, 这样以前运行的所有挂起的异步处理请求都将针对旧对象
             sharedStateRegistry.close();
-            // 重新创建 sharedStateRegistry,旧的不用了
             sharedStateRegistry = sharedStateRegistryFactory.create(executor);
 
-            // Now, we re-register all (shared) states from the checkpoint store with the new
-            // registry
-            for (CompletedCheckpoint completedCheckpoint :
-                    completedCheckpointStore.getAllCheckpoints()) {
-                // 将completedCheckpoint中的成员变量 operatorStates 全部注册到新的sharedStateRegistry中
+            // step2 将所有 CompletedCheckpoint中的成员变量 operatorStates 全部注册到新的sharedStateRegistry中
+            for (CompletedCheckpoint completedCheckpoint : completedCheckpointStore.getAllCheckpoints()) {
                 completedCheckpoint.registerSharedStatesAfterRestored(sharedStateRegistry);
             }
 
-            LOG.debug(
-                    "Status of the shared state registry of job {} after restore: {}.",
-                    job,
-                    sharedStateRegistry);
+            LOG.debug("Status of the shared state registry of job {} after restore: {}.", job, sharedStateRegistry);
 
-            // Restore from the latest checkpoint
+            // step3 从最近的 checkpoint 开始恢复
             CompletedCheckpoint latest = completedCheckpointStore.getLatestCheckpoint();
-
+               // short  cut  for step3
             if (latest == null) {
                 LOG.info("No checkpoint found during restore.");
-
                 if (errorIfNoCheckpoint) {
                     throw new IllegalStateException("No completed checkpoint available");
                 }
-
                 LOG.debug("Resetting the master hooks.");
+                //重置 masterHook
                 MasterHooks.reset(masterHooks.values(), LOG);
 
-                if (operatorCoordinatorRestoreBehavior
-                        == OperatorCoordinatorRestoreBehavior.RESTORE_OR_RESET) {
-                    // we let the JobManager-side components know that there was a recovery,
-                    // even if there was no checkpoint to recover from, yet
+                if (operatorCoordinatorRestoreBehavior == OperatorCoordinatorRestoreBehavior.RESTORE_OR_RESET) {
                     LOG.info("Resetting the Operator Coordinators to an empty state.");
-                    restoreStateToCoordinators(
-                            OperatorCoordinator.NO_CHECKPOINT, Collections.emptyMap());
+                    // 重置算子协调者 为空状态
+                    restoreStateToCoordinators(OperatorCoordinator.NO_CHECKPOINT, Collections.emptyMap());
                 }
 
                 return OptionalLong.empty();
@@ -1616,7 +1601,6 @@ public class CheckpointCoordinator {
 
             LOG.info("Restoring job {} from {}.", job, latest);
 
-            // re-assign the task states
             // 从最近的一次 CompletedCheckpoint中提取状态
             final Map<OperatorID, OperatorState> operatorStates = extractOperatorStates(latest);
 

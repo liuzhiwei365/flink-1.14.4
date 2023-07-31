@@ -51,7 +51,7 @@ public class OperatorState implements CompositeStateHandle {
     private final OperatorID operatorID;
 
     /** The handles to states created by the parallel tasks: subtaskIndex -> subtaskstate. */
-    // 算子子任务状态
+    // 算子子任务状态 集合
     private final Map<Integer, OperatorSubtaskState> operatorSubtaskStates;
 
     /** The state of the operator coordinator. Null, if no such state exists. */
@@ -91,6 +91,7 @@ public class OperatorState implements CompositeStateHandle {
         return false;
     }
 
+    // 更新算子 子任务状态集合operatorSubtaskStates,   往集合中放入    新的算子子任务编号 -> 新的算子子任务状态
     public void putState(int subtaskIndex, OperatorSubtaskState subtaskState) {
         Preconditions.checkNotNull(subtaskState);
 

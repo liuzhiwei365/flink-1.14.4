@@ -42,6 +42,8 @@ class DefaultOperatorStateBackendSnapshotStrategy
     private final Map<String, PartitionableListState<?>> registeredOperatorStates;
     private final Map<String, BackendWritableBroadcastState<?, ?>> registeredBroadcastStates;
 
+    //  算子的状态后台 只包括  PartitionableListState 和 BackendWritableBroadcastState 两类
+    //
     protected DefaultOperatorStateBackendSnapshotStrategy(
             ClassLoader userClassLoader,
             Map<String, PartitionableListState<?>> registeredOperatorStates,
@@ -51,6 +53,9 @@ class DefaultOperatorStateBackendSnapshotStrategy
         this.registeredBroadcastStates = registeredBroadcastStates;
     }
 
+    // 1 分别对 registeredOperatorStates 成员 和 registeredBroadcastStates 成员 做深拷贝
+    // 2 分别填入到 registeredOperatorStatesDeepCopies 和 registeredBroadcastStatesDeepCopies 中
+    // 3 最后用 DefaultOperatorStateBackendSnapshotResources 对象 把深拷贝的两个对象包裹起来返回
     @Override
     public DefaultOperatorStateBackendSnapshotResources syncPrepareResources(long checkpointId) {
         if (registeredOperatorStates.isEmpty() && registeredBroadcastStates.isEmpty()) {
@@ -71,7 +76,7 @@ class DefaultOperatorStateBackendSnapshotStrategy
 
             if (!registeredOperatorStates.isEmpty()) {
                 for (Map.Entry<String, PartitionableListState<?>> entry :
-                        registeredOperatorStates.entrySet()) {
+                                                                  registeredOperatorStates.entrySet()) {
                     PartitionableListState<?> listState = entry.getValue();
                     if (null != listState) {
                         listState = listState.deepCopy();
@@ -94,6 +99,7 @@ class DefaultOperatorStateBackendSnapshotStrategy
             Thread.currentThread().setContextClassLoader(snapshotClassLoader);
         }
 
+        // 用 DefaultOperatorStateBackendSnapshotResources 对象 把深拷贝的两个对象包裹起来返回
         return new DefaultOperatorStateBackendSnapshotResources(
                 registeredOperatorStatesDeepCopies, registeredBroadcastStatesDeepCopies);
     }
@@ -108,6 +114,7 @@ class DefaultOperatorStateBackendSnapshotStrategy
 
         Map<String, PartitionableListState<?>> registeredOperatorStatesDeepCopies =
                 syncPartResource.getRegisteredOperatorStatesDeepCopies();
+
         Map<String, BackendWritableBroadcastState<?, ?>> registeredBroadcastStatesDeepCopies =
                 syncPartResource.getRegisteredBroadcastStatesDeepCopies();
 

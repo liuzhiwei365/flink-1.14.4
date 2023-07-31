@@ -115,6 +115,7 @@ public class HeapKeyedStateBackendBuilder<K> extends AbstractKeyedStateBackendBu
         // 而后会被封装到HeapKeyedStateBackend 中去
         restoreState(registeredKVStates, registeredPQStates, keyContext, stateTableFactory);
 
+
         return new HeapKeyedStateBackend<>(
                 kvStateRegistry,
                 keySerializerProvider.currentSchemaSerializer(),
@@ -149,6 +150,7 @@ public class HeapKeyedStateBackendBuilder<K> extends AbstractKeyedStateBackendBu
             firstHandle = restoreStateHandles.iterator().next();
         }
         if (firstHandle instanceof SavepointKeyedStateHandle) {
+            // 直接从远程存储恢复
             restoreOperation =
                     new HeapSavepointRestoreOperation<>(
                             restoreStateHandles,
@@ -162,6 +164,7 @@ public class HeapKeyedStateBackendBuilder<K> extends AbstractKeyedStateBackendBu
                             stateTableFactory,
                             keyContext);
         } else {
+            // 优先考虑本地恢复, 本地恢复不了,再考虑远程恢复
             restoreOperation =
                     new HeapRestoreOperation<>(
                             restoreStateHandles,

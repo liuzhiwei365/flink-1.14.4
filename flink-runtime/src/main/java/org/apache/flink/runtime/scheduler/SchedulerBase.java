@@ -395,20 +395,17 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 new CheckpointException(CheckpointFailureReason.JOB_FAILOVER_REGION));
 
         if (isGlobalRecovery) {
-            // 这种情况只需要恢复快照状态
-            final Set<ExecutionJobVertex> jobVerticesToRestore =
-                    getInvolvedExecutionJobVertices(vertices);
+            // 全局恢复
+            final Set<ExecutionJobVertex> jobVerticesToRestore = getInvolvedExecutionJobVertices(vertices);
 
             checkpointCoordinator.restoreLatestCheckpointedStateToAll(jobVerticesToRestore, true);
 
         } else {
             // 这种情况, 快照状态 和 算子协调者的状态 都得恢复
-            final Map<ExecutionJobVertex, IntArrayList> subtasksToRestore =
-                    getInvolvedExecutionJobVerticesAndSubtasks(vertices);
+            final Map<ExecutionJobVertex, IntArrayList> subtasksToRestore = getInvolvedExecutionJobVerticesAndSubtasks(vertices);
 
             final OptionalLong restoredCheckpointId =
-                    checkpointCoordinator.restoreLatestCheckpointedStateToSubtasks(
-                            subtasksToRestore.keySet());
+                    checkpointCoordinator.restoreLatestCheckpointedStateToSubtasks(subtasksToRestore.keySet());
 
             // Ideally, the Checkpoint Coordinator would call OperatorCoordinator.resetSubtask, but
             // the Checkpoint Coordinator is not aware of subtasks in a local failover. It always
@@ -417,8 +414,8 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             // Because of that, we need to do the "subtask restored" notification here.
             // Once the Checkpoint Coordinator is properly aware of partial (region) recovery,
             // this code should move into the Checkpoint Coordinator.
-            final long checkpointId =
-                    restoredCheckpointId.orElse(OperatorCoordinator.NO_CHECKPOINT);
+            final long checkpointId = restoredCheckpointId.orElse(OperatorCoordinator.NO_CHECKPOINT);
+
             notifyCoordinatorsOfSubtaskRestore(subtasksToRestore, checkpointId);
         }
     }
@@ -480,6 +477,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             final IntArrayList subtasks =
                     result.computeIfAbsent(
                             executionVertex.getJobVertex(), (key) -> new IntArrayList(32));
+
             subtasks.add(executionVertex.getParallelSubtaskIndex());
         }
 

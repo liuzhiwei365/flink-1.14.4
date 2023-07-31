@@ -32,10 +32,16 @@ import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
  * <p>This message may carry the handle to the task's chained operator state and the key group
  * state.
  */
+//  1 该消息是 TaskExecutor 端发给 JobMaster 端的 CheckpointCoordinator 的
+//  2 你可以理解为  ack  checkpoint
+//  3 该消息携带了  子任务下 每个算子的  算子子任务状态   和 键组状态
+
+//  4 为什么一个task 中会存在多个算子, 因为多个算子会链化在一起
 public class AcknowledgeCheckpoint extends AbstractCheckpointMessage {
 
     private static final long serialVersionUID = -7606214777192401493L;
 
+    // TaskStateSnapshot 对象 内部有   子任务下 每个算子的  算子子任务状态   和 键组状态
     private final TaskStateSnapshot subtaskState;
 
     private final CheckpointMetrics checkpointMetrics;

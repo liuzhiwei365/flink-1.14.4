@@ -65,6 +65,11 @@ class HeapMetaInfoRestoreOperation<K> {
         this.keyContext = keyContext;
     }
 
+    // 利用恢复的元数据信息 来恢复相关状态
+    // 已知 restoredMetaInfo , 来填充 registeredKVStates 和 registeredPQStates
+    // 注意, 这里的填充 是仅仅元数据信息构造  不同空的数据集合对象, 把空的集合对象先放进去
+
+    // 相对于实际读回,恢复状态前, 对registeredKVStates和 registeredPQStates 的初始化工作
     Map<Integer, StateMetaInfoSnapshot> createOrCheckStateForMetaInfo(
             List<StateMetaInfoSnapshot> restoredMetaInfo,
             Map<String, StateTable<K, ?, ?>> registeredKVStates,
@@ -73,7 +78,14 @@ class HeapMetaInfoRestoreOperation<K> {
         final Map<Integer, StateMetaInfoSnapshot> kvStatesById = new HashMap<>();
         for (StateMetaInfoSnapshot metaInfoSnapshot : restoredMetaInfo) {
             final StateSnapshotRestore registeredState;
+            // 根据 不同的后端状态类型,来选择不同的 数据结构来存储状态
+            //   1 KEY_VALUE类型：
+            //      选择 StateTable来存储
+            //   2 PRIORITY_QUEUE类型：
+            //      选择 HeapPriorityQueueSnapshotRestoreWrapper 来存储
 
+            // 注意, 这里的填充 是仅仅元数据信息构造  不同空的数据集合对象, 把空的集合对象先放进去
+            // 相对于是实际读回,恢复状态的前, 对registeredKVStates和 registeredPQStates 的初始化工作
             switch (metaInfoSnapshot.getBackendStateType()) {
                 case KEY_VALUE:
                     registeredState = registeredKVStates.get(metaInfoSnapshot.getName());
@@ -84,6 +96,7 @@ class HeapMetaInfoRestoreOperation<K> {
                                                 metaInfoSnapshot);
                         registeredKVStates.put(
                                 metaInfoSnapshot.getName(),
+                                // StateTable 针对的是 kv 状态
                                 stateTableFactory.newStateTable(
                                         keyContext,
                                         registeredKeyedBackendStateMetaInfo,
@@ -95,6 +108,7 @@ class HeapMetaInfoRestoreOperation<K> {
                     if (registeredState == null) {
                         registeredPQStates.put(
                                 metaInfoSnapshot.getName(),
+                                // HeapPriorityQueueSnapshotRestoreWrapper 针对的是  本身不是kv state, 但是存在 key抽取器的状态
                                 createInternal(
                                         new RegisteredPriorityQueueStateBackendMetaInfo<>(
                                                 metaInfoSnapshot)));

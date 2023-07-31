@@ -51,6 +51,8 @@ import java.util.stream.StreamSupport;
  * @param <N> type of namespace
  * @param <S> type of state
  */
+// 1 StateTable内部将KeyedState 按KeyGroup划分为多个StateMap存储
+// 2 每个KeyGroup对于一个StateMap
 public abstract class StateTable<K, N, S>
         implements StateSnapshotRestore, Iterable<StateEntry<K, N, S>> {
 
@@ -73,6 +75,13 @@ public abstract class StateTable<K, N, S>
      * Map for holding the actual state objects. The outer array represents the key-groups. All
      * array positions will be initialized with an empty state map.
      */
+    // StateTable有CopyOnWriteStateTable 和 NestedMapsStateTable 两种实现
+    // 1 CopyOnWriteStateTable 底层借助 CopyOnWriteStateMap  存储数据元素,checkpoint过程支持异步
+    // 2 NestedMapsStateTable 底层借助 NestedStateMap  存储数据元素,checkpoint过程只支持同步 (NestedStateMap
+    // 通过两层嵌套的HashMap实现)
+
+    // 默认情况下, flink 会将状态数据保存到 CopyOnWriteStateTable 中 , CopyOnWriteStateTable 会保存多个 key group
+    // 的状态, 每个 key group 对应一个 CopyOnWriteStateMap, CopyOnWriteStateTable实际上就是一个数组和 链表构成的hash表
     protected final StateMap<K, N, S>[] keyGroupedStateMaps;
 
     /**

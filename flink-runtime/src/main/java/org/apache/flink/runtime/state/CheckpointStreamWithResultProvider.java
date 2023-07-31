@@ -86,6 +86,7 @@ public interface CheckpointStreamWithResultProvider extends Closeable {
      * Implementation of {@link CheckpointStreamWithResultProvider} that creates both, the
      * primary/remote/jm-owned state and the secondary/local/tm-owned state.
      */
+
     class PrimaryAndSecondaryStream implements CheckpointStreamWithResultProvider {
 
         private static final Logger LOG = LoggerFactory.getLogger(PrimaryAndSecondaryStream.class);
@@ -111,6 +112,7 @@ public interface CheckpointStreamWithResultProvider extends Closeable {
             final StreamStateHandle primaryStreamStateHandle;
 
             try {
+                // 返回 FileStateHandle 对象; 或者非正常情况下,返回 ByteStreamStateHandle （远程）
                 primaryStreamStateHandle = outputStream.closeAndGetPrimaryHandle();
             } catch (IOException primaryEx) {
                 try {
@@ -124,6 +126,7 @@ public interface CheckpointStreamWithResultProvider extends Closeable {
             StreamStateHandle secondaryStreamStateHandle = null;
 
             try {
+                // 返回 ByteStreamStateHandle 对象 （本地）
                 secondaryStreamStateHandle = outputStream.closeAndGetSecondaryHandle();
             } catch (IOException secondaryEx) {
                 LOG.warn("Exception from secondary/local checkpoint stream.", secondaryEx);
@@ -131,6 +134,7 @@ public interface CheckpointStreamWithResultProvider extends Closeable {
 
             if (primaryStreamStateHandle != null) {
                 if (secondaryStreamStateHandle != null) {
+                    // 把primaryStreamStateHandle 和 secondaryStreamStateHandle 包装在一起, 再返回
                     return SnapshotResult.withLocalState(
                             primaryStreamStateHandle, secondaryStreamStateHandle);
                 } else {
@@ -172,11 +176,11 @@ public interface CheckpointStreamWithResultProvider extends Closeable {
                 primaryStreamFactory.createCheckpointStateOutputStream(checkpointedStateScope);
 
         try {
-            File outFile =
-                    new File(
-                            secondaryStreamDirProvider.subtaskSpecificCheckpointDirectory(
-                                    checkpointId),
+
+            File outFile = new File(
+                            secondaryStreamDirProvider.subtaskSpecificCheckpointDirectory(checkpointId),
                             String.valueOf(UUID.randomUUID()));
+
             Path outPath = new Path(outFile.toURI());
 
             CheckpointStreamFactory.CheckpointStateOutputStream secondaryOut =
@@ -210,6 +214,9 @@ public interface CheckpointStreamWithResultProvider extends Closeable {
      * KeyGroupRangeOffsets} and creates a {@link SnapshotResult<KeyedStateHandle>} by combining the
      * key groups offsets with all the present stream state handles.
      */
+
+    // 通过将 键组偏移量信息 封装进入 StreamStateHandle,
+    // 来将 SnapshotResult内部的 StreamStateHandle 转变为  KeyGroupsStateHandle
     @Nonnull
     static SnapshotResult<KeyedStateHandle> toKeyedStateHandleSnapshotResult(
             @Nonnull SnapshotResult<StreamStateHandle> snapshotResult,

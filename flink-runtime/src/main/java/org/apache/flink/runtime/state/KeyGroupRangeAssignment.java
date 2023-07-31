@@ -78,20 +78,13 @@ public final class KeyGroupRangeAssignment {
         return MathUtils.murmurHash(keyHash) % maxParallelism;
     }
 
-    /**
-     * Computes the range of key-groups that are assigned to a given operator under the given
-     * parallelism and maximum parallelism.
-     *
-     * <p>IMPORTANT: maxParallelism must be <= Short.MAX_VALUE to avoid rounding problems in this
-     * method. If we ever want to go beyond this boundary, this method must perform arithmetic on
-     * long values.
-     *
-     * @param maxParallelism Maximal parallelism that the job was initially created with.
-     * @param parallelism The current parallelism under which the job runs. Must be <=
-     *     maxParallelism.
-     * @param operatorIndex Id of a key-group. 0 <= keyGroupID < maxParallelism.
-     * @return the computed key-group range for the operator.
-     */
+
+    // maxParallelism 就是 键组的数量
+    //      如果 maxParallelism = 10 ,那么键组的所有编号 就是 0 ,1 ,2   ...  8, 9
+    // parallelism  当前并行度大小,
+    // 而 operatorIndex 一定是  [0,parallelism] 离散闭区间的一个数
+
+    // 规划指定 subtask（operatorIndex） 的 键组 编号的 range
     public static KeyGroupRange computeKeyGroupRangeForOperatorIndex(
             int maxParallelism, int parallelism, int operatorIndex) {
 
