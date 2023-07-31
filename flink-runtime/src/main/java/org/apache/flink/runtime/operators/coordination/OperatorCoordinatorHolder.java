@@ -257,20 +257,18 @@ public class OperatorCoordinatorHolder
             mainThreadExecutor.assertRunningInMainThread();
         }
 
+        // 这个 阀门在 主从 两端都有
         eventValve.openValveAndUnmarkCheckpoint();
         context.resetFailed();
 
-        // when initial savepoints are restored, this call comes before the mainThreadExecutor
-        // is available, which is needed to set up these gateways. So during the initial restore,
-        // we ignore this, and instead the gateways are set up in the "lazyInitialize" method, which
-        // is called when the scheduler is properly set up.
-        // this is a bit clumsy, but it is caused by the non-straightforward initialization of the
-        // ExecutionGraph and Scheduler.
+        // 设置所有subtask gateway, 方便后续与 sub task 通信
         if (mainThreadExecutor != null) {
             setupAllSubtaskGateways();
         }
 
-        // 重新设置和恢复一个算子协调者的 状态（注意和快照状态不一样）
+        // 重新设置和恢复一个算子协调者的 状态
+        // 如果是 SourceCoordinator , 则恢复分片枚举器
+        // 如果是 CollectSinkOperatorCoordinator , 则恢复InetSocketAddress（也就是相关sink 的地址）
         coordinator.resetToCheckpoint(checkpointId, checkpointData);
     }
 

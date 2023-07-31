@@ -124,6 +124,7 @@ public class CheckpointCoordinator {
     private final CheckpointsCleaner checkpointsCleaner;
 
     /** The operator coordinators that need to be checkpointed. */
+    // 需要做快照 的 算子协调者集合
     private final Collection<OperatorCoordinatorCheckpointContext> coordinatorsToCheckpoint;
 
     /** Map from checkpoint ID to the pending checkpoint. */
@@ -1472,18 +1473,16 @@ public class CheckpointCoordinator {
      * @throws IllegalStateException If the parallelism changed for an operator that restores
      *     <i>non-partitioned</i> state from this checkpoint.
      */
+    // 本地或者 局部恢复
     public OptionalLong restoreLatestCheckpointedStateToSubtasks(
             final Set<ExecutionJobVertex> tasks) throws Exception {
-        // when restoring subtasks only we accept potentially unmatched state for the
-        // following reasons
-        //   - the set frequently does not include all Job Vertices (only the ones that are part
-        //     of the restarted region), meaning there will be unmatched state by design.
-        //   - because what we might end up restoring from an original savepoint with unmatched
-        //     state, if there is was no checkpoint yet.
+
+        // 当恢复子任务时，我们只接受以下原因
+        //-该集合通常不包括所有作业顶点（仅包括作为一部分的作业顶点重新启动区域的）,这意味着在设计上将存在不匹配的状态
         return restoreLatestCheckpointedStateInternal(
                 tasks,
                 OperatorCoordinatorRestoreBehavior.SKIP, // local/regional recovery does not reset coordinators
-                false, // recovery might come before first successful checkpoint
+                false,                                   // recovery might come before first successful checkpoint
                 true,
                 false); // see explanation above
     }
@@ -1509,6 +1508,7 @@ public class CheckpointCoordinator {
      * @throws IllegalStateException If the parallelism changed for an operator that restores
      *     <i>non-partitioned</i> state from this checkpoint.
      */
+    // 全局恢复
     public boolean restoreLatestCheckpointedStateToAll(
             final Set<ExecutionJobVertex> tasks, final boolean allowNonRestoredState)
             throws Exception {
@@ -1601,7 +1601,9 @@ public class CheckpointCoordinator {
 
             LOG.info("Restoring job {} from {}.", job, latest);
 
-            // 从最近的一次 CompletedCheckpoint中提取状态
+            // 从最近的一次 CompletedCheckpoint中提取每个算子所对应的全部状态
+            //    （这里的状态还是句柄的概念）
+            //    （算子所对应的全部状态 和 算子状态不是一个概念）
             final Map<OperatorID, OperatorState> operatorStates = extractOperatorStates(latest);
 
             // 校验
@@ -1611,17 +1613,12 @@ public class CheckpointCoordinator {
                 vertexFinishedStateChecker.validateOperatorsFinishedState();
             }
 
-            //  构造 StateAssignmentOperation对象
+            //  构造状态分配的  操作对象
             StateAssignmentOperation stateAssignmentOperation =
-                    new StateAssignmentOperation(
-                            latest.getCheckpointID(), tasks, operatorStates, allowNonRestoredState);
+                    new StateAssignmentOperation(latest.getCheckpointID(), tasks, operatorStates, allowNonRestoredState);
 
-            // 状态重新分配
+            // 重点,   用状态分配操作对象 来进行状态重新分配
             stateAssignmentOperation.assignStates();
-
-            // call master hooks for restore. we currently call them also on "regional restore"
-            // because there is no other failure notification mechanism in the master hooks
-            // ultimately these should get removed anyways in favor of the operator coordinators
 
             // master hooks  恢复
             MasterHooks.restoreMasterHooks(
@@ -1632,11 +1629,12 @@ public class CheckpointCoordinator {
                     LOG);
 
             if (operatorCoordinatorRestoreBehavior != OperatorCoordinatorRestoreBehavior.SKIP) {
+                //重点, 重置算子协调者的状态
+                // 例如对于 SourceCoordinator , 会重置分片枚举器
                 restoreStateToCoordinators(latest.getCheckpointID(), operatorStates);
             }
 
-            // update metrics
-
+            // 跟新 metrics 监控统计量
             if (statsTracker != null) {
                 long restoreTimestamp = System.currentTimeMillis();
                 RestoredCheckpointStats restored =
@@ -1656,15 +1654,16 @@ public class CheckpointCoordinator {
     private Map<OperatorID, OperatorState> extractOperatorStates(CompletedCheckpoint checkpoint) {
         Map<OperatorID, OperatorState> originalOperatorStates = checkpoint.getOperatorStates();
 
+        // 如果传入的 checkpointId 不应该抛弃 inputChannel 和 ResultSubpartition的状态, 正常返回 （一般情况）
+        // 否则, 得先抛弃 inputChannel 和 ResultSubpartition 的状态 ，再返回
         if (checkpoint.getCheckpointID() != checkpointIdOfIgnoredInFlightData) {
-            // Don't do any changes if it is not required.
             return originalOperatorStates;
         }
 
         HashMap<OperatorID, OperatorState> newStates = new HashMap<>();
-        // Create the new operator states without in-flight data.
-        // OperatorSubtaskState 中 内部总共有8种状态 ,我们把其中的  ResultSubpartitionState 和 InputChannelState
-        // 设置为空
+        // OperatorSubtaskState 中 内部总共有8种状态
+        // 我们把其中的  ResultSubpartitionState 和 InputChannelState设置为空
+        // 其他的状态我们没有抛弃，还在
         for (OperatorState originalOperatorState : originalOperatorStates.values()) {
             newStates.put(
                     originalOperatorState.getOperatorID(),
@@ -1903,12 +1902,16 @@ public class CheckpointCoordinator {
             final long checkpointId, final Map<OperatorID, OperatorState> operatorStates)
             throws Exception {
 
+        // 依次恢复  算子协调者的状态  （不是所有的算子都有算子协调者）
         for (OperatorCoordinatorCheckpointContext coordContext : coordinatorsToCheckpoint) {
+
+            //  OperatorState 中包括算子协调者状态  和 算子子任务状态
             final OperatorState state = operatorStates.get(coordContext.operatorId());
             final ByteStreamStateHandle coordinatorState =
                     state == null ? null : state.getCoordinatorState();
             final byte[] bytes = coordinatorState == null ? null : coordinatorState.getData();
             coordContext.resetToCheckpoint(checkpointId, bytes);
+
         }
     }
 

@@ -49,7 +49,33 @@ public class RoundRobinOperatorStateRepartitioner
     private static final boolean OPTIMIZE_MEMORY_USE = false;
 
     @Override
-    // 别忘了,这是针对对单个的 operator id的
+    /*
+       1 本方法是针对对单个的 operator id的
+       2 RoundRobinOperatorStateRepartitioner 是针对 管理算子状态 和 原始算子状态的(针对算子状态)
+       3 算子状态的算子句柄模式只有三种：
+           SPLIT_DISTRIBUTE：
+                    采用轮训手段：
+                       针对单个状态名称来说明轮训手段, 假设老并行度为3, 新并行度为2  (一个偏移量在这里代表一个不可再切割的最小状态粒度)
+
+                       并行度0
+                           偏移量 0-0      ---------
+                           偏移量 0-1               \                              偏移量 0-0  偏移量 2-1
+                       并行度1                       \   重分配后        新并行度0    偏移量 1-0  偏移量 2-3
+                           偏移量 1-0                 \             ^              偏移量 1-2
+                           偏移量 1-1                  \            | |
+                           偏移量 1-2                   |----->>    | |
+                       并行度2                         /            | |
+                           偏移量 2-0                 /               ↓            偏移量 0-1  偏移量 2-2
+                           偏移量 2-1                /                  新并行度1   偏移量 1-1
+                           偏移量 2-2               /                              偏移量 2-0
+                           偏移量 2-3      ----------
+
+           UNION：
+                    把老的各个并行度的状态句柄合并起来,一起发给任何一个新的并行度
+           BROADCAST：
+                    把任意一个老的并行度的所有句柄, 发给所有的新的并行度
+    */
+
     public List<List<OperatorStateHandle>> repartitionState(
             List<List<OperatorStateHandle>> previousParallelSubtaskStates,
             int oldParallelism,
@@ -65,8 +91,8 @@ public class RoundRobinOperatorStateRepartitioner
 
         List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList;
 
-        // We only round-robin repartition UNION state if new parallelism equals to the old one.
         if (newParallelism == oldParallelism) {
+            // 当新旧并行度一样的时候   short cut
 
             // 找出所有 Union 类型的 State
             Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
@@ -74,10 +100,10 @@ public class RoundRobinOperatorStateRepartitioner
 
             // 找出所有 Broadcast 类型的 State
             Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
-                    partlyFinishedBroadcastStates =
-                            collectPartlyFinishedBroadcastStates(previousParallelSubtaskStates);
+                    partlyFinishedBroadcastStates = collectPartlyFinishedBroadcastStates(previousParallelSubtaskStates);
 
-            // unionStates 和BroadcastStates为空，表示都是 SPLIT_DISTRIBUTE 模式，直接按照老的 State 进行分配,不用进行状态重组
+            // unionStates 和BroadcastStates为空，表示都是 SPLIT_DISTRIBUTE 模式, 直接按照老的 State 进行分配,不用进行状态重组
+            // short cut
             if (unionStates.isEmpty() && partlyFinishedBroadcastStates.isEmpty()) {
                 return previousParallelSubtaskStates;
             }
@@ -125,6 +151,7 @@ public class RoundRobinOperatorStateRepartitioner
     private List<Map<StreamStateHandle, OperatorStateHandle>> initMergeMapList(
             List<List<OperatorStateHandle>> parallelSubtaskStates) {
 
+        // 老的并行度 == 新的并行度
         int parallelism = parallelSubtaskStates.size();
 
         final List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList =
@@ -166,13 +193,13 @@ public class RoundRobinOperatorStateRepartitioner
 
         Map<String, StateEntry> states = new HashMap<>(parallelSubtaskStates.size());
 
-        // 遍历 老的并行度 次
+        // ==> 遍历 老的并行度 次
         for (int i = 0; i < parallelSubtaskStates.size(); ++i) {
             final int subtaskIndex = i;
 
             List<OperatorStateHandle> subTaskState = parallelSubtaskStates.get(i);
 
-            // 遍历老的 subtask 下 所有的 算子状态句柄
+            // ==> 遍历老的 subtask 下 所有的 算子状态句柄
             for (OperatorStateHandle operatorStateHandle : subTaskState) {
 
                 if (operatorStateHandle == null) {continue;}
@@ -185,6 +212,7 @@ public class RoundRobinOperatorStateRepartitioner
                         .filter(// 根据元数据里面的 分布模式信息, 过滤出想要的模式的状态
                                 entry -> entry.getValue().getDistributionMode().equals(mode))
                         .forEach(
+                                // ==> 遍历某种模式下的 所有状态名称
                                 entry -> {
                                     // 1 第一次构建 StateEntry, 并放入 states 中,存在了以后就不会重复构建了
                                     // 2 因为 这里 两层for 循环 再加 一个 foreach 遍历
@@ -217,10 +245,9 @@ public class RoundRobinOperatorStateRepartitioner
 
         // 存储方法结果 , EnumMap 也是java原生api 的一种 map
         EnumMap<
-                        OperatorStateHandle.Mode,
-                        Map<
-                                String,
-                                List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>>
+                        OperatorStateHandle.Mode,//状态模式
+                        Map<String,//状态名
+                                List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>>//
                 nameToStateByMode = new EnumMap<>(OperatorStateHandle.Mode.class);
 
         // 初始化
@@ -273,8 +300,8 @@ public class RoundRobinOperatorStateRepartitioner
         return new GroupByStateNameResults(nameToStateByMode);
     }
 
-    /** Repartition all named states. */
-    // 该方法是针对单个 operator id 的
+
+    // 1 该方法是针对单个 operator id 的
     private List<Map<StreamStateHandle, OperatorStateHandle>> repartition(
             GroupByStateNameResults nameToStateByMode, int newParallelism) {
 
@@ -307,7 +334,8 @@ public class RoundRobinOperatorStateRepartitioner
         return mergeMapList;
     }
 
-    /** Repartition SPLIT_DISTRIBUTE state. */
+
+    // 针对算子状态下 SPLIT_DISTRIBUTE 类型的状态
     private void repartitionSplitState(
             Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
                     nameToDistributeState,
@@ -330,14 +358,14 @@ public class RoundRobinOperatorStateRepartitioner
                 totalPartitions += offsets.f1.getOffsets().length;
             }
 
-            // 在所有并行算子实例间重分区
+            // 维护当前正在消耗的 老并行度编号
             int lstIdx = 0;
             // 维护offsets 数组的索引位置
             int offsetIdx = 0;
             int baseFraction = totalPartitions / newParallelism;
             int remainder = totalPartitions % newParallelism;
 
-            //  newStartParallelOp 为下次进去下面的for 循环时的 首个遍历的 subtask 编号
+            //  newStartParallelOp 为下次进去下面的for 循环时的 首个遍历的 subtask 编号 （为了轮训，才记录这个）
             int newStartParallelOp = startParallelOp;
 
             for (int i = 0; i < newParallelism; ++i) {
@@ -345,7 +373,8 @@ public class RoundRobinOperatorStateRepartitioner
                 //  本次遍历的 sub task 编号
                 int parallelOpIdx = (i + startParallelOp) % newParallelism;
 
-                // 某个记录新的sub task 应该分得的 粒度个数(需求总量)
+                // 某个记录新的sub task 应该分得的 粒度个数
+                // 计算每个新的并行度的 最终需求总量, 用 numberOfPartitionsToAssign 记录
                 int numberOfPartitionsToAssign = baseFraction;
 
                 if (remainder > 0) {
@@ -356,8 +385,24 @@ public class RoundRobinOperatorStateRepartitioner
                     --remainder;
                 }
 
-                // Now start collection the partitions for the parallel instance into this list
+                /*
+                    轮训手段：
+                       对于某个状态名来说明轮训手段, 假设老并行度为3, 新并行度为2  (一个偏移量在这里代表一个不可再切割的最小状态粒度)
 
+                       并行度0
+                           偏移量 0-0      ---------
+                           偏移量 0-1               \                              偏移量 0-0  偏移量 2-1
+                       并行度1                       \                  新并行度0   偏移量 1-0  偏移量 2-3
+                           偏移量 1-0                 \             ^              偏移量 1-2
+                           偏移量 1-1                  \            | |
+                           偏移量 1-2                   |----->>    | |
+                       并行度2                         /            | |
+                           偏移量 2-0                 /               ↓            偏移量 0-1  偏移量 2-2
+                           偏移量 2-1                /                  新并行度1   偏移量 1-1
+                           偏移量 2-2               /                              偏移量 2-0
+                           偏移量 2-3      ----------
+                 */
+                // 只要总需求没有被完全满足,就会一直分配
                 while (numberOfPartitionsToAssign > 0) {
                     Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo> handleWithOffsets =
                             current.get(lstIdx);
@@ -437,7 +482,7 @@ public class RoundRobinOperatorStateRepartitioner
             for (Map.Entry<
                             String,
                             List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
-                    e : unionState.entrySet()) { // 所有union类型的 状态个数
+                    e : unionState.entrySet()) { // 所有union类型的 状态名称个数
 
                 for (Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>
                         handleWithMetaInfo : e.getValue()) { // 旧并行度

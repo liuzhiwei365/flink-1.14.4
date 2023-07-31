@@ -105,7 +105,7 @@ public class CompletedCheckpoint implements Serializable, Checkpoint {
     private final CompletedCheckpointStorageLocation storageLocation;
 
     /** The state handle to the externalized meta data. */
-    // 用于 操作（读取和删除） checkpoint的状态文件的  句柄
+    // 用于 操作（读取和删除） checkpoint 元数据  的状态文件的  句柄
     private final StreamStateHandle metadataHandle;
 
     // 带有协议的绝对路径 的 字符串

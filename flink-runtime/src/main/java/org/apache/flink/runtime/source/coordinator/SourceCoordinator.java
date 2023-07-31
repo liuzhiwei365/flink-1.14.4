@@ -308,9 +308,11 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
 
         final ClassLoader userCodeClassLoader =
                 context.getCoordinatorContext().getUserCodeClassloader();
+
         try (TemporaryClassLoaderContext ignored =
                 TemporaryClassLoaderContext.of(userCodeClassLoader)) {
             final EnumChkT enumeratorCheckpoint = deserializeCheckpoint(checkpointData);
+            // 核心,  恢复分片枚举器
             enumerator = source.restoreEnumerator(context, enumeratorCheckpoint);
         }
     }

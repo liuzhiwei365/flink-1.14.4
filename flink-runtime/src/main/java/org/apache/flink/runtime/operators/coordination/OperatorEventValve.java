@@ -165,7 +165,7 @@ final class OperatorEventValve implements EventSender {
             return;
         }
 
-        // 如果阀门关着, 处理缓存事件
+        // 如果阀门关着, 处理之前被阻塞的 缓存事件
         for (BlockedEvent blockedEvent : blockedEvents) {
             callSendAction(blockedEvent.sendAction, blockedEvent.future);
         }
