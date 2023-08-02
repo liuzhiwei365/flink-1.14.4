@@ -41,6 +41,7 @@ public class MappingBasedRepartitioner<T> implements OperatorStateRepartitioner<
         this.newToOldSubtasksMapping = newToOldSubtasksMapping;
     }
 
+    // 抽取 oldIndexes 老并行度编号 列表数组 抽取 其对应的所有的 状态句柄
     private static <T> List<T> extractOldState(
             List<List<T>> previousParallelSubtaskStates, int[] oldIndexes) {
         switch (oldIndexes.length) {
@@ -56,6 +57,7 @@ public class MappingBasedRepartitioner<T> implements OperatorStateRepartitioner<
         }
     }
 
+    // 拿到每个新 并行度编号 应该拿到的 所有状态句柄
     @Override
     public List<List<T>> repartitionState(
             List<List<T>> previousParallelSubtaskStates, int oldParallelism, int newParallelism) {
@@ -64,9 +66,11 @@ public class MappingBasedRepartitioner<T> implements OperatorStateRepartitioner<
 
 
         for (int newIndex = 0; newIndex < newParallelism; newIndex++) {
+            // 拿到指定  并行度编号newIndex,  应该拿到的 所有状态句柄
             repartitioned.add(
                     extractOldState(
                             previousParallelSubtaskStates,
+                            // 新并行度编号 所对应的 老并行度编号 列表数组
                             newToOldSubtasksMapping.getMappedIndexes(newIndex)));
         }
         return repartitioned;

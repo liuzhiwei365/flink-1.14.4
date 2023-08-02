@@ -32,7 +32,7 @@ public interface OperatorStateHandle extends StreamStateHandle {
 
     /** Returns a map of meta data for all contained states by their name. */
 
-    // 每个状态名称 到 状态元数据 的映射
+    // 每个状态名称 到 状态元数据 的映射 , StateMetaInfo 包含偏移量数组, 一个偏移量与一个不可分割的最小基本状态粒度 对应
     Map<String, StateMetaInfo> getStateNameToPartitionOffsets();
 
     //返回  用于读取  算子状态信息的 输入流
@@ -55,6 +55,8 @@ public interface OperatorStateHandle extends StreamStateHandle {
     }
 
     /** Meta information about the operator state handle. */
+
+    // 专门用来描述 算子状态 的 状态元数据的
     class StateMetaInfo implements Serializable {
 
         private static final long serialVersionUID = 3593817615858941166L;

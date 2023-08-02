@@ -36,10 +36,12 @@ public class OperatorStreamStateHandle implements OperatorStateHandle {
     private static final long serialVersionUID = 35876522969227335L;
 
     /** unique state name -> offsets for available partitions in the handle stream */
+    // 状态名称 ->
     private final Map<String, StateMetaInfo> stateNameToPartitionOffsets;
 
     private final StreamStateHandle delegateStateHandle;
 
+    // 一个算子状态的 状态句柄 可以操作多个 状态名称
     public OperatorStreamStateHandle(
             Map<String, StateMetaInfo> stateNameToPartitionOffsets,
             StreamStateHandle delegateStateHandle) {

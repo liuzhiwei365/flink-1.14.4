@@ -104,17 +104,44 @@ public enum SubtaskStateMapper {
      * upper bound by 2*n.
      */
     RANGE {
+
+        // 返回的  int[]  一定是一个 range 范围
         @Override
         public int[] getOldSubtasks(
-                int newSubtaskIndex, int oldNumberOfSubtasks, int newNumberOfSubtasks) {
+                int newSubtaskIndex, // 新的 并行度索引编号   base
+                int oldNumberOfSubtasks, // 老并行度数据
+                int newNumberOfSubtasks) { // 新并行度数目
             // the actual maxParallelism cancels out
             int maxParallelism = KeyGroupRangeAssignment.UPPER_BOUND_MAX_PARALLELISM;
+
+            // 计算新的  并行度索引编号 所对应的 键组范围
             final KeyGroupRange newRange =
                     KeyGroupRangeAssignment.computeKeyGroupRangeForOperatorIndex(
                             maxParallelism, newNumberOfSubtasks, newSubtaskIndex);
+
+            // 根据键组的 开始值 和 结束值 映射  老的分区范围
+            // 并且认为老的 分区范围  与 新的分区编号（ 就是 新的并行度索引编号 newSubtaskIndex ）是对应的
+            /*
+               1 这里其实利用的是 区间映射投影（数学理论支撑） 的技巧,只不过是 离散的版本
+               2 我们 假设 [0 , maxPara) 是最精细的分区模版
+               3 [0,oldPara)  和 [0,newPara) 之间的缩放要以 [0 , maxPara) 作为参照
+
+               画图实例： 假设oldPara = 4  newPara = 2  maxPara = 8
+
+               newPara-0            maxPara-0             oldPara-0
+                                    maxPara-1
+                                    maxPara-2             oldPara-1
+                                    maxPara-3
+               newPara-1            maxPara-4             oldPara-2
+                                    maxPara-5
+                                    maxPara-6             oldPara-3
+                                    maxPara-7
+
+             */
             final int start =
                     KeyGroupRangeAssignment.computeOperatorIndexForKeyGroup(
                             maxParallelism, oldNumberOfSubtasks, newRange.getStartKeyGroup());
+
             final int end =
                     KeyGroupRangeAssignment.computeOperatorIndexForKeyGroup(
                             maxParallelism, oldNumberOfSubtasks, newRange.getEndKeyGroup());
@@ -190,17 +217,48 @@ public enum SubtaskStateMapper {
      * Returns all old subtask indexes that need to be read to restore all buffers for the given new
      * subtask index on rescale.
      */
+    // 得到 新的 并行度编号 对应的 老的并行度编号列表
     public abstract int[] getOldSubtasks(
             int newSubtaskIndex, int oldNumberOfSubtasks, int newNumberOfSubtasks);
 
     /** Returns a mapping new subtask index to all old subtask indexes. */
+
     public RescaleMappings getNewToOldSubtasksMapping(int oldParallelism, int newParallelism) {
+
+        /*
+           1 RescaleMappings.of 只是被已经重分区好的结果, 再做整理,修剪和包装 而已
+           2 核心在  getOldSubtasks 方法
+                   2.1   本类的多个枚举对象 RANGE, ROUND_ROBIN 对 getOldSubtasks 都有重新实现
+
+                   2.2   具体走哪个实现得看 相关的 StreamPartitioner
+
+                         StreamPartitioner的子类都有如下两个方法:
+                             getUpstreamSubtaskStateMapper      定义了 ResultSubpartition 的重分区策略
+                             getDownstreamSubtaskStateMapper    定义了 InputChannel 的重分区策略
+
+                   2.3   StreamingJobGraphGenerator.connect 方法中会调用
+                         设置 DownstreamSubtaskStateMapper   和  UpstreamSubtaskStateMapper 的方法
+                         而 它们最终来自与分区器
+
+                   2.4   分区器以及  input output 重分区策略
+                         分区器                          UpstreamSubtaskStateMapper     DownstreamSubtaskStateMapper
+                         BroadcastPartitioner                ARBITRARY                       UNSUPPORTED（不支持）
+                   *     BinaryHashPartitioner               ARBITRARY                       FULL
+                   *     KeyGroupStreamPartitioner           ARBITRARY                       RANGE
+                         GlobalPartitioner                   ARBITRARY                       FIRST
+
+                         ShufflePartitioner                  ARBITRARY                        ROUND_ROBIN
+                         RebalancePartitioner                ARBITRARY                        ROUND_ROBIN
+
+                         ForwardPartitioner                  UNSUPPORTED（不支持）             UNSUPPORTED（不支持）
+                         RescalePartitioner                  UNSUPPORTED（不支持）             UNSUPPORTED（不支持）
+         */
         return RescaleMappings.of(
                 IntStream.range(0, newParallelism)
                         .mapToObj(
                                 channelIndex ->
-                                        getOldSubtasks(
-                                                channelIndex, oldParallelism, newParallelism)),
+                                        // 核心;   得到 channelIndex 对应的 老的并行度编号列表
+                                        getOldSubtasks(channelIndex, oldParallelism, newParallelism)),
                 oldParallelism);
     }
 

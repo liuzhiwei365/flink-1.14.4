@@ -374,6 +374,7 @@ class TaskStateAssignment {
                         checkSubtaskMapping(oldMapping, mapping, mapper.isAmbiguous()));
     }
 
+    // 针对指定的 input gate
     public SubtasksRescaleMapping getInputMapping(int gateIndex) {
         final SubtaskStateMapper mapper =
                 checkNotNull(
@@ -383,10 +384,12 @@ class TaskStateAssignment {
                                 .get(gateIndex)
                                 .getDownstreamSubtaskStateMapper(),
                         "No channel rescaler found during rescaling of channel state");
+        // 计算每个新的并行度 编号 对应的 老的并行度集合 mapping
         final RescaleMappings mapping =
                 mapper.getNewToOldSubtasksMapping(
                         oldState.get(inputOperatorID).getParallelism(), newParallelism);
 
+        // 将上一步计算的 mapping 包装成 SubtasksRescaleMapping 对象, 交给 inputSubtaskMappings 成员维护
         return inputSubtaskMappings.compute(
                 gateIndex,
                 (idx, oldMapping) ->
@@ -425,6 +428,8 @@ class TaskStateAssignment {
          * If channel data cannot be safely divided into subtasks (several new subtask indexes are
          * associated with the same old subtask index). Mostly used for range partitioners.
          */
+        // 如果 通道的数据不能安全的划分给子任务 (有几个新的子任务与同一个老的子任务有联系), 则 mayHaveAmbiguousSubtasks 标志为true
+        // 通常这种情况 用的都是 range partitioners
         private final boolean mayHaveAmbiguousSubtasks;
 
         private SubtasksRescaleMapping(

@@ -418,7 +418,9 @@ public class StateAssignmentOperation {
         }
     }
 
+    // 重分布 inputChannel
     public void reDistributeInputChannelStates(TaskStateAssignment stateAssignment) {
+        // short cut
         if (!stateAssignment.hasInputState) {
             return;
         }
@@ -432,42 +434,53 @@ public class StateAssignmentOperation {
         final List<IntermediateResult> inputs = executionJobVertex.getInputs();
 
         // check for rescaling: no rescaling = simple reassignment
+
+        //  1 inputOperatorID 其实是算子链中的第一个 第一个OperatorID
+        //  2 InputChannel的状态 和其他状态不同, 它只在 头算子的状态中存在
+        //  3 OperatorState 内部各类状态的句柄
         final OperatorState inputState =
                 stateAssignment.oldState.get(stateAssignment.inputOperatorID);
+
+        //  从 inputState 中 抽取 InputChannel 类型的句柄 ; 外层长度为老并行度
         final List<List<InputChannelStateHandle>> inputOperatorState =
                 splitBySubtasks(inputState, OperatorSubtaskState::getInputChannelState);
+
+        // short cut
         if (inputState.getParallelism() == executionJobVertex.getParallelism()) {
+            // 交给成员变量inputChannelStates 维护
             stateAssignment.inputChannelStates.putAll(
                     toInstanceMap(stateAssignment.inputOperatorID, inputOperatorState));
             return;
         }
-        // if this subtask has a different degree of parallelism, use the partitioner to figure
-        // out to which subtasks the state should be reassigned. In some cases, state is
-        // replicated to multiple subtasks and filtered during recovery.
-        // example: if this task is downscaled from 3 to 2 and it uses a range partitioner over
-        // [0;128)
-        // old assignment: 0 -> [0;43); 1 -> [43;87); 2 -> [87;128)
-        // new assignment: 0 -> [0;64]; 1 -> [64;128)
-        // subtask 0 recovers data from old subtask 0 + 1 and subtask 1 recovers data from old
-        // subtask 0 + 2
+       
+        // 遍历 InputGate 个数, 每个InputGate 下有多个 InputChannel
         for (int gateIndex = 0; gateIndex < inputs.size(); gateIndex++) {
+
+            // 针对指定的 input gate, 根据一定的策略提前规划:  每个新的并行度 编号 对应的 老的并行度集合
             final RescaleMappings mapping =
                     stateAssignment.getInputMapping(gateIndex).getRescaleMappings();
 
             final List<List<InputChannelStateHandle>> gateState =
                     inputs.size() == 1
                             ? inputOperatorState
+                            // 如果size 不为 1 , 则需要抽取只属于本 input gate 的 状态
                             : getPartitionState(
                                     inputOperatorState, InputChannelInfo::getGateIdx, gateIndex);
+
             final MappingBasedRepartitioner<InputChannelStateHandle> repartitioner =
                     new MappingBasedRepartitioner(mapping);
+
+            // OperatorInstanceID 中包含 operatorId 和 subtaskId
+            // 最终 指定算子下指定新的subTask下   所应该分配的所有状态句柄
             final Map<OperatorInstanceID, List<InputChannelStateHandle>> repartitioned =
                     applyRepartitioner(
                             stateAssignment.inputOperatorID,
                             repartitioner,
                             gateState,
-                            inputOperatorState.size(),
-                            stateAssignment.newParallelism);
+                            inputOperatorState.size(),// 老并行度
+                            stateAssignment.newParallelism);//新并行度
+
+            // 交给成员变量inputChannelStates 维护
             addToSubtasks(stateAssignment.inputChannelStates, repartitioned);
         }
     }
@@ -788,7 +801,7 @@ public class StateAssignmentOperation {
         //     把 老的状态结构 chainOpParallelStates  装换成 新的状态结构 states
         // 2 chainOpParallelStates  外层List容量与老的并行度一致
         //    states                外层List容量与新的并行度一致
-        // 3  且 结构都为  List<List<OperatorStateHandle>>
+        // 3  T 为某种状态句柄, List<List<T>>  表示 每个新的并行度编号 所要分配的全部状态句柄
         List<List<T>> states =
                 applyRepartitioner(
                         opStateRepartitioner,   // 封装了状态重分布策略
@@ -799,12 +812,14 @@ public class StateAssignmentOperation {
         return toInstanceMap(operatorID, states);
     }
 
+
     private static <T> Map<OperatorInstanceID, List<T>> toInstanceMap(
             OperatorID operatorID, List<List<T>> states) {
         Map<OperatorInstanceID, List<T>> result = new HashMap<>(states.size());
 
         for (int subtaskIndex = 0; subtaskIndex < states.size(); subtaskIndex++) {
             checkNotNull(states.get(subtaskIndex) != null, "states.get(subtaskIndex) is null");
+            // OperatorInstanceID 与 operatorID 相比, 内部多了一个 subtaskIndex
             result.put(OperatorInstanceID.of(subtaskIndex, operatorID), states.get(subtaskIndex));
         }
 
@@ -837,7 +852,11 @@ public class StateAssignmentOperation {
         // 1  OperatorStateRepartitioner 有两个实现：
         //    MappingBasedRepartitioner    和    RoundRobinOperatorStateRepartitioner
 
-        // 核心
+        //    inputChannel 和 ResultSubpartition 状态的重分区用的是 MappingBasedRepartitioner
+        //    算子状态重分区用的是  RoundRobinOperatorStateRepartitioner
+
+
+        //  拿到每个新 并行度编号 应该拿到的 所有状态句柄
         return opStateRepartitioner.repartitionState(
                 chainOpParallelStates, oldParallelism, newParallelism);
     }

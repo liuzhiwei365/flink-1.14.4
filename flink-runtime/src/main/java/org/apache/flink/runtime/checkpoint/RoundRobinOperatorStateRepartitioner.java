@@ -135,7 +135,7 @@ public class RoundRobinOperatorStateRepartitioner
 
         //   List<List<OperatorStateHandle>> result = new ArrayList<>(newParallelism);
         //   List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList;
-        //   mergeMapList 是比 result 更加精确的结构
+        //   mergeMapList 的信息是有冗余的,稍加整理
 
         for (int i = 0; i < mergeMapList.size(); ++i) {
             result.add(i, new ArrayList<>(mergeMapList.get(i).values()));
@@ -306,6 +306,7 @@ public class RoundRobinOperatorStateRepartitioner
             GroupByStateNameResults nameToStateByMode, int newParallelism) {
 
         // 用来存储方法返回结果, list长度为新的并行度
+        // 下面的方法都是为了填充本 结构
         List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList = new ArrayList<>(newParallelism);
 
         // 初始化结构对象,放入一些空的 map
@@ -340,9 +341,9 @@ public class RoundRobinOperatorStateRepartitioner
             Map<String, List<Tuple2<StreamStateHandle, OperatorStateHandle.StateMetaInfo>>>
                     nameToDistributeState,
             int newParallelism,
-            List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList) {
+            List<Map<StreamStateHandle, OperatorStateHandle>> mergeMapList) { //  List的长度为新的并行度
 
-        //最开始的 sub task 编号
+        //  最开始的 sub task 编号
         int startParallelOp = 0;
 
         //  遍历 SPLIT_DISTRIBUTE 模式下  状态名 数目 次

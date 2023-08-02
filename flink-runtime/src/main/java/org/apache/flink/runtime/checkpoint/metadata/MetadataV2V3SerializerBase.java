@@ -491,34 +491,41 @@ public abstract class MetadataV2V3SerializerBase {
         }
     }
 
+    // 序列化 算子状态句柄对应的  多个算子状态  (不是keyed 状态)
     void serializeOperatorStateHandle(OperatorStateHandle stateHandle, DataOutputStream dos)
             throws IOException {
         if (stateHandle != null) {
+            // 写状态句柄标识
             dos.writeByte(PARTITIONABLE_OPERATOR_STATE_HANDLE);
             Map<String, OperatorStateHandle.StateMetaInfo> partitionOffsetsMap =
                     stateHandle.getStateNameToPartitionOffsets();
+            // 写状态名称的 数目
             dos.writeInt(partitionOffsetsMap.size());
             for (Map.Entry<String, OperatorStateHandle.StateMetaInfo> entry :
                     partitionOffsetsMap.entrySet()) {
+                // 写状态名称
                 dos.writeUTF(entry.getKey());
 
                 OperatorStateHandle.StateMetaInfo stateMetaInfo = entry.getValue();
-
+                // 写算子状态的 分布模式
                 int mode = stateMetaInfo.getDistributionMode().ordinal();
                 dos.writeByte(mode);
 
+                // 写偏移量信息
                 long[] offsets = stateMetaInfo.getOffsets();
                 dos.writeInt(offsets.length);
                 for (long offset : offsets) {
                     dos.writeLong(offset);
                 }
             }
+            // 写实际的状态数据
             serializeStreamStateHandle(stateHandle.getDelegateStateHandle(), dos);
         } else {
             dos.writeByte(NULL_HANDLE);
         }
     }
 
+    // 与 serializeOperatorStateHandle 的逻辑是镜像的
     OperatorStateHandle deserializeOperatorStateHandle(
             DataInputStream dis, @Nullable DeserializationContext context) throws IOException {
 

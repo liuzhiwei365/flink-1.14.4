@@ -46,14 +46,17 @@ public class RescaleMappings implements Serializable {
 
     private static final long serialVersionUID = -8719670050630674631L;
 
+    // 新并行度
     private final int numberOfSources;
 
     /**
      * The mapping from source to multiple targets. In most cases, the targets arrays are of
      * different sizes.
      */
+    // 外层 长度为 新的并行度;
     private final int[][] mappings;
 
+    // 老并行度
     private final int numberOfTargets;
 
     RescaleMappings(int numberOfSources, int[][] mappings, int numberOfTargets) {
@@ -131,16 +134,20 @@ public class RescaleMappings implements Serializable {
         return ambiguousTargets;
     }
 
+    // mappedTargets 的长度为新的并行度 ; numberOfTargets 为老并行度
     public static RescaleMappings of(Stream<int[]> mappedTargets, int numberOfTargets) {
+        // 构建mappings ,外层 长度为 新的并行度
         final int[][] mappings =
                 mappedTargets
                         .map(targets -> targets.length == 0 ? EMPTY_TARGETS : targets)
                         .toArray(int[][]::new);
 
+        // short cut
         if (isIdentity(mappings, numberOfTargets)) {
             return new IdentityRescaleMappings(mappings.length, numberOfTargets);
         }
 
+        // 拿到mappings 最后一个不为空 的外层元素
         int lastNonEmpty = mappings.length - 1;
         for (; lastNonEmpty >= 0; lastNonEmpty--) {
             if (mappings[lastNonEmpty] != EMPTY_TARGETS) {
@@ -148,6 +155,7 @@ public class RescaleMappings implements Serializable {
             }
         }
 
+        // 对于mappings数组而言, 如果存在空数组, 则可以修剪一下,来节省空间
         int length = lastNonEmpty + 1;
         return new RescaleMappings(
                 mappings.length,
@@ -155,20 +163,34 @@ public class RescaleMappings implements Serializable {
                 numberOfTargets);
     }
 
+    // mappings 的外层长度为 新并行度 ; numberOfTargets 为老并行度
     private static boolean isIdentity(int[][] mappings, int numberOfTargets) {
+        // 如果 新并行度 小于 老并行度
         if (mappings.length < numberOfTargets) {
             return false;
         }
+        // 代码走到这里,一定是新并行度大于 等于 老并行度
+        // 遍历 [老并行度,新并行度) ; 如果新老之间 不为空
         for (int source = numberOfTargets; source < mappings.length; source++) {
             if (mappings[source] != EMPTY_TARGETS) {
                 return false;
             }
         }
+        // 代码走到这里, 新与老的  公共并行度区间 是对齐的
+        // 现在遍历 公共并行度区间, 并且对比新与老
         for (int source = 0; source < numberOfTargets; source++) {
             if (mappings[source].length != 1 || source != mappings[source][0]) {
                 return false;
             }
         }
+        /* 代码能走到这里, mapping的结构一定是这样:
+            [[0],
+             [1],
+             [2],            mappings[source].length == 1 且  source == mappings[source][0]
+             ...
+             [numberOfTargets-1]]
+         */
+        // 这种 布尔判定相等的逻辑, 一般都会有很多 short cut
         return true;
     }
 
@@ -196,6 +218,7 @@ public class RescaleMappings implements Serializable {
         return mappings;
     }
 
+    //
     private static final class IdentityRescaleMappings extends RescaleMappings {
         public static final int[][] IMPLICIT_MAPPING = new int[0][0];
         private static final long serialVersionUID = -4406023794753660925L;
