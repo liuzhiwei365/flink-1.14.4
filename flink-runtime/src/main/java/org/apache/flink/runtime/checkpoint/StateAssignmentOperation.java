@@ -196,9 +196,14 @@ public class StateAssignmentOperation {
                 RoundRobinOperatorStateRepartitioner.INSTANCE,
                 taskStateAssignment.subRawOperatorState);
 
+        /*
+           1 reDistributeResultSubpartitionStates 与 reDistributeInputChannelStates 的核心逻辑十分相似
+           2 除了最终使用的  SubtaskStateMapper 的时候, 使用的策略不同
+           3 重分布 ResultSubpartition 一定使用 SubtaskStateMapper.ARBITRARY 策略
+           4 重分布 InputChannel 一定使用 FIRST FULL RANGE ROUND_ROBIN 四种的其中一种
+        */
         // 重新分布InputChannel 状态
         reDistributeInputChannelStates(taskStateAssignment);
-
         // 重新分布ResultSubpartition 状态
         reDistributeResultSubpartitionStates(taskStateAssignment);
 
@@ -370,6 +375,10 @@ public class StateAssignmentOperation {
                                         newParallelism)));                  // 新并行度
     }
 
+    // 1 reDistributeResultSubpartitionStates 与 reDistributeInputChannelStates 的核心逻辑十分相似
+    // 2 除了最终使用的  SubtaskStateMapper 的时候, 使用的策略不同
+    // 3 重分布 ResultSubpartition 一定使用 SubtaskStateMapper.ARBITRARY 策略
+    // 4 重分布 InputChannel 一定使用 FIRST FULL RANGE ROUND_ROBIN 四种的其中一种
     public <I, T extends AbstractChannelStateHandle<I>> void reDistributeResultSubpartitionStates(
             TaskStateAssignment assignment) {
         if (!assignment.hasOutputState) {
@@ -419,6 +428,7 @@ public class StateAssignmentOperation {
     }
 
     // 重分布 inputChannel
+    // 参见 SubtaskStateMapper.getNewToOldSubtasksMapping 方法 是重分布inputChannel 的算法核心逻辑
     public void reDistributeInputChannelStates(TaskStateAssignment stateAssignment) {
         // short cut
         if (!stateAssignment.hasInputState) {
@@ -431,7 +441,7 @@ public class StateAssignmentOperation {
                 stateAssignment.inputOperatorID);
 
         final ExecutionJobVertex executionJobVertex = stateAssignment.executionJobVertex;
-        final List<IntermediateResult> inputs = executionJobVertex.getInputs();
+        final List<IntermediateResult> inputs = executionJobVertex.getInputs();// 与InputGate 数量对应
 
         // check for rescaling: no rescaling = simple reassignment
 
@@ -445,18 +455,19 @@ public class StateAssignmentOperation {
         final List<List<InputChannelStateHandle>> inputOperatorState =
                 splitBySubtasks(inputState, OperatorSubtaskState::getInputChannelState);
 
-        // short cut
+        // short cut for  " 如果老的并行度 等于新的并行度 "
         if (inputState.getParallelism() == executionJobVertex.getParallelism()) {
             // 交给成员变量inputChannelStates 维护
             stateAssignment.inputChannelStates.putAll(
                     toInstanceMap(stateAssignment.inputOperatorID, inputOperatorState));
             return;
         }
-       
+
         // 遍历 InputGate 个数, 每个InputGate 下有多个 InputChannel
         for (int gateIndex = 0; gateIndex < inputs.size(); gateIndex++) {
 
             // 针对指定的 input gate, 根据一定的策略提前规划:  每个新的并行度 编号 对应的 老的并行度集合
+            //  **************重新分布 InputChannel 的 最核心逻辑****************
             final RescaleMappings mapping =
                     stateAssignment.getInputMapping(gateIndex).getRescaleMappings();
 

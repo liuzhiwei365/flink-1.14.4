@@ -37,6 +37,21 @@ import java.util.stream.IntStream;
  * such as {@link #RANGE}, create a mixture of unique and non-unique mappings, where downstream
  * tasks need to filter on some mapped subtasks.
  */
+// ResultSubpartition 的状态重分布会用到 ARBITRARY 策略
+// InputChannel 会用到 FIRST 、FULL、RANGE 、ROUND_ROBIN 策略
+//
+// 1  为什么  ResultSubpartition 重分布会用 任意的策略呢?
+//     因为ResultSubpartition 无论怎么样分布,对分布式计算而已都不会造成逻辑错误,数据发到下游的时候
+//     会根据下游的分区器分到正确的下游的分区（下游的InputChannel）
+//     但是为了效率, 尽可能重分布的时候均匀一点,要好一些
+//
+// 2  InputChannel 的重分布策略针对不同的 分区器 有不同的实现, 对应关系如下：
+//     BinaryHashPartitioner                                    FULL
+//     GlobalPartitioner                                        FIRST
+//     KeyGroupStreamPartitioner                                RANGE
+//     ShufflePartitioner                                       ROUND_ROBIN
+//     RebalancePartitioner                                     ROUND_ROBIN
+//
 @Internal
 public enum SubtaskStateMapper {
 
@@ -44,6 +59,7 @@ public enum SubtaskStateMapper {
      * Extra state is redistributed to other subtasks without any specific guarantee (only that up-
      * and downstream are matched).
      */
+    // 当前 ARBITRARY的实现 直接调用 ROUND_ROBIN实现 ,但官方说以后可能会更改
     ARBITRARY {
         @Override
         public int[] getOldSubtasks(

@@ -368,6 +368,7 @@ class TaskStateAssignment {
         final RescaleMappings mapping =
                 mapper.getNewToOldSubtasksMapping(
                         oldState.get(outputOperatorID).getParallelism(), newParallelism);
+
         return outputSubtaskMappings.compute(
                 partitionIndex,
                 (idx, oldMapping) ->
@@ -384,7 +385,7 @@ class TaskStateAssignment {
                                 .get(gateIndex)
                                 .getDownstreamSubtaskStateMapper(),
                         "No channel rescaler found during rescaling of channel state");
-        // 计算每个新的并行度 编号 对应的 老的并行度集合 mapping
+        // 核心, 计算每个新的并行度 编号 对应的 老的并行度集合 mapping
         final RescaleMappings mapping =
                 mapper.getNewToOldSubtasksMapping(
                         oldState.get(inputOperatorID).getParallelism(), newParallelism);
