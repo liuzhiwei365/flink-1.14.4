@@ -129,11 +129,12 @@ public class KeyGroupRangeOffsets implements Iterable<Tuple2<Integer, Long>>, Se
      */
     public KeyGroupRangeOffsets getIntersection(KeyGroupRange keyGroupRange) {
         Preconditions.checkNotNull(keyGroupRange);
-        // 老的keyGroupRange 与 新的keyGroupRange 取交集 (他们的交集一定也是一个连续的 Range空间)
+        // 老的keyGroupRange（this.keyGroupRange）与 新的keyGroupRange 取交集 (他们的交集一定也是一个连续的 Range空间)
         KeyGroupRange intersection = this.keyGroupRange.getIntersection(keyGroupRange);
 
         long[] subOffsets = new long[intersection.getNumberOfKeyGroups()];
         if (subOffsets.length > 0) {
+            //把交集的部分 偏移量信息 拷贝进新的 KeyGroupRangeOffsets
             System.arraycopy(
                     offsets,
                     computeKeyGroupIndex(intersection.getStartKeyGroup()),

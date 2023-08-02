@@ -284,13 +284,17 @@ public class StateAssignmentOperation {
         stateAssignment.oldState.forEach(
                 // 针对单个算子
                 (operatorID, operatorState) -> {
-                    for (int subTaskIndex = 0;
-                            subTaskIndex < stateAssignment.newParallelism;
-                            subTaskIndex++) {
+
+                    // 遍历新的并行度, 让老的状态资源去满足
+
+                    for (int subTaskIndex = 0; subTaskIndex < stateAssignment.newParallelism; subTaskIndex++) {
                         OperatorInstanceID instanceID =
                                 OperatorInstanceID.of(subTaskIndex, operatorID);
 
-                        // 前面的List 存储的是subManagedKeyedState的结果,后面的List 存储的是subRawKeyedState的结果
+                        // 1     前面的List 存储的是subManagedKeyedState的结果
+                        //       后面的List 存储的是subRawKeyedState的结果
+
+                        // 2    计算指定 新的subTask 在新的规划下, 所应该分配的所有 管理状态和 原始状态的 状态句柄集合
                         Tuple2<List<KeyedStateHandle>, List<KeyedStateHandle>> subKeyedStates =
                                 reAssignSubKeyedStates(
                                         operatorState,
@@ -302,6 +306,7 @@ public class StateAssignmentOperation {
                         stateAssignment.subManagedKeyedState.put(instanceID, subKeyedStates.f0);
                         stateAssignment.subRawKeyedState.put(instanceID, subKeyedStates.f1);
                     }
+
                 });
     }
 
@@ -309,7 +314,7 @@ public class StateAssignmentOperation {
     private Tuple2<List<KeyedStateHandle>, List<KeyedStateHandle>> reAssignSubKeyedStates(
             OperatorState operatorState, // 一个OperatorState对象
             List<KeyGroupRange> keyGroupPartitions, // 新的规划
-            int subTaskIndex, // 新并行度中的一个编号
+            int subTaskIndex,            // 新并行度中的一个编号
             int newParallelism,
             int oldParallelism) {
 
@@ -318,22 +323,17 @@ public class StateAssignmentOperation {
 
         if (newParallelism == oldParallelism) { // 当并行度没有改变时,直接返回,不需要重新分配状态
             if (operatorState.getState(subTaskIndex) != null) {
-                subManagedKeyedState =
-                        operatorState.getState(subTaskIndex).getManagedKeyedState().asList();
+                subManagedKeyedState = operatorState.getState(subTaskIndex).getManagedKeyedState().asList();
                 subRawKeyedState = operatorState.getState(subTaskIndex).getRawKeyedState().asList();
             } else {
                 subManagedKeyedState = emptyList();
                 subRawKeyedState = emptyList();
             }
         } else {
-            // 第一个入参是  一个OperatorState对象
-            // 第二个入参是  新的并行度的其中一个编号所对应的 KeyGroupRange对象
+            // 针对管理状态
             subManagedKeyedState =
-                    getManagedKeyedStateHandles(
-                            operatorState, keyGroupPartitions.get(subTaskIndex));
-
-            // 第两个入参是  一个OperatorState对象
-            // 第二个入参是  新的并行度的其中一个编号所对应的 KeyGroupRange对象
+                    getManagedKeyedStateHandles(operatorState, keyGroupPartitions.get(subTaskIndex));
+            // 针对原始状态
             subRawKeyedState =
                     getRawKeyedStateHandles(operatorState, keyGroupPartitions.get(subTaskIndex));
         }
@@ -609,9 +609,10 @@ public class StateAssignmentOperation {
 
         final int parallelism = operatorState.getParallelism();
 
+        // 保存新的规划下 , 本 subtaskKeyGroupRange 所应该分配的 所有状态句柄 （由老的状态句柄分割和重组得到）
         List<KeyedStateHandle> subtaskKeyedStateHandles = null;
 
-        for (int i = 0; i < parallelism; i++) { // 旧并行度
+        for (int i = 0; i < parallelism; i++) { // 老的并行度
             if (operatorState.getState(i) != null) {
 
                 Collection<KeyedStateHandle> keyedStateHandles =
@@ -623,7 +624,7 @@ public class StateAssignmentOperation {
                 }
 
                 // 拿着新的Range规划中的一个KeyGroupRange, 与老的所有分区的keyedStateHandles 依次去做交集
-                // 最终的结构全果放入subtaskKeyedStateHandles 中
+                // 最终的结果全果放入subtaskKeyedStateHandles 中
                 extractIntersectingState(
                         keyedStateHandles, subtaskKeyGroupRange, subtaskKeyedStateHandles);
             }
@@ -672,19 +673,22 @@ public class StateAssignmentOperation {
      */
     @VisibleForTesting
     public static void extractIntersectingState(
+            // 一个subTask 下会存储多个状态句柄(因为可能由多个状态名称)
             Collection<? extends KeyedStateHandle> originalSubtaskStateHandles,
             KeyGroupRange rangeToExtract,
             List<KeyedStateHandle> extractedStateCollector) {
 
-        // 这里的迭代的是  老的任一分区中 的所有的  KeyedState句柄
+        // 这里的迭代的是  老的 指定分区中 的所有的  KeyedState句柄
         for (KeyedStateHandle keyedStateHandle : originalSubtaskStateHandles) {
 
             if (keyedStateHandle != null) {
 
+                // 拿着 新的 rangeToExtract标准, 让老的状态句柄集合来满足,如果满足,则将满足的部分剥离出来
+                // 然后,重塑成新的  KeyedStateHandle 对象,也就是  intersectedKeyedStateHandle
                 KeyedStateHandle intersectedKeyedStateHandle =
                         keyedStateHandle.getIntersection(rangeToExtract);
 
-                // 如果有符合新的Range规则的 旧的KeyedState句柄,则放入到相应的结果中
+                // 收集 intersectedKeyedStateHandle
                 if (intersectedKeyedStateHandle != null) {
                     extractedStateCollector.add(intersectedKeyedStateHandle);
                 }

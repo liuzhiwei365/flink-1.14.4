@@ -77,6 +77,9 @@ public class KeyGroupsStateHandle implements StreamStateHandle, KeyedStateHandle
      * @return key-group state over a range that is the intersection between this handle's key-group
      *     range and the provided key-group range.
      */
+
+    // 获取 成员 groupRangeOffsets 与 入参 keyGroupRange 交集的 键组
+    // 以及键组的偏移量信息、 负责底层流读写的句柄
     @Override
     public KeyGroupsStateHandle getIntersection(KeyGroupRange keyGroupRange) {
         KeyGroupRangeOffsets offsets = groupRangeOffsets.getIntersection(keyGroupRange);
