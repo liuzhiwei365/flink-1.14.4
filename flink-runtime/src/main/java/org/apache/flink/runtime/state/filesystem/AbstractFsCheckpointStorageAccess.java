@@ -239,7 +239,7 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
         checkNotNull(checkpointPointer, "checkpointPointer");
         checkArgument(!checkpointPointer.isEmpty(), "empty checkpoint pointer");
 
-        // check if the pointer is in fact a valid file path
+        // step1  检查 checkpointPointer 是否 是 有效的 "文件系统路径"  （可以是分布式文件系统,也可以是本地）
         final Path path;
         try {
             path = new Path(checkpointPointer);
@@ -251,7 +251,7 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
                             + "Either the pointer path is invalid, or the checkpoint was created by a different state backend.");
         }
 
-        // check if the file system can be accessed
+        // step2 检查 path 是否能 访问  "文件系统的路径"  （可以是分布式文件系统,也可以是本地）
         final FileSystem fs;
         try {
             fs = path.getFileSystem();
@@ -263,6 +263,7 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
                     e);
         }
 
+        // step3 检查 path 的 文件状态
         final FileStatus status;
         try {
             status = fs.getFileStatus(path);
@@ -276,7 +277,7 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
                             + "'.");
         }
 
-        // if we are here, the file / directory exists
+        // step4  进一步解析  checkpoint 元数据的目录 和 实际状态数据的目录
         final Path checkpointDir;
         final FileStatus metadataFileStatus;
 
@@ -296,12 +297,11 @@ public abstract class AbstractFsCheckpointStorageAccess implements CheckpointSto
                                 + "directly from the metadata file instead of the directory.");
             }
         } else {
-            // this points to a file and we either do no name validation, or
-            // the name is actually correct, so we can return the path
             metadataFileStatus = status;
             checkpointDir = status.getPath().getParent();
         }
 
+        // step5 整合信息, 返回FsCompletedCheckpointStorageLocation 对象
         final FileStateHandle metaDataFileHandle =
                 new FileStateHandle(metadataFileStatus.getPath(), metadataFileStatus.getLen());
 

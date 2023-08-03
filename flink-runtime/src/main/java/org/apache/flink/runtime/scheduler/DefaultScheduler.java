@@ -223,7 +223,10 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 
                           2  JobMaster.JobManagerJobStatusListener 内部类
         */
+        // step1  开始周期性的 checkpoint 调度   （CheckpointCoordinator 的功能）
         transitionToRunning();
+
+        // step2  以  region 为单位, 开始调度启动 tasks
         schedulingStrategy.startScheduling();
     }
 
@@ -257,6 +260,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         }
     }
 
+    // 处理某个 task失败 , 重启的 ExecutionVertexID 只有一个
     private void handleTaskFailure(
             final ExecutionVertexID executionVertexId, @Nullable final Throwable error) {
         final long timestamp = System.currentTimeMillis();
@@ -280,6 +284,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         jobVertex.getOperatorCoordinators().forEach(c -> c.subtaskFailed(subtaskIndex, error));
     }
 
+    // 处理 全局 失败, 重启计算拓扑中的所有节点
     @Override
     public void handleGlobalFailure(final Throwable error) {
         final long timestamp = System.currentTimeMillis();
@@ -300,6 +305,8 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
     }
 
     // 重启任务（延迟）
+    //    task失败 和 全局失败,  都会用这个方法来重启
+    //    前者会重启一个节点,  后者重启所有节点
     private void restartTasksWithDelay(final FailureHandlingResult failureHandlingResult) {
         // 得到要重启的顶点
         final Set<ExecutionVertexID> verticesToRestart =
@@ -310,6 +317,8 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                         executionVertexVersioner
                                 .recordVertexModifications(verticesToRestart)
                                 .values());
+
+        // 是否是全局失败, 全局失败,后续得全局恢复; task 失败，后续得 单个task恢复
         final boolean globalRecovery = failureHandlingResult.isGlobalFailure();
 
         addVerticesToRestartPending(verticesToRestart);
@@ -320,6 +329,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                 FailureHandlingResultSnapshot.create(
                         failureHandlingResult,
                         id -> this.getExecutionVertex(id).getCurrentExecutionAttempt());
+
         delayExecutor.schedule(
                 () ->
                         FutureUtils.assertNoException(
@@ -350,7 +360,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
     private void restartTasks(
             final Set<ExecutionVertexVersion> executionVertexVersions,
             final boolean isGlobalRecovery) {
-        // 获取所有需要重启的且没有发生版本修改的计算节点
+        // 获取所有需要重启的 且 没有发生版本修改的计算节点
         final Set<ExecutionVertexID> verticesToRestart =
                 executionVertexVersioner.getUnmodifiedExecutionVertices(executionVertexVersions);
 
@@ -359,13 +369,13 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         resetForNewExecutions(verticesToRestart);
 
         try {
-            //核心, 重启所有的任务的时候得 恢复状态
+            //核心, 重启所有的任务的时候得 先恢复状态 （状态句柄）
             restoreState(verticesToRestart, isGlobalRecovery);
         } catch (Throwable t) {
             handleGlobalFailure(t);
             return;
         }
-
+        // 重启计算节点
         schedulingStrategy.restartTasks(verticesToRestart);
     }
 

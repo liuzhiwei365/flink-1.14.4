@@ -1457,21 +1457,6 @@ public class CheckpointCoordinator {
      * Restores the latest checkpointed state to a set of subtasks. This method represents a "local"
      * or "regional" failover and does restore states to coordinators. Note that a regional failover
      * might still include all tasks.
-     *
-     * @param tasks Set of job vertices to restore. State for these vertices is restored via {@link
-     *     Execution#setInitialState(JobManagerTaskRestore)}.
-     * @return An {@code OptionalLong} with the checkpoint ID, if state was restored, an empty
-     *     {@code OptionalLong} otherwise.
-     * @throws IllegalStateException If the CheckpointCoordinator is shut down.
-     * @throws IllegalStateException If no completed checkpoint is available and the <code>
-     *     failIfNoCheckpoint</code> flag has been set.
-     * @throws IllegalStateException If the checkpoint contains state that cannot be mapped to any
-     *     job vertex in <code>tasks</code> and the <code>allowNonRestoredState</code> flag has not
-     *     been set.
-     * @throws IllegalStateException If the max parallelism changed for an operator that restores
-     *     state from this checkpoint.
-     * @throws IllegalStateException If the parallelism changed for an operator that restores
-     *     <i>non-partitioned</i> state from this checkpoint.
      */
     // 本地或者 局部恢复
     public OptionalLong restoreLatestCheckpointedStateToSubtasks(
@@ -1481,7 +1466,7 @@ public class CheckpointCoordinator {
         //-该集合通常不包括所有作业顶点（仅包括作为一部分的作业顶点重新启动区域的）,这意味着在设计上将存在不匹配的状态
         return restoreLatestCheckpointedStateInternal(
                 tasks,
-                OperatorCoordinatorRestoreBehavior.SKIP, // local/regional recovery does not reset coordinators
+                OperatorCoordinatorRestoreBehavior.SKIP, //不恢复算子协调者
                 false,                                   // recovery might come before first successful checkpoint
                 true,
                 false); // see explanation above
@@ -1490,23 +1475,7 @@ public class CheckpointCoordinator {
     /**
      * Restores the latest checkpointed state to all tasks and all coordinators. This method
      * represents a "global restore"-style operation where all stateful tasks and coordinators from
-     * the given set of Job Vertices are restored. are restored to their latest checkpointed state.
-     *
-     * @param tasks Set of job vertices to restore. State for these vertices is restored via {@link
-     *     Execution#setInitialState(JobManagerTaskRestore)}.
-     * @param allowNonRestoredState Allow checkpoint state that cannot be mapped to any job vertex
-     *     in tasks.
-     * @return <code>true</code> if state was restored, <code>false</code> otherwise.
-     * @throws IllegalStateException If the CheckpointCoordinator is shut down.
-     * @throws IllegalStateException If no completed checkpoint is available and the <code>
-     *     failIfNoCheckpoint</code> flag has been set.
-     * @throws IllegalStateException If the checkpoint contains state that cannot be mapped to any
-     *     job vertex in <code>tasks</code> and the <code>allowNonRestoredState</code> flag has not
-     *     been set.
-     * @throws IllegalStateException If the max parallelism changed for an operator that restores
-     *     state from this checkpoint.
-     * @throws IllegalStateException If the parallelism changed for an operator that restores
-     *     <i>non-partitioned</i> state from this checkpoint.
+     * the given set of Job Vertices are restored. are restored to their latest checkpointed state
      */
     // 全局恢复
     public boolean restoreLatestCheckpointedStateToAll(
@@ -1553,7 +1522,10 @@ public class CheckpointCoordinator {
      * <p>This method returns the restored checkpoint ID (as an optional) or an empty optional, if
      * no checkpoint was restored.
      */
-    // 恢复最新的快照状态
+    // 1 恢复最新的快照状态
+    //    恢复状态（包括 6种）（状态句柄）、恢复 master hooks 状态、 恢复算子协调者状态
+    // 2  restoreLatestCheckpointedStateToAll （全局恢复）和 restoreLatestCheckpointedStateToSubtasks（局部恢复）
+    //    都会调用本方法
     private OptionalLong restoreLatestCheckpointedStateInternal(
             final Set<ExecutionJobVertex> tasks,
             final OperatorCoordinatorRestoreBehavior operatorCoordinatorRestoreBehavior,
@@ -1601,26 +1573,29 @@ public class CheckpointCoordinator {
 
             LOG.info("Restoring job {} from {}.", job, latest);
 
-            // 从最近的一次 CompletedCheckpoint中提取每个算子所对应的全部状态
-            //    （这里的状态还是句柄的概念）
-            //    （算子所对应的全部状态 和 算子状态不是一个概念）
+            // step3-1   从最近的一次 CompletedCheckpoint中提取每个算子所对应的全部状态
+            //          （这里的状态还是句柄的概念） （算子所对应的全部状态 和 算子状态不是一个概念）
             final Map<OperatorID, OperatorState> operatorStates = extractOperatorStates(latest);
 
-            // 校验
+            // step3-2   校验
             if (checkForPartiallyFinishedOperators) {
                 VertexFinishedStateChecker vertexFinishedStateChecker =
                         new VertexFinishedStateChecker(tasks, operatorStates);
                 vertexFinishedStateChecker.validateOperatorsFinishedState();
             }
 
-            //  构造状态分配的  操作对象
+            // step3-3   构造状态分配的  操作对象
             StateAssignmentOperation stateAssignmentOperation =
                     new StateAssignmentOperation(latest.getCheckpointID(), tasks, operatorStates, allowNonRestoredState);
 
-            // 重点,   用状态分配操作对象 来进行状态重新分配
+            // *  step3-4   核心 , 用状态分配操作对象 来进行状态重新分配
+            //              1  这里的状态包括6种,如下:
+            //                  管理算子状态、 原始算子状态、管理keyed状态、原始keyed状态、 InputChannel状态 和 ResultSubpartition状态
+            //              2  这里的状态 其实 指的 都是状态句柄:
+            //                  因为 CheckpointCoordinator 的所有逻辑都运行在 JobMaster,不涉及实际的用户的 计算逻辑
             stateAssignmentOperation.assignStates();
 
-            // master hooks  恢复
+            // step3-5   master hooks  恢复
             MasterHooks.restoreMasterHooks(
                     masterHooks,
                     latest.getMasterHookStates(),
@@ -1628,13 +1603,13 @@ public class CheckpointCoordinator {
                     allowNonRestoredState,
                     LOG);
 
+            // * step3-5   重点, 重置恢复 算子协调者的状态
+            //             例如对于 SourceCoordinator , 会重置恢复 分片枚举器
             if (operatorCoordinatorRestoreBehavior != OperatorCoordinatorRestoreBehavior.SKIP) {
-                //重点, 重置算子协调者的状态
-                // 例如对于 SourceCoordinator , 会重置分片枚举器
                 restoreStateToCoordinators(latest.getCheckpointID(), operatorStates);
             }
 
-            // 跟新 metrics 监控统计量
+            // step3-5    更新 metrics 监控统计量, 没实际意义
             if (statsTracker != null) {
                 long restoreTimestamp = System.currentTimeMillis();
                 RestoredCheckpointStats restored =
@@ -1684,6 +1659,8 @@ public class CheckpointCoordinator {
      * @param userClassLoader The class loader to resolve serialized classes in legacy savepoint
      *     versions.
      */
+
+    // 用户指定savepoint 重启,会走到这里
     public boolean restoreSavepoint(
             String savepointPointer,
             boolean allowNonRestored,
@@ -1699,25 +1676,26 @@ public class CheckpointCoordinator {
                 savepointPointer,
                 (allowNonRestored ? "allowing non restored state" : ""));
 
+        //  step1  解析 checkpoint 存储地址信息
+        //           具体解析 参见 AbstractFsCheckpointStorageAccess.resolveCheckpointPointer 方法
         final CompletedCheckpointStorageLocation checkpointLocation =
                 checkpointStorageView.resolveCheckpoint(savepointPointer);
 
-        // Load the savepoint as a checkpoint into the system
+        // step2   通过输入流加载回 savepoint 的 元数据信息
         CompletedCheckpoint savepoint =
-                Checkpoints.loadAndValidateCheckpoint(
-                        job, tasks, checkpointLocation, userClassLoader, allowNonRestored);
+                Checkpoints.loadAndValidateCheckpoint(job, tasks, checkpointLocation, userClassLoader, allowNonRestored);
 
+        // step3   更新维护各数据结构
         completedCheckpointStore.addCheckpoint(
                 savepoint, checkpointsCleaner, this::scheduleTriggerRequest);
 
-        // Reset the checkpoint ID counter
         long nextCheckpointId = savepoint.getCheckpointID() + 1;
         checkpointIdCounter.setCount(nextCheckpointId);
 
         LOG.info("Reset the checkpoint ID of job {} to {}.", job, nextCheckpointId);
 
+        // step4   恢复 并且 重新布局状态分布 （重点）
         final OptionalLong restoredCheckpointId =
-                // 重新恢复状态
                 restoreLatestCheckpointedStateInternal(
                         new HashSet<>(tasks.values()),
                         OperatorCoordinatorRestoreBehavior.RESTORE_IF_CHECKPOINT_PRESENT,

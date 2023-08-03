@@ -56,14 +56,14 @@ import java.util.Map;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * A utility class with the methods to write/load/dispose the checkpoint and savepoint metadata.
- *
- * <p>Stored checkpoint metadata files have the following format:
- *
- * <pre>[MagicNumber (int) | Format Version (int) | Checkpoint Metadata (variable)]</pre>
- *
- * <p>The actual savepoint serialization is version-specific via the {@link MetadataSerializer}.
+   工具类:   具有写入, 加载, 处置 检查点 和 保存点  元数据的方法
+
+   checkpoint 元数据结构如下：
+        [MagicNumber (int) | Format Version (int) | Checkpoint Metadata (variable)]
+
+   真正的 checkpoint 序列化和反序列化 由 {@link MetadataSerializer} 实现
  */
+
 public class Checkpoints {
 
     private static final Logger LOG = LoggerFactory.getLogger(Checkpoints.class);
@@ -118,6 +118,7 @@ public class Checkpoints {
         }
     }
 
+    // 
     public static CompletedCheckpoint loadAndValidateCheckpoint(
             JobID jobId,
             Map<JobVertexID, ExecutionJobVertex> tasks,

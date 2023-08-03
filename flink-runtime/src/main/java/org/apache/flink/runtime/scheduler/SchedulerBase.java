@@ -394,6 +394,9 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         checkpointCoordinator.abortPendingCheckpoints(
                 new CheckpointException(CheckpointFailureReason.JOB_FAILOVER_REGION));
 
+        // 全局恢复与局部恢复的区别在于：
+        //     1 前者,要恢复或者重置算子协调者的状态; 后者忽略恢复算子协调者
+        //     2 前者,
         if (isGlobalRecovery) {
             // 全局恢复
             final Set<ExecutionJobVertex> jobVerticesToRestore = getInvolvedExecutionJobVertices(vertices);
@@ -401,7 +404,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
             checkpointCoordinator.restoreLatestCheckpointedStateToAll(jobVerticesToRestore, true);
 
         } else {
-            // 这种情况, 快照状态 和 算子协调者的状态 都得恢复
+            // 局部恢复
             final Map<ExecutionJobVertex, IntArrayList> subtasksToRestore = getInvolvedExecutionJobVerticesAndSubtasks(vertices);
 
             final OptionalLong restoredCheckpointId =

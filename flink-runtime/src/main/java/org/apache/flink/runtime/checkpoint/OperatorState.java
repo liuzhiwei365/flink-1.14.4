@@ -43,6 +43,8 @@ import static org.apache.flink.util.Preconditions.checkState;
 // 算子状态是一个主从结构  包括：
 //                      算子协调者状态
 //                      算子子任务状态    , 即subtask 状态
+
+// 这里的  OperatorState 和我们平时讲的算子状态 keyed 状态 不是同一个范畴
 public class OperatorState implements CompositeStateHandle {
 
     private static final long serialVersionUID = -4845578005863201810L;

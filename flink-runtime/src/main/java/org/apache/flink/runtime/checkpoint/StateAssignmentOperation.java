@@ -93,12 +93,12 @@ public class StateAssignmentOperation {
     // 状态重新分配的算法
     public void assignStates() {
 
-        // 复制一份 operatorStates , 本方法的主题和目的，就是要对operatorStates 做重新划分
+        // step1  复制一份 operatorStates , 本方法的主题和目的，就是要对operatorStates 做重新划分
         Map<OperatorID, OperatorState> localOperators = new HashMap<>(operatorStates);
 
         checkStateMappingCompleteness(allowNonRestoredState, operatorStates, tasks);
 
-        // 遍历,初始化准备
+        // step2  遍历,初始化各成员变量 和 数据结构 ; 为真正的算法做准备   ----->>>>
         for (ExecutionJobVertex executionJobVertex : tasks) {
 
             // 一个ExecutionJobVertex 包含多个算子, 它们以后会运行在同一个 sub task中
@@ -134,9 +134,10 @@ public class StateAssignmentOperation {
             for (final IntermediateResult producedDataSet : executionJobVertex.getInputs()) {
                 consumerAssignment.put(producedDataSet.getId(), stateAssignment);
             }
-        }
+        } //<-----------------------  初始化 结束
 
-        // 将状态重新分区 , 以ExecutionJobVertex 为单位
+
+        // step3  以ExecutionJobVertex 为单位, 将状态重新分布  (状态重新布局)
         for (TaskStateAssignment stateAssignment : vertexAssignments.values()) {
             if (stateAssignment.hasNonFinishedState) {
                 // 一个ExecutionJobVertex 对应 一个TaskStateAssignment
@@ -144,7 +145,10 @@ public class StateAssignmentOperation {
             }
         }
 
-        // actually assign the state
+        // step4
+        // 以ExecutionJobVertex 为单位
+        // 将算法重新布局的 状态分布, 封装进入每个 ExecutionJobVertex 的 Execution 中
+        // 以方便后续启动 subTask
         for (TaskStateAssignment stateAssignment : vertexAssignments.values()) {
             if (stateAssignment.hasNonFinishedState || stateAssignment.isFullyFinished) {
                 assignTaskStateToExecutionJobVertices(stateAssignment);
@@ -152,7 +156,7 @@ public class StateAssignmentOperation {
         }
     }
 
-    // job启动时,尝试着恢复状态
+    // job启动时,尝试着重新分布状态, 重新分布的结果在  taskStateAssignment 中
     private void assignAttemptState(TaskStateAssignment taskStateAssignment) {
 
         // 校验
@@ -217,16 +221,8 @@ public class StateAssignmentOperation {
         List<OperatorIDPair> operatorIDs = executionJobVertex.getOperatorIDs();
         final int newParallelism = executionJobVertex.getParallelism();
 
-        /*
-         *  An executionJobVertex's all state handles needed to restore are something like a matrix
-         *
-         * 		parallelism0 parallelism1 parallelism2 parallelism3
-         * op0   sh(0,0)     sh(0,1)       sh(0,2)	    sh(0,3)
-         * op1   sh(1,0)	 sh(1,1)	   sh(1,2)	    sh(1,3)
-         * op2   sh(2,0)	 sh(2,1)	   sh(2,2)		sh(2,3)
-         * op3   sh(3,0)	 sh(3,1)	   sh(3,2)		sh(3,3)
-         *
-         */
+
+        // 依次 将 TaskStateAssignment 中的状态布局 封装到每个 Execution对象中; 以方便后续启动 每个subTask
         for (int subTaskIndex = 0; subTaskIndex < newParallelism; subTaskIndex++) {
             Execution currentExecutionAttempt =
                     executionJobVertex.getTaskVertices()[subTaskIndex].getCurrentExecutionAttempt();
@@ -244,6 +240,7 @@ public class StateAssignmentOperation {
     }
 
     private void assignFinishedStateToTask(Execution currentExecutionAttempt) {
+        // FINISHED_ON_RESTORE 是空实现,里面集合成员 啥元素也没有
         JobManagerTaskRestore taskRestore =
                 new JobManagerTaskRestore(
                         restoreCheckpointId, TaskStateSnapshot.FINISHED_ON_RESTORE);
@@ -257,6 +254,7 @@ public class StateAssignmentOperation {
             Execution currentExecutionAttempt) {
         TaskStateSnapshot taskState = new TaskStateSnapshot(operatorIDs.size(), false);
 
+        // 遍历算子链中所有的算子
         for (OperatorIDPair operatorID : operatorIDs) {
             OperatorInstanceID instanceID =
                     OperatorInstanceID.of(subTaskIndex, operatorID.getGeneratedOperatorID());
@@ -330,10 +328,10 @@ public class StateAssignmentOperation {
                 subRawKeyedState = emptyList();
             }
         } else {
-            // 针对管理状态
+            // 针对管理keyed状态
             subManagedKeyedState =
                     getManagedKeyedStateHandles(operatorState, keyGroupPartitions.get(subTaskIndex));
-            // 针对原始状态
+            // 针对原始keyed状态  （逻辑和 管理keyed状态 一致）
             subRawKeyedState =
                     getRawKeyedStateHandles(operatorState, keyGroupPartitions.get(subTaskIndex));
         }
