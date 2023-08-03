@@ -116,7 +116,8 @@ public class DefaultCompletedCheckpointStore<R extends ResourceVersion<R>>
      *     system in a possibly inconsistent state, i.e. it's uncertain whether the checkpoint
      *     metadata was fully written to the underlying systems or not.
      */
-    // 持久化新的 completedCheckpoint 和 其句柄, 并异步删除旧的 （如果需要）
+    // 持久化新的 completedCheckpoint（到文件系统） 和 其句柄（zk或k8s）, 并异步删除旧的 （如果需要）
+    // 内存中也保留一份  completedCheckpoint
     @Override
     public void addCheckpoint(
             final CompletedCheckpoint checkpoint,
@@ -133,6 +134,7 @@ public class DefaultCompletedCheckpointStore<R extends ResourceVersion<R>>
         // 2 将 checkpoint 的句柄（加强版的状态引用） 持久化到 zk 或者 k8s 等外部存储中
         checkpointStateHandleStore.addAndLock(path, checkpoint);
 
+        // 内存中也保存一份
         completedCheckpoints.addLast(checkpoint);
 
         // 防止 chekcpoint 内存 或者 其他存储中 膨胀, 做清理操作(这个清理,包括内存,文件系统，也包括zk,k8s外部系统中的清理)

@@ -161,6 +161,8 @@ public class ZooKeeperStateHandleStore<T extends Serializable>
         }
         // 把状态持久化文件系统, 并返回操作句柄
         final RetrievableStateHandle<T> storeHandle = storage.store(state);
+
+
         // 序列化操作句柄
         final byte[] serializedStoreHandle = serializeOrDiscard(storeHandle);
         try {

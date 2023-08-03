@@ -131,11 +131,13 @@ public class DefaultExecutionGraphFactory implements ExecutionGraphFactory {
                 newExecutionGraph.getCheckpointCoordinator();
 
         if (checkpointCoordinator != null) {
-            // check whether we find a valid checkpoint
+            // 1 先尝试从 CheckpointCoordinator.completedCheckpointStore 中 存储的最新的CompletedCheckpoint 对象
+            //   恢复执行图中 每个节点的 状态句柄
+            // 2 如果不成功,则加载 savepoint 到 CheckpointCoordinator.completedCheckpointStore 中,
+            //   然后，再次尝试恢复执行图中 每个节点的 状态句柄
             if (!checkpointCoordinator.restoreInitialCheckpointIfPresent(
                     new HashSet<>(newExecutionGraph.getAllVertices().values()))) {
 
-                // check whether we can restore from a savepoint
                 tryRestoreExecutionGraphFromSavepoint(
                         newExecutionGraph, jobGraph.getSavepointRestoreSettings());
             }

@@ -135,11 +135,16 @@ public class CheckpointCoordinator {
      * Completed checkpoints. Implementations can be blocking. Make sure calls to methods accessing
      * this don't block the job manager actor and run asynchronously.
      */
-    // CompletedCheckpointStore 的实现类：
-    //  DeactivatedCheckpointCompletedCheckpointStore         无用实现
-    //  EmbeddedCompletedCheckpointStore                      针对MiniCluster
-    //  StandaloneCompletedCheckpointStore                    针对非高可用模式
-    //  DefaultCompletedCheckpointStore                       默认实现
+    // 1 CompletedCheckpointStore 的实现类：
+    //     DeactivatedCheckpointCompletedCheckpointStore         无用实现
+    //     EmbeddedCompletedCheckpointStore                      针对MiniCluster
+    //     StandaloneCompletedCheckpointStore                    针对非高可用模式
+    //     DefaultCompletedCheckpointStore                       默认实现
+    //
+    //
+    // 2   默认实现DefaultCompletedCheckpointStore 在添加 CompletedCheckpoint对象的时候 会
+    //     持久化新的 completedCheckpoint（到文件系统） 和 其句柄（到zk 或者 k8s）, 并异步删除旧的 （如果需要）
+    //     内存中也保留一份  completedCheckpoint
     private final CompletedCheckpointStore completedCheckpointStore;
 
     /**
@@ -1458,7 +1463,7 @@ public class CheckpointCoordinator {
      * or "regional" failover and does restore states to coordinators. Note that a regional failover
      * might still include all tasks.
      */
-    // 本地或者 局部恢复
+    // 局部恢复
     public OptionalLong restoreLatestCheckpointedStateToSubtasks(
             final Set<ExecutionJobVertex> tasks) throws Exception {
 
@@ -1497,10 +1502,6 @@ public class CheckpointCoordinator {
      * Restores the latest checkpointed at the beginning of the job execution. If there is a
      * checkpoint, this method acts like a "global restore"-style operation where all stateful tasks
      * and coordinators from the given set of Job Vertices are restored.
-     *
-     * @param tasks Set of job vertices to restore. State for these vertices is restored via {@link
-     *     Execution#setInitialState(JobManagerTaskRestore)}.
-     * @return True, if a checkpoint was found and its state was restored, false otherwise.
      */
     public boolean restoreInitialCheckpointIfPresent(final Set<ExecutionJobVertex> tasks)
             throws Exception {
@@ -1508,24 +1509,27 @@ public class CheckpointCoordinator {
                 restoreLatestCheckpointedStateInternal(
                         tasks,
                         OperatorCoordinatorRestoreBehavior.RESTORE_IF_CHECKPOINT_PRESENT,
-                        false, // initial checkpoints exist only on JobManager failover. ok if not
-                        // present.
+                        false, // initial checkpoints exist only on JobManager failover. ok if not present.
                         false,
                         true); // JobManager failover means JobGraphs match exactly.
 
         return restoredCheckpointId.isPresent();
     }
 
-    /**
-     * Performs the actual restore operation to the given tasks.
-     *
-     * <p>This method returns the restored checkpoint ID (as an optional) or an empty optional, if
-     * no checkpoint was restored.
-     */
+ 
     // 1 恢复最新的快照状态
     //    恢复状态（包括 6种）（状态句柄）、恢复 master hooks 状态、 恢复算子协调者状态
-    // 2  restoreLatestCheckpointedStateToAll （全局恢复）和 restoreLatestCheckpointedStateToSubtasks（局部恢复）
-    //    都会调用本方法
+
+    // 2 调用时机：
+    //     2.1  手动 savepoint 重启,重新构建执行图时 （DefaultExecutionGraphFactory.createAndRestoreExecutionGraph方法）
+    //            2.1.1 先尝试从 CheckpointCoordinator.completedCheckpointStore 中 存储的最新的CompletedCheckpoint 对象
+    //                 恢复执行图中 每个节点的 状态句柄
+    //            2.1.2  如果不成功,则加载 savepoint 到 CheckpointCoordinator.completedCheckpointStore 中,
+    //                 然后，再次尝试恢复执行图中 每个节点的 状态句柄
+    //     2.2 全局作业失败后, 全局恢复, restoreLatestCheckpointedStateToAll
+    //     2.3 单个task失败后, 局部恢复, restoreLatestCheckpointedStateToSubtasks
+    //
+    //  严格来说, 本方法的调用时机有3个, 能调用到本方法的方法有 4 个
     private OptionalLong restoreLatestCheckpointedStateInternal(
             final Set<ExecutionJobVertex> tasks,
             final OperatorCoordinatorRestoreBehavior operatorCoordinatorRestoreBehavior,
@@ -1577,7 +1581,7 @@ public class CheckpointCoordinator {
             //          （这里的状态还是句柄的概念） （算子所对应的全部状态 和 算子状态不是一个概念）
             final Map<OperatorID, OperatorState> operatorStates = extractOperatorStates(latest);
 
-            // step3-2   校验
+            // step3-2   校验  检查部分完成的算子
             if (checkForPartiallyFinishedOperators) {
                 VertexFinishedStateChecker vertexFinishedStateChecker =
                         new VertexFinishedStateChecker(tasks, operatorStates);
@@ -1660,7 +1664,7 @@ public class CheckpointCoordinator {
      *     versions.
      */
 
-    // 用户指定savepoint 重启,会走到这里
+    // 加载 savepoint 到 CheckpointCoordinator.completedCheckpointStore 成员中, 然后，恢复重分布 执行图中 每个节点的 状态句柄
     public boolean restoreSavepoint(
             String savepointPointer,
             boolean allowNonRestored,
@@ -1686,6 +1690,9 @@ public class CheckpointCoordinator {
                 Checkpoints.loadAndValidateCheckpoint(job, tasks, checkpointLocation, userClassLoader, allowNonRestored);
 
         // step3   更新维护各数据结构
+        //             默认实现DefaultCompletedCheckpointStore 在添加 CompletedCheckpoint对象的时候 会
+        //               1 持久化新的 CompletedCheckpoint（到文件系统） 和 其句柄（到zk 或者 k8s）, 并异步删除旧的 （如果需要）
+        //               2 内存中的队列最后面  也保留一份  CompletedCheckpoint
         completedCheckpointStore.addCheckpoint(
                 savepoint, checkpointsCleaner, this::scheduleTriggerRequest);
 
@@ -1695,6 +1702,8 @@ public class CheckpointCoordinator {
         LOG.info("Reset the checkpoint ID of job {} to {}.", job, nextCheckpointId);
 
         // step4   恢复 并且 重新布局状态分布 （重点）
+        //             这里重新布局的针对的一定是我们刚刚在 step3 中 添加的 savepoint
+        //             因为本方法会取 相关队列中的最后一个 CompletedCheckpoint 对象
         final OptionalLong restoredCheckpointId =
                 restoreLatestCheckpointedStateInternal(
                         new HashSet<>(tasks.values()),
@@ -2132,6 +2141,7 @@ public class CheckpointCoordinator {
         RESTORE_OR_RESET,
 
         /** Coordinators are restored if there was a checkpoint. */
+        // 只有 savepoint 恢复, 才是这种情况
         RESTORE_IF_CHECKPOINT_PRESENT,
 
         /** Coordinators are not restored during this checkpoint restore. */
