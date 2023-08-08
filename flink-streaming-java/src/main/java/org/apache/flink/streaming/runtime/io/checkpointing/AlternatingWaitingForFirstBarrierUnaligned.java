@@ -64,21 +64,40 @@ final class AlternatingWaitingForFirstBarrierUnaligned implements BarrierHandler
             boolean markChannelBlocked)
             throws CheckpointException, IOException {
 
-        // we received an out of order aligned barrier, we should book keep this channel as blocked,
-        // as it is being blocked by the credit-based network
+        // 我们收到一个 对齐的  barrier ，我们应该预订，将此通道保持为阻塞状态
+        //  因为这种情况 它正被基于信用的网络阻止
         if (markChannelBlocked
                 && !checkpointBarrier.getCheckpointOptions().isUnalignedCheckpoint()) {
             channelState.blockChannel(channelInfo);
         }
 
         CheckpointBarrier unalignedBarrier = checkpointBarrier.asUnaligned();
+
+        // 构造写出器, 实际的持久化 InputChannel 状态
+        //           非对齐 的 checkpoint 才会有效
         controller.initInputsCheckpoint(unalignedBarrier);
+
         for (CheckpointableInput input : channelState.getInputs()) {
+            // 这里会调用栈：
+            //     StreamTaskSourceInput.checkpointStarted
+            //     StreamTaskSourceInput.blockConsumption
+            //     阻塞input 的消费 （全局阻塞, input 的所有inputChannel）
             input.checkpointStarted(unalignedBarrier);
         }
+
+        // 调用栈：
+        //     SingleCheckpointBarrierHandler.ControllerImpl.triggerGlobalCheckpoint
+        //     SingleCheckpointBarrierHandler.triggerCheckpoint
+        //     CheckpointBarrierHandler.notifyCheckpoint
+        //     StreamTask.triggerCheckpointOnBarrier
+        //     StreamTask.performCheckpoint
+        //     SubtaskCheckpointCoordinatorImpl.checkpointState
+        //
         controller.triggerGlobalCheckpoint(unalignedBarrier);
+
         if (controller.allBarriersReceived()) {
             for (CheckpointableInput input : channelState.getInputs()) {
+                // 恢复input 的消费
                 input.checkpointStopped(unalignedBarrier.getId());
             }
             return stopCheckpoint();

@@ -100,7 +100,7 @@ public final class StreamTaskNetworkInput<T>
                 e : recordDeserializers.entrySet()) {
 
             try {
-                // 将没有消费的 inputChannel 中的  Buffer 添加到 channelStateWriter
+                //异步持久化 InputChannel 状态
                 channelStateWriter.addInputData(
                         checkpointId,
                         e.getKey(),

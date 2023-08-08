@@ -108,8 +108,7 @@ public interface ChannelStateWriter extends Closeable {
      * @see org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter#SEQUENCE_NUMBER_RESTORED
      * @see org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter#SEQUENCE_NUMBER_UNKNOWN
      */
-    // 使用ChannelStateWriter 写入buffer 内容
-    // addInputData方法将buffer加入到ChannelStateWriter中, 等待稍后写入到checkpoint
+    // 使用ChannelStateWriter 写出  inputChannel 的 buffer 内容
     void addInputData(
             long checkpointId,
             InputChannelInfo info,

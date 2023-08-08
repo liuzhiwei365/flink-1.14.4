@@ -197,7 +197,7 @@ public class StreamOperatorStateHandler {
             long timestamp,
             CheckpointOptions checkpointOptions,
             CheckpointStreamFactory factory,
-            OperatorSnapshotFutures snapshotInProgress,
+            OperatorSnapshotFutures snapshotInProgress, // 存储futue对象
             StateSnapshotContextSynchronousImpl snapshotContext,
             boolean isUsingCustomRawKeyedState)
             throws CheckpointException {
@@ -222,13 +222,17 @@ public class StreamOperatorStateHandler {
                             snapshotContext.getRawKeyedOperatorStateOutput(), operatorName);
                 }
             }
+            // 钩子方法, 用于用户自己 维护算子的 原始状态
             streamOperator.snapshotState(snapshotContext);
 
+            // 设置 keyed 原始状态 的 future对象
             snapshotInProgress.setKeyedStateRawFuture(snapshotContext.getKeyedStateStreamFuture());
+            // 设置 算子 原始状态的 future对象
             snapshotInProgress.setOperatorStateRawFuture(
                     snapshotContext.getOperatorStateStreamFuture());
 
             if (null != operatorStateBackend) {
+                // 设置算子管理状态的 future对象
                 snapshotInProgress.setOperatorStateManagedFuture(
                         // 算子状态目前只有一个后端:   DefaultOperatorStateBackend
                         //
@@ -237,6 +241,7 @@ public class StreamOperatorStateHandler {
             }
 
             if (null != keyedStateBackend) {
+                // 设置keyed 管理状态 的 future对象
                 if (checkpointOptions.getCheckpointType().isSavepoint()) {
                     SnapshotStrategyRunner<KeyedStateHandle, ? extends FullSnapshotResources<?>>
                             snapshotRunner = prepareSavepoint(keyedStateBackend, closeableRegistry);

@@ -271,11 +271,10 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         logCheckpointProcessingDelay(metadata);
 
         // 第0步，更新lastCheckpointId变量
-        // 如果当前checkpoint被取消，广播CancelCheckpointMarker到下游，表明这个checkpoint被终止
+
         lastCheckpointId = metadata.getCheckpointId();
+        // 如果当前checkpoint被取消，广播CancelCheckpointMarker到下游，表明这个checkpoint被终止（防止下游背压）
         if (checkAndClearAbortedStatus(metadata.getCheckpointId())) {
-            // broadcast cancel checkpoint marker to avoid downstream back-pressure due to
-            // checkpoint barrier align.
             operatorChain.broadcastEvent(new CancelCheckpointMarker(metadata.getCheckpointId()));
             LOG.info(
                     "Checkpoint {} has been notified as aborted, would not trigger any checkpoint.",
@@ -285,7 +284,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
 
         // if checkpoint has been previously unaligned, but was forced to be aligned (pointwise
         // connection), revert it here so that it can jump over output data
-
+        //如果检查点以前未对齐，但现在被强制对齐
         if (options.getAlignment() == CheckpointOptions.AlignmentType.FORCED_ALIGNED) {
             options = options.withUnalignedSupported();
             initInputsCheckpoint(metadata.getCheckpointId(), options);
@@ -295,7 +294,6 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         // 第1步,   调用operatorChain的prepareSnapshotPreBarrier方法，执行checkpoint操作前的预处理逻辑
         //         大都是空实现
         operatorChain.prepareSnapshotPreBarrier(metadata.getCheckpointId());
-
 
         /*
            第2步,   向下游发送 CheckpointBarriar 事件
@@ -313,15 +311,18 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
                              PipelinedSubpartition.addBuffer
                              PipelinedSubpartition.processPriorityBuffer
                              ChannelStateWriter.addOutputData    做实际的持久化
+
+                    3 对于inputChannel 和 ResultSubpartition 的状态的持久化的所有生命周期,最终都会落到 ChannelStateWriter的逻辑中
          */
         operatorChain.broadcastEvent(
                 new CheckpointBarrier(metadata.getCheckpointId(), metadata.getTimestamp(), options),
                 options.isUnalignedCheckpoint());
 
-        // 第3步,    是一个关键点，如果启用了unaligned checkpoint, 将所有input channel中checkpoint barrier后的buffer
+        // 第3步,   是一个关键点，如果启用了unaligned checkpoint, 将所有input channel中checkpoint barrier后的buffer
         // 写入到checkpoint中
         if (options.isUnalignedCheckpoint()) {
-            // output data already written while broadcasting event
+            // 刷写, 关流, 持有ResultSubpartition 通道状态句柄
+            //      注意,在第二步 广播事件时输出已写入的数据
             channelStateWriter.finishOutput(metadata.getCheckpointId());
         }
 
@@ -335,7 +336,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
             if (takeSnapshotSync(
                     snapshotFutures, metadata, metrics, options, operatorChain, isRunning)) {
 
-                //  第6步, 用线程池异步的执行 snapshotFutures , 并且向CheckpointCoodinator 汇报ack
+                //  第6步, 用线程池异步的执行 , 会阻塞get得到6种状态句柄 ,并且向CheckpointCoodinator 汇报ack
                 finishAndReportAsync(
                         snapshotFutures,
                         metadata,
@@ -416,9 +417,14 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
     public void initInputsCheckpoint(long id, CheckpointOptions checkpointOptions)
             throws CheckpointException {
         if (checkpointOptions.isUnalignedCheckpoint()) {
-            // ChannelStateWriterImpl  对象
+            // 1 向队列ChannelStateWriteRequestExecutorImpl.deque中 发送 CheckpointStartRequest 请求
+            // 最终处理请求, 是在 ChannelStateWriteRequestDispatcherImpl.dispatchInternal 方法中
+            // 2 dispatchInternal 方法 会构造写出器, 为状态持久化做准备 (写出器内部就包含输出流 )
             channelStateWriter.start(id, checkpointOptions);
 
+
+            // 1 实际的持久化 InputChannel 状态
+            // 2 针对 InputChannel 状态的 刷写 关流 和 持有通道状态
             prepareInflightDataSnapshot(id);
         }
     }
@@ -549,7 +555,19 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
     }
 
     private void prepareInflightDataSnapshot(long checkpointId) throws CheckpointException {
+        // 1 prepareInputSnapshot 就是 StreamTask.prepareInputSnapshot 方法
+        // 2 在StreamTask 的构造方法中, 也会构造 SubtaskCheckpointCoordinatorImpl对象（也就是本类的对象）作为其成员
+        // 3 而本类的 prepareInputSnapshot成员的赋值 恰恰就是   this::prepareInputSnapshot （this此时代表的就是StreamTask对象）
         prepareInputSnapshot
+                /*  所以, apply 实际上是触发了 StreamTask 的 prepareInputSnapshot 方法
+                    调用栈如下:
+                        StreamTask.prepareInputSnapshot
+                        StreamOneInputProcessor.prepareSnapshot
+                        StreamTaskNetworkInput.prepareSnapshot
+                        ChannelStateWriterImpl.addInputData
+
+                     //异步持久化 InputChannel 状态  (注意, 我们持久化的是 InputChannel中 还没有被消费的 Buffer)
+                 */
                 .apply(channelStateWriter, checkpointId)
                 .whenComplete(
                         (unused, ex) -> {
@@ -559,6 +577,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
                                         ex,
                                         false /* result is needed and cleaned by getWriteResult */);
                             } else {
+                                // 针对 InputChannel 状态的 刷写 关流 和 持有通道状态
                                 channelStateWriter.finishInput(checkpointId);
                             }
                         });
@@ -621,7 +640,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         //    否则, 不需要, 返回一个内容为空的ChannelStateWriteResult 对象
 
         // 3  因为只有当checkpoint 是非对齐模式又需要保证 exactly-once 语义时,我们才需要
-        //    将inputChannel 和 ResultSubpartition的状态保存
+        //    将inputChannel 和 ResultSubpartition的状态句柄保存
         ChannelStateWriteResult channelStateWriteResult =
                 checkpointOptions.isUnalignedCheckpoint()
                         ? channelStateWriter.getAndRemoveWriteResult(checkpointId)

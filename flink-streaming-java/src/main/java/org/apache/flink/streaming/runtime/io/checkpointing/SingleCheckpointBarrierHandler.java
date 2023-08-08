@@ -552,6 +552,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
                 throws CheckpointException {
             checkState(subTaskCheckpointCoordinator != null);
             long barrierId = checkpointBarrier.getId();
+            // 构造写出器, 实际的持久化 InputChannel 状态
             subTaskCheckpointCoordinator.initInputsCheckpoint(
                     barrierId, checkpointBarrier.getCheckpointOptions());
         }

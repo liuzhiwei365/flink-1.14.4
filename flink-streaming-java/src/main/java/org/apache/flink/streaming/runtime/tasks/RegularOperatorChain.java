@@ -206,7 +206,8 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
             CheckpointStreamFactory storage)
             throws Exception {
         // 调用栈前面 是对  整个算子链做 快照
-        // 这里是对  单个的算子做快照  ****  注意区别
+        // 这里是针对  单个的算子快照逻辑 （还没有真正触发, 还只是准备future对象）
+        // 不包括 inputChannel 和 ResultSubpartition的 状态
         OperatorSnapshotFutures snapshotInProgress =
                 checkpointStreamOperator(
                         op, checkpointMetaData, checkpointOptions, storage, isRunning);
@@ -214,7 +215,7 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
         // 如果算子是算子链中的 头算子; 设置 InputChannel 的状态句柄
         //    1 当checkpoint 是非对齐模式时, channelStateWriteResult 才有实际的实现
         //    否则, channelStateWriteResult 为空实现, 设置的 future对象也是啥逻辑都没有的空的future对象
-        //    2 因为只有当checkpoint 是非对齐模式又需要保证 exactly-once 语义时,我们才需要将inputChannel 和 ResultSubpartition的状态保存
+        //    2 因为只有当checkpoint 是非对齐模式又需要保证 exactly-once 语义时,我们才需要将inputChannel 和 ResultSubpartition的状态句柄保存
         if (op == getMainOperator()) {
             snapshotInProgress.setInputChannelStateFuture(
                     channelStateWriteResult
