@@ -152,7 +152,12 @@ public abstract class CheckpointBarrierHandler implements Closeable {
                             .setCheckpointStartDelayNanos(0);
         }
 
-        // 当上游来的barrier对齐的时候, triggerCheckpointOnBarrier触发调用
+        // 对于阻塞 对齐模式的checkpoint:
+        //             当上游来的barrier对齐的时候, triggerCheckpointOnBarrier触发调用
+        //
+        // 对于阻塞 非对齐模式的 checkpoint：
+        //             当上游来第一个 barrier的时候,就触发调用
+        //
         toNotifyOnCheckpoint.triggerCheckpointOnBarrier(
                 checkpointMetaData, checkpointBarrier.getCheckpointOptions(), checkpointMetrics);
     }

@@ -236,7 +236,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         checkNewCheckpoint(barrier);
         checkState(currentCheckpointId == barrierId);
 
-        //   对齐：
+        //   阻塞对齐checkpoint：
         //     1   state 最初始是 WaitingForFirstBarrier 类型
         //           （父类 AbstractAlignedBarrierHandlerState ）
         //     2   当来了 barrier ,但是还没齐的时候
@@ -247,7 +247,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         //             恢复之前阻塞的  所有 inputChannel ,
         //             状态机恢复为 WaitingForFirstBarrier 类型
 
-        //  非对齐：
+        //  阻塞非对齐checkpoint：
         //     1    state 最初始是 AlternatingWaitingForFirstBarrierUnaligned 类型
         //
         //
