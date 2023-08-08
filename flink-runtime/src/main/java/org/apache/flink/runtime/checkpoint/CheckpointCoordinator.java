@@ -677,6 +677,7 @@ public class CheckpointCoordinator {
                             CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE,
                             checkpoint.getFailureCause()));
         } else {
+            // triggerTasks 是核心
             //触发所有 trigger 集合中的执行节点  的 checkpoint, 并等待它们执行完
             triggerTasks(request, timestamp, checkpoint)
                     .exceptionally(
@@ -997,11 +998,12 @@ public class CheckpointCoordinator {
                     if (shutdown) {
                         return false;
                     }
+                    // 核心
                     // 1  共享状态注册
                     // 2  CheckpointMetadata 持久化  ( 包括 算子状态 和 master状态 )
                     // 3  CompletedCheckpoint 持久化  ( 信息比 CheckpointMetadata 丰富很多 )
                     // 4  各类 checkpoint 信息, 依情况清理
-                    // 5  触发所有 子任务 和 算子协调者 notifyCheckpointComplete 逻辑  （子任务先, 算子协调者后）
+                    // 5  触发所有 子任务 和 算子协调者 notifyCheckpointComplete 逻辑  （子任务先, 算子协调者后）  ****
                     completePendingCheckpoint(checkpoint);
                 } catch (CheckpointException ce) {
                     onTriggerFailure(checkpoint, ce);
@@ -1262,6 +1264,8 @@ public class CheckpointCoordinator {
      * @param pendingCheckpoint to complete
      * @throws CheckpointException if the completion failed
      */
+    // 本方法重点在于, 触发所有 子任务 和 算子协调者 notifyCheckpointComplete 逻辑
+    // 会执行 各种 用户定制化的 提交逻辑
     private void completePendingCheckpoint(PendingCheckpoint pendingCheckpoint)
             throws CheckpointException {
         final long checkpointId = pendingCheckpoint.getCheckpointId();
@@ -1363,8 +1367,44 @@ public class CheckpointCoordinator {
             LOG.debug(builder.toString());
         }
 
-        // 先 触发所有 子任务的 notifyCheckpointComplete 逻辑
-        // 再 触发所有 算子协调者的 notifyCheckpointComplete 逻辑
+        /*
+          核心：
+               1 先 触发所有 子任务的 notifyCheckpointComplete 逻辑
+                   调用栈：
+                       Execution.notifyCheckpointComplete
+                       TaskManagerGateway.notifyCheckpointComplete
+                       RpcTaskManagerGateway.notifyCheckpointComplete
+                       TaskExecutorGateway.confirmCheckpoint
+                       TaskExecutor.confirmCheckpoint
+                       Task.notifyCheckpointComplete
+                       StreamTask.notifyCheckpointCompleteAsync
+                       StreamTask.notifyCheckpointComplete
+                       SubtaskCheckpointCoordinatorImpl.notifyCheckpointComplete
+                       RegularOperatorChain.notifyCheckpointComplete
+                       StreamOperatorWrapper.notifyCheckpointComplete
+                           最后一直到具体的算子, 比如
+                                 AbstractStreamOperator.notifyCheckpointComplete
+                                 SourceOperator.notifyCheckpointComplete
+                                 SinkOperator.notifyCheckpointComplete
+                                 AbstractUdfStreamOperator.notifyCheckpointComplete
+                                 ...
+                   用户自己写的算子, 往往做一些保证数据一致性的 提交动作
+                   对于AbstractUdfStreamOperator 实例,会判断当前 userFunction是否实现了CheckpointListener
+                   如果实现了,则向UserFunction通知Checkpoint 执行完成的信息,例如 FlinkkafkaConsumerBase 中会
+                   通过获取到的 Checkpoint完成信息将Offset提交到Kafka集群
+
+                   参见 FlinkkafkaConsumerBase.notifyCheckpointComplete 方法
+
+               2 再 触发所有 算子协调者的 notifyCheckpointComplete 逻辑
+                        OperatorCoordinatorHolder.notifyCheckpointComplete
+                             然后就直接到了各子类实现
+                                SourceCoordinator.notifyCheckpointComplete
+                                RecreateOnResetOperatorCoordinator.notifyCheckpointComplete
+                                CollectSinkOperatorCoordinator.notifyCheckpointComplete
+                        算子协调者的逻辑可以用户自己扩展, hudi 就做了扩展,来做hudi 到hive 的元数据同步
+
+
+        */
         sendAcknowledgeMessages(
                 pendingCheckpoint.getCheckpointPlan().getTasksToCommitTo(),
                 checkpointId,

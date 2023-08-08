@@ -365,7 +365,6 @@ public class PendingCheckpoint implements Checkpoint {
                     completed.setDiscardCallback(discardCallback);
                 }
 
-                // mark this pending checkpoint as disposed, but do NOT drop the state
                 // 用checkpointsCleaner 来清理 本 checkpoint ,
                 dispose(false, checkpointsCleaner, postCleanup, executor);
 
