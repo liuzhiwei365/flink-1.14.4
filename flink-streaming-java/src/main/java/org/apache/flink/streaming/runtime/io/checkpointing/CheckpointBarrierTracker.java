@@ -71,10 +71,7 @@ public class CheckpointBarrierTracker extends CheckpointBarrierHandler {
     /** The number of open channels. */
     private int numOpenChannels;
 
-    /**
-     * All checkpoints for which some (but not all) barriers have been received, and that are not
-     * yet known to be subsumed by newer checkpoints.
-     */
+
     // pending 真正的意思是悬而未决,这里表示已经开始对齐,却没有结束对齐的checkpoint
     private final ArrayDeque<CheckpointBarrierCount> pendingCheckpoints;
 
@@ -105,7 +102,8 @@ public class CheckpointBarrierTracker extends CheckpointBarrierHandler {
         // 3. Received barrier from channel 1.
         // In this case we should finish the existing pending checkpoint.
 
-        // 如果是新的 checkpoint的 receivedBarrier
+
+        // short cut
         if (receivedBarrier.getId() > latestPendingCheckpointID && numOpenChannels == 1) {
             markAlignmentStartAndEnd(barrierId, receivedBarrier.getTimestamp());
             notifyCheckpoint(receivedBarrier);
@@ -117,8 +115,8 @@ public class CheckpointBarrierTracker extends CheckpointBarrierHandler {
             LOG.debug("Received barrier for checkpoint {} from channel {}", barrierId, channelInfo);
         }
 
-        // find the checkpoint barrier in the queue of pending barriers
-        // CheckpointBarrierCount 与 checkpointId一一对应
+        //  1 CheckpointBarrierCount 是用来维护指定checkpointId 对齐情况的
+        //  2 barrierId 和 checkpointId  最初都是由  全局快照协调者产生的,同宗同源
         CheckpointBarrierCount barrierCount = null;
         int pos = 0;
 
@@ -131,32 +129,28 @@ public class CheckpointBarrierTracker extends CheckpointBarrierHandler {
         }
 
         if (barrierCount != null) {
-            // add one to the count to that barrier and check for completion
+            // 标记和记录指定  inputChannel的 barrier 来了
             int numChannelsNew = barrierCount.markChannelAligned(channelInfo);
 
+            // 如果所有的  inputChannel 的 barrier 到齐
             if (numChannelsNew == barrierCount.getTargetChannelCount()) {
-                // checkpoint can be triggered (or is aborted and all barriers have been seen)
 
-                // 首先，删除此检查点和所有之前的挂起 检查站(现已并入)
+                // 首先,删除此检查点和所有之前的挂起 检查点(现已并入)
                 for (int i = 0; i <= pos; i++) {
                     pendingCheckpoints.pollFirst();
                 }
 
-                // notify the listener
-                // 对齐结束,调用父类的notifyCheckpoint方法
+                // 对齐结束,  调用父类的notifyCheckpoint方法
                 if (!barrierCount.isAborted()) {
+                    // 核心
                     triggerCheckpointOnAligned(barrierCount);
                 }
             }
         } else {
-            // first barrier for that checkpoint ID
-            // add it only if it is newer than the latest checkpoint.
-            // if it is not newer than the latest checkpoint ID, then there cannot be a
-            // successful checkpoint for that ID anyways
 
-            //  如果barrierCount==null,说明 barrierCount所对应的checkpointId 在 pendingCheckpoints中没有维护
-            //  说明 该本barrier 是 是这个checkpoint 的首个barrier
-            //  既然是首个barrier ,那么一定有 barrierId > latestPendingCheckpointID
+            //  1 如果barrierCount==null,说明 barrierCount所对应的checkpointId 在 pendingCheckpoints中没有维护
+            //  2 说明 该本barrier 是 是这个checkpoint 的首个barrier
+            //  3 既然是首个barrier ,那么一定有 barrierId > latestPendingCheckpointID,否则不正常
             if (barrierId > latestPendingCheckpointID) {
                 // 开始对齐
                 markAlignmentStart(barrierId, receivedBarrier.getTimestamp());
@@ -166,7 +160,7 @@ public class CheckpointBarrierTracker extends CheckpointBarrierHandler {
                 pendingCheckpoints.addLast(
                         new CheckpointBarrierCount(receivedBarrier, channelInfo, numOpenChannels));
 
-                // make sure we do not track too many checkpoints
+                // 清理前面的checkpint 对应的 CheckpointBarrierCount 对象 (防止膨胀)
                 if (pendingCheckpoints.size() > MAX_CHECKPOINTS_TO_TRACK) {
                     pendingCheckpoints.pollFirst();
                 }

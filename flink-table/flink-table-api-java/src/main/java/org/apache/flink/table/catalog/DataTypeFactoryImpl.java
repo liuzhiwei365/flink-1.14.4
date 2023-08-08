@@ -67,8 +67,10 @@ final class DataTypeFactoryImpl implements DataTypeFactory {
     @Override
     public DataType createDataType(AbstractDataType<?> abstractDataType) {
         if (abstractDataType instanceof DataType) {
+            // 已经是解析过的 DataType,不需要重复解析
             return (DataType) abstractDataType;
         } else if (abstractDataType instanceof UnresolvedDataType) {
+            // 解析
             return ((UnresolvedDataType) abstractDataType).toDataType(this);
         }
         throw new ValidationException("Unsupported abstract data type.");

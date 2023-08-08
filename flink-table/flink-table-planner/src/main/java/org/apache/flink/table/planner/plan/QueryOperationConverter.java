@@ -241,6 +241,7 @@ public class QueryOperationConverter extends QueryOperationDefaultVisitor<RelNod
             }
         }
 
+        // 处理Join
         @Override
         public RelNode visit(JoinQueryOperation join) {
             final Set<CorrelationId> corSet;

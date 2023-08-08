@@ -51,6 +51,24 @@ import java.util.Objects;
  *
  * @see DataTypes for a list of supported data types and instances of this class.
  */
+
+/*
+1 DataType 的 4个实现：
+
+    AtomicDataType        不可再分割的基本原子类型
+    KeyValueDataType      字段是 map 类型
+    CollectionDataType    字段是 集合 类型
+    FieldsDataType        字段内部 可以嵌套多个字段
+
+2 KeyValueDataType 与 FieldsDataType 的区别：
+     KeyValueDataType中的 k 和 v 的类型是固定的
+     而 FieldsDataType中,每个子字段都可以定义自己的类型,类型可以无限多
+
+
+3 LogicalType 与 DataType的区别：
+     LogicalType  是sql标准中定义的类型 ; 而DataType 是对应java 内存计算时的类型
+
+ */
 @PublicEvolving
 public abstract class DataType implements AbstractDataType<DataType>, Serializable {
 

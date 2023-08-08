@@ -56,12 +56,10 @@ import java.util.stream.Collectors;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
-/**
- * This state backend holds the working state in the underlying delegatedStateBackend, and forwards
- * state changes to State Changelog.
- */
 
-// 此状态后端保存底层DelegatedStateBend中的工作状态，并将状态更改转发到状态更改日志
+// 1 此状态后端保存底层DelegatedStateBend中的工作状态，并将状态更改 转发到 状态更改日志
+
+// 2 ChangelogStateBackend  是其他 StateBackend 的一个增强 和 代理
 @Internal
 public class ChangelogStateBackend implements DelegatingStateBackend, ConfigurableStateBackend {
 
@@ -228,6 +226,7 @@ public class ChangelogStateBackend implements DelegatingStateBackend, Configurab
                                 env.getAsyncOperationsThreadPool()));
     }
 
+    // 把普通的 KeyedStateHandle 转为 ChangelogStateBackendHandle 类型
     private Collection<ChangelogStateBackendHandle> castHandles(
             Collection<KeyedStateHandle> stateHandles) {
         if (stateHandles.stream().anyMatch(h -> !(h instanceof ChangelogStateBackendHandle))) {

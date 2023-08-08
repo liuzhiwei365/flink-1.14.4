@@ -322,7 +322,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
         this.jobStatusListener = new JobManagerJobStatusListener();
 
         // 内部会创建Execution Graph
-        // 调度器目前只有两种实现  Ng调度  和 Adaptive
+        // 调度器目前只有两种实现  DefaultScheduler调度  和 AdaptiveScheduler
         this.schedulerNG =
                 createScheduler(
                         slotPoolServiceSchedulerFactory,
@@ -346,6 +346,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
             JobManagerJobMetricGroup jobManagerJobMetricGroup,
             JobStatusListener jobStatusListener)
             throws Exception {
+        // 目前调度器只有两种实现： DefaultScheduler 和 DefaultScheduler
         final SchedulerNG scheduler =
                 slotPoolServiceSchedulerFactory.createScheduler(
                         log,

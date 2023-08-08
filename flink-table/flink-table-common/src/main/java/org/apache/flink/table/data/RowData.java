@@ -119,6 +119,7 @@ public interface RowData {
      *
      * <p>The number does not include {@link RowKind}. It is kept separately.
      */
+    // 字段的数量, 单词 arity 本身就是数量的意思 (不包括RowKind 在内的数量)
     int getArity();
 
     /**
@@ -126,6 +127,7 @@ public interface RowData {
      *
      * @see RowKind
      */
+    // 描述了 changelog 的 4种 类型  INSERT  UPDATE_BEFORE   UPDATE_AFTER  DELETE
     RowKind getRowKind();
 
     /**

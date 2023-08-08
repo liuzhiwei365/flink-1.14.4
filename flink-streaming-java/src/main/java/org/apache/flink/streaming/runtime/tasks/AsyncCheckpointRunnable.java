@@ -103,7 +103,8 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
     }
 
 
-    //  执行  subtask 的  所有相关  后端快照的  异步部分
+    //  1 执行  subtask 的  所有相关  后端快照的  异步部分 （因为触发future对象的执行,肯定是异步的）
+    //  2 然后 向 CheckpointCoodinator 汇报 ack
     @Override
     public void run() {
         final long asyncStartNanos = System.nanoTime();
@@ -117,6 +118,11 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
         FileSystemSafetyNet.initializeSafetyNetForThread();
         try {
 
+            // step1 核心
+            //     一般情况：
+            //     finalizeNonFinishedSnapshots 也就是触发众多的 future 对象的 实际的快照逻辑;并阻塞获取 结果
+            //     特殊情况:
+            //     如果 task 状态是已经部署完成, 那么不需要做快照了,直接返回空实现
             SnapshotsFinalizeResult snapshotsFinalizeResult =
                     isTaskDeployedAsFinished
                             ? new SnapshotsFinalizeResult(
@@ -128,16 +134,16 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
             final long asyncEndNanos = System.nanoTime();
             final long asyncDurationMillis = (asyncEndNanos - asyncConstructionNanos) / 1_000_000L;
 
-            // 统计在对齐过程中的 被持久化的字节数
+            // step2 统计在对齐过程中的 被持久化的字节数
             checkpointMetrics.setBytesPersistedDuringAlignment(
                     snapshotsFinalizeResult.bytesPersistedDuringAlignment);
-            // 统计对齐花费的 毫秒数
+            // step3 统计对齐花费的 毫秒数
             checkpointMetrics.setAsyncDurationMillis(asyncDurationMillis);
 
             if (asyncCheckpointState.compareAndSet(
                     AsyncCheckpointState.RUNNING, AsyncCheckpointState.COMPLETED)) {
 
-                // 核心,  向CheckpointCoodinator 汇报
+                // step4 核心,  向CheckpointCoodinator 汇报 ack
                 reportCompletedSnapshotStates(
                         snapshotsFinalizeResult.jobManagerTaskOperatorSubtaskStates,
                         snapshotsFinalizeResult.localTaskOperatorSubtaskStates,
@@ -165,25 +171,30 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
         }
     }
 
+
     private SnapshotsFinalizeResult finalizeNonFinishedSnapshots() throws Exception {
 
-        // In Progress 和 In Flight 是一个意思
+        // 用于存储和记录发送给 JobMaster的 Checkpoint数据
         TaskStateSnapshot jobManagerTaskOperatorSubtaskStates =
                 new TaskStateSnapshot(operatorSnapshotsInProgress.size(), isTaskFinished);
+        // 用于存储TaskExecutor 本地的 数据
         TaskStateSnapshot localTaskOperatorSubtaskStates =
                 new TaskStateSnapshot(operatorSnapshotsInProgress.size(), isTaskFinished);
 
         long bytesPersistedDuringAlignment = 0;
         for (Map.Entry<OperatorID, OperatorSnapshotFutures> entry :
                                                             operatorSnapshotsInProgress.entrySet()) {
-
             OperatorID operatorID = entry.getKey();
             OperatorSnapshotFutures snapshotInProgress = entry.getValue();
 
-            // finalize the async part of all by executing all snapshot runnables
+            //  核心
+            //  OperatorSnapshotFinalizer 构造方法的 内部就会去 "执行所有的 状态快照的 线程操作"
+            //           1  也就是触发众多的 future 对象的 实际的快照逻辑
+            //           2  并阻塞获取 结果 , 结果暂由 OperatorSnapshotFinalizer 成员变量中
             OperatorSnapshotFinalizer finalizedSnapshots =
                     new OperatorSnapshotFinalizer(snapshotInProgress);
 
+            // 整理快照操作的 结果, 最终封装成 SnapshotsFinalizeResult 返回
             jobManagerTaskOperatorSubtaskStates.putSubtaskStateByOperatorID(
                     operatorID, finalizedSnapshots.getJobManagerOwnedState());
 

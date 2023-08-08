@@ -73,6 +73,7 @@ final class ChannelStateWriteRequestDispatcherImpl implements ChannelStateWriteR
 
     private void dispatchInternal(ChannelStateWriteRequest request) throws Exception {
         if (request instanceof CheckpointStartRequest) {
+            //
             checkState(
                     !writers.containsKey(request.getCheckpointId()),
                     "writer not found for request " + request);
@@ -80,6 +81,7 @@ final class ChannelStateWriteRequestDispatcherImpl implements ChannelStateWriteR
 
             writers.put(request.getCheckpointId(), buildWriter((CheckpointStartRequest) request));
         } else if (request instanceof CheckpointInProgressRequest) {
+            //
             ChannelStateCheckpointWriter writer = writers.get(request.getCheckpointId());
             CheckpointInProgressRequest req = (CheckpointInProgressRequest) request;
             if (writer == null) {

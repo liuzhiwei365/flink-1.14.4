@@ -1309,6 +1309,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
         FlinkSecurityManager.monitorUserSystemExitForCurrentThread();
         try {
+            //  performCheckpoint 核心
             if (performCheckpoint(checkpointMetaData, checkpointOptions, checkpointMetrics)) {
                 if (isCurrentSavepointWithoutDrain(checkpointMetaData.getCheckpointId())) {
                     runSynchronousSavepointMailboxLoop();
@@ -1400,12 +1401,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             actionExecutor.runThrowing(
                     () -> {
                         // we cannot perform our checkpoint - let the downstream operators know that
-                        // they
-                        // should not wait for any input from this operator
+                        // they should not wait for any input from this operator
 
                         // we cannot broadcast the cancellation markers on the 'operator chain',
-                        // because it may not
-                        // yet be created
+                        // because it may not yet be created
                         final CancelCheckpointMarker message =
                                 new CancelCheckpointMarker(checkpointMetaData.getCheckpointId());
                         recordWriter.broadcastEvent(message);

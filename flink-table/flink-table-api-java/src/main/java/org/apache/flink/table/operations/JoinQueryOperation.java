@@ -30,12 +30,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Table operation that joins two relational operations based on given condition. */
+
+// 定义join 查询操作
 @Internal
 public class JoinQueryOperation implements QueryOperation {
 
     private final QueryOperation left;
     private final QueryOperation right;
     private final JoinType joinType;
+
+    // join 的 连接条件
     private final ResolvedExpression condition;
     private final boolean correlated;
     private final ResolvedSchema resolvedSchema;
@@ -60,6 +64,7 @@ public class JoinQueryOperation implements QueryOperation {
         this.condition = condition;
         this.correlated = correlated;
 
+        // 左右俩个表 （表在这里用 QueryOperation 表示 ）的 所有字段 都会包含进来
         this.resolvedSchema = calculateResultingSchema(left, right);
     }
 

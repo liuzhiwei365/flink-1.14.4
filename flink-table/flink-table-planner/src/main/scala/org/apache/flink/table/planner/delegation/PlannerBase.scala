@@ -179,13 +179,17 @@ abstract class PlannerBase(
       return List.empty[Transformation[_]]
     }
 
-    val relNodes = modifyOperations.map(translateToRel) //将flink的operations 转化为 RelNode
+    //将修改操作 都 转化为 RelNode ,逻辑是 translateToRel
+    val relNodes = modifyOperations.map(translateToRel)
 
-    val optimizedRelNodes = optimize(relNodes)  //优化 RelNode
+    // 优化器 优化 RelNode
+    val optimizedRelNodes = optimize(relNodes)
 
+    // 这里execGraph 是sql 层面的执行计划
     val execGraph = translateToExecNodeGraph(optimizedRelNodes)
 
-    val transformations = translateToPlan(execGraph) // 这里execGraph 是sql 层面的执行计划
+    // 装变为 flink 内核层面的 装换操作
+    val transformations = translateToPlan(execGraph)
     cleanupInternalConfigurations()
     transformations
   }
@@ -273,10 +277,15 @@ abstract class PlannerBase(
         }
 
       case externalModifyOperation: ExternalModifyOperation =>
+        // flink changelog 会走这里;  最后会返回一个 LogicalSink对象, 内部包含 ExternalDynamicSink 成员
+        // flink任务将来运行时走的 主要的逻辑就在  ExternalDynamicSink (父类是 DynamicTableSink)里面
+
         val input = getRelBuilder.queryOperation(modifyOperation.getChild).build()
         DynamicSinkUtils.convertExternalToRel(getRelBuilder, input, externalModifyOperation)
 
-      // legacy
+
+
+      // 输出转换操作, 把普通流 , retract 流 , append 流 和 upsert 流相互装换
       case outputConversion: OutputConversionModifyOperation =>
         val input = getRelBuilder.queryOperation(outputConversion.getChild).build()
         // 处理 flinksql 的 cdc
@@ -291,13 +300,15 @@ abstract class PlannerBase(
           outputConversion.getType,
           inputLogicalType,
           withChangeFlag)
-        // validate query schema and sink schema, and apply cast if possible
+
+        // 检验 查询语句的 schema 和 sink 的schema , 如果需要的话,做类型转换
         val query = validateSchemaAndApplyImplicitCast(
           input,
           catalogManager.getSchemaResolver.resolve(sinkPhysicalSchema.toSchema),
           null,
           dataTypeFactory,
           getTypeFactory)
+
         val tableSink = new DataStreamTableSink(
           FlinkTypeFactory.toTableSchema(query.getRowType),
           typeInfo,
@@ -332,26 +343,46 @@ abstract class PlannerBase(
    * Converts [[FlinkPhysicalRel]] DAG to [[ExecNodeGraph]],
    * tries to reuse duplicate sub-plans and transforms the graph based on the given processors.
    */
+
   @VisibleForTesting
   private[flink] def translateToExecNodeGraph(optimizedRelNodes: Seq[RelNode]): ExecNodeGraph = {
+
+    //  step1  校验
     val nonPhysicalRel = optimizedRelNodes.filterNot(_.isInstanceOf[FlinkPhysicalRel])
     if (nonPhysicalRel.nonEmpty) {
       throw new TableException("The expected optimized plan is FlinkPhysicalRel plan, " +
         s"actual plan is ${nonPhysicalRel.head.getClass.getSimpleName} plan.")
     }
-
     require(optimizedRelNodes.forall(_.isInstanceOf[FlinkPhysicalRel]))
-    // Rewrite same rel object to different rel objects
-    // in order to get the correct dag (dag reuse is based on object not digest)
+
+    //  step2  这种优化情况是 虽然 Filter1 和 Filter2 最终扫描的是同一个表
+    //         但是它们的过滤条件不一样, 还是得扫描两次
+    //  *      Join                       Join
+    //  *     /    \                     /    \
+    //  * Filter1 Filter2     =>     Filter1 Filter2
+    //  *     \   /                     |      |
+    //  *      Scan                  Scan1    Scan2
     val shuttle = new SameRelObjectShuttle()
     val relsWithoutSameObj = optimizedRelNodes.map(_.accept(shuttle))
-    // reuse subplan
+
+    // step3  发现完全相同的子计划,  合并成一个 可重用的子计划
+    //  *       Join                      Join
+    //  *     /      \                  /      \
+    //  * Filter1  Filter2          Filter1  Filter2
+    //  *    |        |        =>       \     /
+    //  * Project1 Project2            Project1
+    //  *    |        |                   |
+    //  *  Scan1    Scan2               Scan1
+    //   装换的前提  Scan1 == Scan2  且 Project1 == max(原来的 Project1, 原来的 Project2)
     val reusedPlan = SubplanReuser.reuseDuplicatedSubplan(relsWithoutSameObj, config)
-    // convert FlinkPhysicalRel DAG to ExecNodeGraph
+
+    // step4  将  FlinkPhysicalRel DAG  转变为  ExecNodeGraph
+    // 在调用 generate 方法生成 sql 执行图之前, 先将所有的关系代数 强转为 FlinkPhysicalRel
     val generator = new ExecNodeGraphGenerator()
     val execGraph = generator.generate(reusedPlan.map(_.asInstanceOf[FlinkPhysicalRel]))
 
-    // process the graph
+    // step5 处理执行图
+    //   BatchPlanner 时 , processors 才有实际的内容;   StreamPlanner时, processors 为空
     val context = new ProcessorContext(this)
     val processors = getExecNodeGraphProcessors
     processors.foldLeft(execGraph)((graph, processor) => processor.process(graph, context))

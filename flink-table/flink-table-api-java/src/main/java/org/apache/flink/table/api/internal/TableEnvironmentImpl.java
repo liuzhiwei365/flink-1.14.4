@@ -1284,6 +1284,7 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
                                 "Tables or views with the identifier '%s' doesn't exist",
                                 describeTableOperation.getSqlIdentifier().asSummaryString()));
             }
+        // 查询
         } else if (operation instanceof QueryOperation) {
             return executeQueryOperation((QueryOperation) operation);
         } else if (operation instanceof CreateTableASOperation) {

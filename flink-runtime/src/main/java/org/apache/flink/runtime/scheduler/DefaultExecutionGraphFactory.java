@@ -82,6 +82,7 @@ public class DefaultExecutionGraphFactory implements ExecutionGraphFactory {
         this.jobMasterPartitionTracker = jobMasterPartitionTracker;
     }
 
+    // 构建执行图, 如果可以的话, 恢复重分布节点状态
     @Override
     public ExecutionGraph createAndRestoreExecutionGraph(
             JobGraph jobGraph,

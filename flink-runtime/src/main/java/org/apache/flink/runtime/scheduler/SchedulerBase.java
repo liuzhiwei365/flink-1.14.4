@@ -176,6 +176,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         this.mainThreadExecutor = mainThreadExecutor;
 
         this.checkpointsCleaner = checkpointsCleaner;
+        // 用来存储和持久化 CompletedCheckpoint 对象
         this.completedCheckpointStore =
                 SchedulerUtils.createCompletedCheckpointStoreIfCheckpointingIsEnabled(
                         jobGraph,
@@ -187,7 +188,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
                 SchedulerUtils.createCheckpointIDCounterIfCheckpointingIsEnabled(
                         jobGraph, checkNotNull(checkpointRecoveryFactory));
 
-        // 构建 ExecutionGraph  内部有恢复checkpoint 的逻辑
+        // 构建 ExecutionGraph , 内部涉及状态句柄的恢复和重分布,以及填充给相关的执行节点 （***  重要 ）
         this.executionGraph =
                 createAndRestoreExecutionGraph(
                         completedCheckpointStore,
@@ -210,13 +211,14 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
         this.executionGraphHandler =
                 new ExecutionGraphHandler(executionGraph, log, ioExecutor, this.mainThreadExecutor);
 
-        // 用来构造算子协调者
+        // 构造算子协调者处理器
         this.operatorCoordinatorHandler =
                 new DefaultOperatorCoordinatorHandler(executionGraph, this::handleGlobalFailure);
 
-        //
+        // 初始化所有的 算子协调者
         operatorCoordinatorHandler.initializeOperatorCoordinators(this.mainThreadExecutor);
 
+        // 记录错误历史的队列
         this.exceptionHistory =
                 new BoundedFIFOQueue<>(
                         jobMasterConfiguration.getInteger(WebOptions.MAX_EXCEPTION_HISTORY_SIZE));

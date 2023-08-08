@@ -28,6 +28,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 /**
   * Defines a sequence of programs to optimize flink batch table plan.
   */
+// FlinkBatchProgram  FlinkStreamProgram  分别封装批 和 流 的执行计划 的 所有的优化策略集合
 object FlinkBatchProgram {
   val SUBQUERY_REWRITE = "subquery_rewrite"
   val TEMPORAL_JOIN_REWRITE = "temporal_join_rewrite"

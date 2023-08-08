@@ -47,9 +47,12 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
 
   override protected def doOptimize(roots: Seq[RelNode]): Seq[RelNodeBlock] = {
     val config = planner.getTableConfig
-    // build RelNodeBlock plan
+    // 把整个计划, 切割成块
     val sinkBlocks = RelNodeBlockPlanBuilder.buildRelNodeBlockPlan(roots, config)
-    // infer trait properties for sink block
+
+    // 为每个  sink block 设置如下两个属性
+    //       1  "mini batch" 属性
+    //       2  "是否需要updateBefore 类型的数据" 的标识
     sinkBlocks.foreach { sinkBlock =>
       // don't require update before by default
       sinkBlock.setUpdateBeforeRequired(false)
@@ -67,11 +70,14 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
       sinkBlock.setMiniBatchInterval(miniBatchInterval)
     }
 
+    //  如果只有一个块  的 short cut
     if (sinkBlocks.size == 1) {
       // If there is only one sink block, the given relational expressions are a simple tree
       // (only one root), not a dag. So many operations (e.g. infer and propagate
       // requireUpdateBefore) can be omitted to save optimization time.
       val block = sinkBlocks.head
+
+      // optimizeTree 是核心, 对关系代数做优化
       val optimizedTree = optimizeTree(
         block.getPlan,
         block.isUpdateBeforeRequired,
@@ -80,6 +86,22 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
       block.setOptimizedPlan(optimizedTree)
       return sinkBlocks
     }
+
+    /*
+      1  这些 optimizeBlock 最终都还是会调用 optimizeTree
+
+      2  RelNodeBlock 与 Tree 的区别:
+          每个RelNodeBlock 都只有一个Sink 输出, 而实际的计算中有多个sink
+          那么我们就需要,把多个sink 的 公共依赖抽取出来,切割成块,于是才有了RelNodeBlock 的概念
+          而在使用优化其优化的时候，必须得先分别对块 单独优化
+
+      2.1 如果只有一棵树, 那么整棵树都在一个区块中
+      2.2 重用不同RelNode树中的公共子树、生成RelNode DAG
+      2.3 从根到叶遍历每棵树, 并标记每个RelNode的汇点RelNode
+      2.4 如果遇到具有多个汇点的RelNode，则再次从根到叶遍历每棵树RelNode, RelNode是一个新块（或命名断点）的输出节点
+          有几种特殊情况下,RelNode不能成为断点
+
+     */
 
     // TODO FLINK-24048: Move changeLog inference out of optimizing phase
     // infer modifyKind property for each blocks independently
@@ -146,18 +168,25 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
     */
   private def optimizeTree(
       relNode: RelNode,
-      updateBeforeRequired: Boolean,
-      miniBatchInterval: MiniBatchInterval,
-      isSinkBlock: Boolean): RelNode = {
+      updateBeforeRequired: Boolean,        // cdc 更新需要updateBefore 类型的数据
+      miniBatchInterval: MiniBatchInterval, // miniBatch 的 间隔
+      isSinkBlock: Boolean): RelNode = {    //
 
     val config = planner.getTableConfig
     val calciteConfig = TableConfigUtils.getCalciteConfig(config)
+
+    // step1 构造封装了 诸多优化规则的 FlinkChainedProgram , 核心在于 buildProgram 方法
+    //        1  FlinkChainedProgram 有两个成员 programNames 和 programMap
+    //           前者维护所有的 优化策略名称,  后者维护每个优化策略名对应的 一套规则集程序 (FlinkRuleSetProgram对象)
     val programs = calciteConfig.getStreamProgram
       .getOrElse(FlinkStreamProgram.buildProgram(config.getConfiguration))
+
     Preconditions.checkNotNull(programs)
 
     val context = relNode.getCluster.getPlanner.getContext.unwrap(classOf[FlinkContext])
 
+    // step2 应用  FlinkChainedProgram 中的优化规则,开始优化关系代数
+    //        注意, 第二个入参是一个 匿名的 流优化的环境对象
     programs.optimize(relNode, new StreamOptimizeContext() {
 
       override def isBatchMode: Boolean = false

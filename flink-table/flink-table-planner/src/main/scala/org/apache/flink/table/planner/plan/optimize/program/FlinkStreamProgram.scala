@@ -28,6 +28,7 @@ import org.apache.calcite.plan.hep.HepMatchOrder
 /**
   * Defines a sequence of programs to optimize for stream table plan.
   */
+// FlinkBatchProgram  FlinkStreamProgram  分别封装批 和 流 的执行计划 的 所有的优化策略集合
 object FlinkStreamProgram {
 
   val SUBQUERY_REWRITE = "subquery_rewrite"
@@ -43,10 +44,18 @@ object FlinkStreamProgram {
   val PHYSICAL = "physical"
   val PHYSICAL_REWRITE = "physical_rewrite"
 
+  /*
+    1  HepMatchOrder 启发式优化的 规则匹配顺序：
+           ARBITRARY, 任意
+           BOTTOM_UP, 从底到顶
+           TOP_DOWN,  从顶到底
+           DEPTH_FIRST, 深度优先
+
+   */
   def buildProgram(config: Configuration): FlinkChainedProgram[StreamOptimizeContext] = {
     val chainedProgram = new FlinkChainedProgram[StreamOptimizeContext]()
 
-    // rewrite sub-queries to joins
+    // 将子查询 重写为join
     chainedProgram.addLast(
       SUBQUERY_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
@@ -74,7 +83,7 @@ object FlinkStreamProgram {
           .build(), "convert table references after sub-queries removed")
         .build())
 
-    // rewrite special temporal join plan
+    // 重写 特殊的 时态 join 计划
     chainedProgram.addLast(
       TEMPORAL_JOIN_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
@@ -92,7 +101,7 @@ object FlinkStreamProgram {
             .build(), "convert enumerable table scan")
         .build())
 
-    // query decorrelation
+    // 查询去关联
     chainedProgram.addLast(DECORRELATE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
           // rewrite before decorrelation
@@ -117,6 +126,7 @@ object FlinkStreamProgram {
 
     // rule based optimization: push down predicate(s) in where clause, so it only needs to read
     // the required data
+    // 谓词下推
     chainedProgram.addLast(
       PREDICATE_PUSHDOWN,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
@@ -140,7 +150,7 @@ object FlinkStreamProgram {
             .build(), "prune empty after predicate push down")
         .build())
 
-    // join reorder
+    // join 重排序
     if (config.getBoolean(OptimizerConfigOptions.TABLE_OPTIMIZER_JOIN_REORDER_ENABLED)) {
       chainedProgram.addLast(
         JOIN_REORDER,
@@ -158,7 +168,7 @@ object FlinkStreamProgram {
           .build())
     }
 
-    // project rewrite
+    // project 重写
     chainedProgram.addLast(
       PROJECT_REWRITE,
       FlinkHepRuleSetProgramBuilder.newBuilder
@@ -167,7 +177,7 @@ object FlinkStreamProgram {
         .add(FlinkStreamRuleSets.PROJECT_RULES)
         .build())
 
-    // optimize the logical plan
+    // 优化逻辑计划
     chainedProgram.addLast(
       LOGICAL,
       FlinkVolcanoProgramBuilder.newBuilder
@@ -175,7 +185,7 @@ object FlinkStreamProgram {
         .setRequiredOutputTraits(Array(FlinkConventions.LOGICAL))
         .build())
 
-    // logical rewrite
+    // 逻辑重写
     chainedProgram.addLast(
       LOGICAL_REWRITE,
       FlinkHepRuleSetProgramBuilder.newBuilder
@@ -185,9 +195,11 @@ object FlinkStreamProgram {
         .build())
 
     // convert time indicators
+    // 处理时间语义
     chainedProgram.addLast(TIME_INDICATOR, new FlinkRelTimeIndicatorProgram)
 
-    // optimize the physical plan
+    // 逻辑计划变 物理计划, 物理计划优化 ( flink 对物理计划有大量的扩展 )
+    //         内部存在 join 优化
     chainedProgram.addLast(
       PHYSICAL,
       FlinkVolcanoProgramBuilder.newBuilder
@@ -195,7 +207,7 @@ object FlinkStreamProgram {
         .setRequiredOutputTraits(Array(FlinkConventions.STREAM_PHYSICAL))
         .build())
 
-    // physical rewrite
+    // 物理计划重写
     chainedProgram.addLast(
       PHYSICAL_REWRITE,
       FlinkGroupProgramBuilder.newBuilder[StreamOptimizeContext]
@@ -214,7 +226,7 @@ object FlinkStreamProgram {
           FlinkHepRuleSetProgramBuilder.newBuilder
             .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
             .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-            .add(FlinkStreamRuleSets.MINI_BATCH_RULES)
+            .add(FlinkStreamRuleSets.MINI_BATCH_RULES)      //mini batch 优化
             .build(), "mini-batch interval rules")
         .addProgram(
           FlinkHepRuleSetProgramBuilder.newBuilder

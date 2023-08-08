@@ -143,10 +143,13 @@ public final class DynamicSinkUtils {
         final ResolvedSchema schema = externalModifyOperation.getResolvedSchema();
         final CatalogTable unresolvedTable = new InlineCatalogTable(schema);
         final ResolvedCatalogTable catalogTable = new ResolvedCatalogTable(unresolvedTable, schema);
+
         final DynamicTableSink tableSink =
                 new ExternalDynamicSink(
                         externalModifyOperation.getChangelogMode().orElse(null),
                         externalModifyOperation.getPhysicalDataType());
+
+        // 将 tableSink 封装成符合 calcite 标准的 关系代数
         return convertSinkToRel(
                 relBuilder,
                 input,
@@ -196,11 +199,12 @@ public final class DynamicSinkUtils {
 
         List<SinkAbilitySpec> sinkAbilitySpecs = new ArrayList<>();
 
-        //  校验, 把元数据信息, 覆盖信息保存到 sinkAbilitySpecs
+        // 1 校验 sink 是否支持分区, 是否支持 insert overwite, 是否 元数据字段写;
+        // 2 并把相关信息添加给 sinkAbilitySpecs
         prepareDynamicSink(
                 sinkIdentifier, staticPartitions, isOverwrite, sink, table, sinkAbilitySpecs);
 
-        //  配置 sink ,把分区, 覆盖 和元数据信息 保存到 sink 的成员变量上
+        //  配置 sink ,把分区 覆盖 和元数据信息 保存到 sink 的成员变量上
         sinkAbilitySpecs.forEach(spec -> spec.apply(sink));
 
         //  校验 查询的schema和 sink端的schema  ,并进行隐式类型转换
@@ -209,20 +213,21 @@ public final class DynamicSinkUtils {
                         input, schema, sinkIdentifier, dataTypeFactory, typeFactory);
         relBuilder.push(query);
 
-        // 3. convert the sink's table schema to the consumed data type of the sink
         // 抽取  元数据非虚拟列 , 非虚拟列才能被持久化
         final List<Integer> metadataColumns = extractPersistedMetadataColumns(schema);
         if (!metadataColumns.isEmpty()) {
             pushMetadataProjection(relBuilder, typeFactory, schema, sink);
         }
 
+        // 处理 OPTIONS sql暗示
         List<RelHint> hints = new ArrayList<>();
         if (!dynamicOptions.isEmpty()) {
             hints.add(RelHint.builder("OPTIONS").hintOptions(dynamicOptions).build());
         }
         final RelNode finalQuery = relBuilder.build();
 
-        /*  LogicalLegacySink <- LegacySink <-SingleRel <- AbstractRelNode <- RelNode  */
+        /* 继承链 LogicalLegacySink <- LegacySink <-SingleRel <- AbstractRelNode <- RelNode  */
+        // 核心逻辑在 sink内, 但是得用 LogicalSink包装,  因为得符合 calcite 的标准, 这样才能用到 calcite的优化策略等
         return LogicalSink.create(
                 finalQuery,
                 hints,
@@ -412,10 +417,10 @@ public final class DynamicSinkUtils {
             ResolvedCatalogTable table,
             List<SinkAbilitySpec> sinkAbilitySpecs) {
 
-        // 校验分区信息
+        // 校验分区信息 （sink 是否支持分区）
         validatePartitioning(sinkIdentifier, staticPartitions, sink, table.getPartitionKeys());
 
-        // 校验 并把相关 覆盖 信息保存到 sinkAbilitySpecs
+        // 校验 并把相关 覆盖 信息保存到 sinkAbilitySpecs  （ sink 是否支持 insert  overwrite ）
         validateAndApplyOverwrite(sinkIdentifier, isOverwrite, sink, sinkAbilitySpecs);
 
         // 校验 并把相关元数据列 信息保存到 sinkAbilitySpecs
@@ -432,10 +437,10 @@ public final class DynamicSinkUtils {
     private static List<String> createRequiredMetadataKeys(
             ResolvedSchema schema, DynamicTableSink sink) {
         final List<Column> tableColumns = schema.getColumns();
-        // 抽取 可以持久化到磁盘的虚拟列的序号
+        // 抽取 可以持久化到磁盘的元数据列的序号
         final List<Integer> metadataColumns = extractPersistedMetadataColumns(schema);
 
-        //拿到 可以持久化到磁盘的虚拟列的 列名
+        //拿到 可以持久化到磁盘的 元数据列的 列名
         final Set<String> requiredMetadataKeys =
                 metadataColumns.stream()
                         .map(tableColumns::get)
@@ -443,7 +448,8 @@ public final class DynamicSinkUtils {
                         .map(c -> c.getMetadataKey().orElse(c.getName()))
                         .collect(Collectors.toSet());
 
-
+        // 如果是 ExternalDynamicSink实现类:    只有 rowtime 一个字段元素
+        // 如果是 KafkaDynamicSink实现类： 有 headers 和 timestamp 字段元素
         final Map<String, DataType> metadataMap = extractMetadataMap(sink);
 
         // sink 和 requiredMetadataKeys 取交集
@@ -604,7 +610,7 @@ public final class DynamicSinkUtils {
             ResolvedSchema schema,
             List<SinkAbilitySpec> sinkAbilitySpecs) {
         final List<Column> columns = schema.getColumns();
-        // 抽出可以持久化的列的 序号
+        // 抽出可以持久化的 元数据列的 序号
         final List<Integer> metadataColumns = extractPersistedMetadataColumns(schema);
 
         if (metadataColumns.isEmpty()) {
@@ -622,14 +628,17 @@ public final class DynamicSinkUtils {
                             SupportsWritingMetadata.class.getSimpleName()));
         }
 
+        // ExternalDynamicSink 和 KafkaDynamicSink 两种实现可写的元数据字段不一样
         final Map<String, DataType> metadataMap =
                 ((SupportsWritingMetadata) sink).listWritableMetadata();
+
         metadataColumns.forEach(
                 pos -> {
                     final MetadataColumn metadataColumn = (MetadataColumn) columns.get(pos);
-                    final String metadataKey =
-                            metadataColumn.getMetadataKey().orElse(metadataColumn.getName());
+
+                    final String metadataKey = metadataColumn.getMetadataKey().orElse(metadataColumn.getName());
                     final LogicalType metadataType = metadataColumn.getDataType().getLogicalType();
+
                     final DataType expectedMetadataDataType = metadataMap.get(metadataKey);
                     // check that metadata key is valid
                     if (expectedMetadataDataType == null) {
@@ -645,6 +654,7 @@ public final class DynamicSinkUtils {
                                         String.join("\n", metadataMap.keySet())));
                     }
                     // check that types are compatible
+                    // 检验类型是否兼容
                     if (!supportsExplicitCast(
                             metadataType, expectedMetadataDataType.getLogicalType())) {
                         if (metadataKey.equals(metadataColumn.getName())) {
@@ -674,7 +684,9 @@ public final class DynamicSinkUtils {
 
         sinkAbilitySpecs.add(
                 new WritingMetadataSpec(
+                        //  最终将会被持久化的 元数据列的 字段名列表
                         createRequiredMetadataKeys(schema, sink),
+                        //  物理列 和 被持久化的元数据列
                         createConsumedType(schema, sink)));
     }
 

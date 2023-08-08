@@ -183,9 +183,20 @@ public class CheckpointedInputGate implements PullingAsyncDataInput<BufferOrEven
         return next;
     }
 
+    // 处理 CheckpointBarrier, CancelCheckpointMarker, EndOfData,EventAnnouncement 等事件
     private Optional<BufferOrEvent> handleEvent(BufferOrEvent bufferOrEvent) throws IOException {
         Class<? extends AbstractEvent> eventClass = bufferOrEvent.getEvent().getClass();
         if (eventClass == CheckpointBarrier.class) {
+            /*
+               在创建barrier 处理器的时候, 会根据不同checkpoint语义 和 不同的对齐方式 创建不同的实现
+               barrierHandler 有两种实现：
+                    1  EXACTLY_ONCE: SingleCheckpointBarrierHandler (支持对齐与非对齐)
+                         SingleCheckpointBarrierHandler.unaligned 方法构建非对齐时的对象
+                         SingleCheckpointBarrierHandler.aligned 方法用来构建对齐时的对象
+                         两者 构建的对象一样， 但是成员变量不一样, 比如，前者多一个 SubtaskCheckpointCoordinator  成员
+
+                    2  AT_LEAST_ONCE: CheckpointBarrierTracker (不支持非对齐)
+             */
             CheckpointBarrier checkpointBarrier = (CheckpointBarrier) bufferOrEvent.getEvent();
             barrierHandler.processBarrier(checkpointBarrier, bufferOrEvent.getChannelInfo(), false);
         } else if (eventClass == CancelCheckpointMarker.class) {

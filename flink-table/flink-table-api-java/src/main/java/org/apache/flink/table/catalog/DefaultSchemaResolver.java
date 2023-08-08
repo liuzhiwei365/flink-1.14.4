@@ -91,12 +91,26 @@ class DefaultSchemaResolver implements SchemaResolver {
     }
 
     // --------------------------------------------------------------------------------------------
+    /*
+       列大概分为三种：  物理列 元数据列 和 计算列
 
+          1 物理列：
+             其定义了物理介质中存储的数据中字段的名称、类型和顺序
+
+          2 元数据列：
+             是 SQL 标准的扩展，允许访问数据源本身具有的一些元数据。元数据列由 METADATA 关键字标识。
+          例如，我们可以使用元数据列从 Kafka 数据中读取 Kafka 数据自带的时间戳（Kafka 引擎给这条数据打上的
+          时间戳标记），然后我们可以在 Flink SQL 中使用这个时间戳，比如进行基于时间的窗口操作
+
+          3 计算列：
+              拿已有的一些列经过一些自定义的运算生成的新列
+     */
     private List<Column> resolveColumns(List<Schema.UnresolvedColumn> unresolvedColumns) {
 
         validateDuplicateColumns(unresolvedColumns);
 
         final Column[] resolvedColumns = new Column[unresolvedColumns.size()];
+
         // process source columns first before computed columns
         for (int pos = 0; pos < unresolvedColumns.size(); pos++) {
             final Schema.UnresolvedColumn unresolvedColumn = unresolvedColumns.get(pos);

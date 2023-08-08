@@ -452,6 +452,8 @@ public class CliClient implements AutoCloseable {
             callShowCreateTable((ShowCreateTableOperation) operation);
         } else {
             // fallback to default implementation
+
+            // 建表,修改操作都在这里
             executeOperation(operation);
         }
     }

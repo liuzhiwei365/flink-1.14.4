@@ -1316,9 +1316,10 @@ public class Task
      * @param checkpointTimestamp The timestamp associated with the checkpoint.
      * @param checkpointOptions Options for performing this checkpoint.
      */
-    // 只有作为source的Task才会触发triggerCheckpointBarrier()方法的调用
+    // 1 只有作为source的Task才会触发triggerCheckpointBarrier()方法的调用
     // 其中triggerCheckpoint是触发checkpoint的源头,会向下游注入CheckpointBarrier;
-    // 而下游的其他任务在收到CheckpointBarrier后调用triggerCheckpointOnBarrier方法
+
+    // 2  而下游的其他任务在收到CheckpointBarrier后调用triggerCheckpointOnBarrier方法
     public void triggerCheckpointBarrier(
             final long checkpointID,
             final long checkpointTimestamp,

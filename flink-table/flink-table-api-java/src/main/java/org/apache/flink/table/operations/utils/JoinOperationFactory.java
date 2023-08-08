@@ -69,9 +69,13 @@ final class JoinOperationFactory {
             JoinType joinType,
             ResolvedExpression condition,
             boolean correlated) {
+        // 校验连接表达式的类型是否正确
         verifyConditionType(condition);
+        // 检验左右两个 QueryOperation 是否有字段名混淆
         validateNamesAmbiguity(left, right);
+        // 校验连接表达式
         validateCondition(right, joinType, condition, correlated);
+        // 构建 Join 查询操作
         return new JoinQueryOperation(left, right, joinType, condition, correlated);
     }
 

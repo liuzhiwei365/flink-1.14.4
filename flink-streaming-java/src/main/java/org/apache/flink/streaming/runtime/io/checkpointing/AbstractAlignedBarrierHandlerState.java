@@ -71,13 +71,16 @@ abstract class AbstractAlignedBarrierHandlerState implements BarrierHandlerState
             return triggerGlobalCheckpoint(controller, checkpointBarrier);
         }
 
+        // 调整状态机
         return convertAfterBarrierReceived(state);
     }
 
     protected WaitingForFirstBarrier triggerGlobalCheckpoint(
             Controller controller, CheckpointBarrier checkpointBarrier) throws IOException {
         controller.triggerGlobalCheckpoint(checkpointBarrier);
+        // 恢复所有 先前阻塞的 inputChannel
         state.unblockAllChannels();
+        // 调整状态机为 WaitingForFirstBarrier
         return new WaitingForFirstBarrier(state.getInputs());
     }
 

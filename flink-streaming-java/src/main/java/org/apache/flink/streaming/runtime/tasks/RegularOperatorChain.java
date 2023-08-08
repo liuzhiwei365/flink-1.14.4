@@ -212,6 +212,9 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
                         op, checkpointMetaData, checkpointOptions, storage, isRunning);
 
         // 如果算子是算子链中的 头算子; 设置 InputChannel 的状态句柄
+        //    1 当checkpoint 是非对齐模式时, channelStateWriteResult 才有实际的实现
+        //    否则, channelStateWriteResult 为空实现, 设置的 future对象也是啥逻辑都没有的空的future对象
+        //    2 因为只有当checkpoint 是非对齐模式又需要保证 exactly-once 语义时,我们才需要将inputChannel 和 ResultSubpartition的状态保存
         if (op == getMainOperator()) {
             snapshotInProgress.setInputChannelStateFuture(
                     channelStateWriteResult
@@ -220,6 +223,7 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
                             .thenApply(SnapshotResult::of));
         }
         // 如果算子是算子链中的 尾算子; 设置 ResultSubpartition  的状态句柄
+        //    和 上面是一个道理, 当checkpoint 是非对齐模式时, channelStateWriteResult 才有实际的实现
         if (op == getTailOperator()) {
             snapshotInProgress.setResultSubpartitionStateFuture(
                     channelStateWriteResult

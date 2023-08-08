@@ -226,8 +226,8 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
                 || (currentCheckpointId == barrierId && !isCheckpointPending())) {
             if (!barrier.getCheckpointOptions().isUnalignedCheckpoint()) {
 
-                // 在对齐checkpoint模式下, 让指定的 channel 恢复消费. (因为有可能上次checkpoint 对齐barriar的时候,将channel
-                // 阻塞了.)
+                // 在对齐checkpoint模式下, 让指定的 channel 恢复消费.
+                // (因为有可能上次checkpoint 对齐barriar的时候,将channel阻塞了.)
                 inputs[channelInfo.getGateIdx()].resumeConsumption(channelInfo);
             }
             return;
@@ -236,6 +236,21 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
         checkNewCheckpoint(barrier);
         checkState(currentCheckpointId == barrierId);
 
+        //   对齐：
+        //     1   state 最初始是 WaitingForFirstBarrier 类型
+        //           （父类 AbstractAlignedBarrierHandlerState ）
+        //     2   当来了 barrier ,但是还没齐的时候
+        //             阻塞 相关 barrier对应的 inputChannel
+        //             状态机变成 CollectingBarriers  类型（父类还是 AbstractAlignedBarrierHandlerState ）
+        //     3   当 barrier到齐后,
+        //             正式开始本 subtask 的checkpoint ,
+        //             恢复之前阻塞的  所有 inputChannel ,
+        //             状态机恢复为 WaitingForFirstBarrier 类型
+
+        //  非对齐：
+        //     1    state 最初始是 AlternatingWaitingForFirstBarrierUnaligned 类型
+        //
+        //
         markCheckpointAlignedAndTransformState(
                 channelInfo,
                 barrier,
@@ -252,6 +267,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
 
         alignedChannels.add(alignedChannel);
 
+        // short cut
         if (alignedChannels.size() == 1) {
             if (targetChannelCount == 1) {
                 // 开始并且结束对齐
@@ -273,7 +289,8 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
 
         try {
             // 调用状态机的 状态转移方法 （这个过程有可能触发 本 subtask 的 checkpoint ）
-            // 可参考 AbstractAlignedBarrierHandlerState::barrierReceived 方法
+            //     可参考 AbstractAlignedBarrierHandlerState.barrierReceived 方法
+            //     或者 , AbstractAlternatingAlignedBarrierHandlerState.barrierReceived 方法
             currentState = stateTransformer.apply(currentState);
         } catch (CheckpointException e) {
             abortInternal(currentCheckpointId, e);
@@ -291,6 +308,7 @@ public class SingleCheckpointBarrierHandler extends CheckpointBarrierHandler {
                     taskName,
                     currentCheckpointId);
             resetAlignmentTimer();
+            // 触发本task 的checkpoint
             allBarriersReceivedFuture.complete(null);
         }
     }

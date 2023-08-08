@@ -68,11 +68,28 @@ public final class UnresolvedDataType implements AbstractDataType<UnresolvedData
      * Converts this instance to a resolved {@link DataType} possibly enriched with additional
      * nullability and conversion class information.
      */
+    /*
+        1 DataType 的 4个实现：
+
+            AtomicDataType        不可再分割的基本原子类型
+            KeyValueDataType      字段是 map 类型
+            CollectionDataType    字段是 集合 类型
+            FieldsDataType        字段内部 可以嵌套多个字段
+
+        2 KeyValueDataType 与 FieldsDataType 的区别：
+               KeyValueDataType中的 k 和 v 的类型是固定的
+               而 FieldsDataType中,每个子字段都可以定义自己的类型,类型可以无限多
+ */
+
     public DataType toDataType(DataTypeFactory factory) {
+        //  factory <= DataTypeFactoryImpl
+        //   这里的apply 方法 一定调用  DataTypeFactoryImpl 的 createDataType方法
         DataType resolvedDataType = resolutionFactory.apply(factory);
         if (isNullable == Boolean.TRUE) {
+            // 好比在ddl 定义了 某个字段可以为 null
             resolvedDataType = resolvedDataType.nullable();
         } else if (isNullable == Boolean.FALSE) {
+            //  好比在ddl 定义了 某个字段为  is not null
             resolvedDataType = resolvedDataType.notNull();
         }
         if (conversionClass != null) {

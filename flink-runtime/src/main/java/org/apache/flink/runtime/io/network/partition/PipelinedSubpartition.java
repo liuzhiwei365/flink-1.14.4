@@ -184,7 +184,7 @@ public class PipelinedSubpartition extends ResultSubpartition
                 return -1;
             }
 
-            // 添加 bufferConsumer到buffers 队列
+            // 添加 bufferConsumer到buffers 队列,   ***  addBuffer  方法是核心
             if (addBuffer(bufferConsumer, partialRecordLength)) {
                 prioritySequenceNumber = sequenceNumber;
             }
@@ -203,7 +203,7 @@ public class PipelinedSubpartition extends ResultSubpartition
             notifyPriorityEvent(prioritySequenceNumber);
         }
         if (notifyDataAvailable) {
-            // 通知 ResultSubPartitionView的 开始消费 PipelinedSubpartition中的 buffers 数据
+            // 通知 ResultSubPartitionView的 开始消费 PipelinedSubpartition中的 buffers队列中的 数据
             notifyDataAvailable();
         }
 
@@ -212,25 +212,35 @@ public class PipelinedSubpartition extends ResultSubpartition
 
     private boolean addBuffer(BufferConsumer bufferConsumer, int partialRecordLength) {
         assert Thread.holdsLock(buffers);
+        // 如果来的 bufferConsumer 有优先级, 触发一次优先级的处理
+        //     1 注意 只有是  非对齐的checkpoint, 才可能是 优先级事件
+        //     2 如果这个优先级事件是 CheckpointBarrier, 那么会触发 ResultSubpartition 当前状态的 持久化
         if (bufferConsumer.getDataType().hasPriority()) {
             return processPriorityBuffer(bufferConsumer, partialRecordLength);
         }
+        // 添加到 buffers  队列
         buffers.add(new BufferConsumerWithPartialRecordLength(bufferConsumer, partialRecordLength));
         return false;
     }
 
     private boolean processPriorityBuffer(BufferConsumer bufferConsumer, int partialRecordLength) {
+        // step1 将 bufferConsumer 添加到buffers 队列的优先级部分
         buffers.addPriorityElement(
                 new BufferConsumerWithPartialRecordLength(bufferConsumer, partialRecordLength));
         final int numPriorityElements = buffers.getNumPriorityElements();
 
+        // step2  如果, bufferConsumer 就是一个CheckpointBarrier 事件
         CheckpointBarrier barrier = parseCheckpointBarrier(bufferConsumer);
         if (barrier != null) {
             checkState(
                     barrier.getCheckpointOptions().isUnalignedCheckpoint(),
                     "Only unaligned checkpoints should be priority events");
+
             final Iterator<BufferConsumerWithPartialRecordLength> iterator = buffers.iterator();
+
+            // step3 将迭代器的游标向前移动 numPriorityElements 次
             Iterators.advance(iterator, numPriorityElements);
+            // step4 将 buffers 队列中所有的非优先级元素 填充到  inflightBuffers ,准备持久化
             List<Buffer> inflightBuffers = new ArrayList<>();
             while (iterator.hasNext()) {
                 BufferConsumer buffer = iterator.next().getBufferConsumer();
@@ -242,6 +252,7 @@ public class PipelinedSubpartition extends ResultSubpartition
                 }
             }
             if (!inflightBuffers.isEmpty()) {
+                //step5  异步持久化 inflightBuffers, 也就 ResultSubpartition 的当前状态     **核心
                 channelStateWriter.addOutputData(
                         barrier.getId(),
                         subpartitionInfo,
@@ -250,8 +261,7 @@ public class PipelinedSubpartition extends ResultSubpartition
             }
         }
         return numPriorityElements == 1
-                && !isBlocked; // if subpartition is blocked then downstream doesn't expect any
-        // notifications
+                && !isBlocked; // if subpartition is blocked then downstream doesn't expect any notifications
     }
 
     @Nullable

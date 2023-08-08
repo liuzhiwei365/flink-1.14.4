@@ -194,14 +194,17 @@ class ChannelStateCheckpointWriter {
 
     void completeInput() throws Exception {
         LOG.debug("complete input, output completed: {}", allOutputsReceived);
+        // 刷写然后关流 ,并且保存  inputChannel 通道状态句柄
         complete(!allInputsReceived, () -> allInputsReceived = true);
     }
 
     void completeOutput() throws Exception {
         LOG.debug("complete output, input completed: {}", allInputsReceived);
+        // 刷写然后关流 ,并且保存  ResultSubpartition 通道状态句柄
         complete(!allOutputsReceived, () -> allOutputsReceived = true);
     }
 
+    // 刷写然后关流 ,并且得到通道状态句柄
     private void complete(boolean precondition, RunnableWithException complete) throws Exception {
         if (result.isDone()) {
             // likely after abort - only need to set the flag run onComplete callback
@@ -213,19 +216,34 @@ class ChannelStateCheckpointWriter {
                                     precondition,
                                     complete,
                                     onComplete,
-                                    this::finishWriteAndResult));
+                                    this::finishWriteAndResult)); //核心  刷写然后关流 ,并且得到通道状态句柄
         }
     }
 
+    // 主要流程:
+    //    1 刷写,完成写入
+    //    2 关流
+    //    3 获取 状态句柄
+    //    4 触发 future 对象 , 结果保存在  result 成员变量中
     private void finishWriteAndResult() throws IOException {
+        // short cut
         if (inputChannelOffsets.isEmpty() && resultSubpartitionOffsets.isEmpty()) {
             dataStream.close();
             result.inputChannelStateHandles.complete(emptyList());
             result.resultSubpartitionStateHandles.complete(emptyList());
             return;
         }
+        // dataStream 和 checkpointStream 本质上是同一个流 ,可参见相关构造方法
+
+        // 刷写
         dataStream.flush();
+
+        // 关流, 并且获取 底层的 状态流句柄
         StreamStateHandle underlying = checkpointStream.closeAndGetHandle();
+
+        //  构建上层的  AbstractChannelStateHandle  通道状态句柄
+        //      AbstractChannelStateHandle有两个实现：   InputChannelStateHandle 和 ResultSubpartitionStateHandle
+        //  触发 所有相关的异步 future 对象 , 结果保存在  result 成员变量中
         complete(
                 underlying,
                 result.inputChannelStateHandles,

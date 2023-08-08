@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
 
 
 //  负责把各个input channel的inflight buffer和
-//  operator的输出缓存（ResultSubpartition）的内容记录到checkpoint
+//  operator的输出缓存（ResultSubpartition）的内容持久化到checkpoint
 @Internal
 public interface ChannelStateWriter extends Closeable {
 

@@ -68,6 +68,7 @@ public class PipelinedRegionSchedulingStrategy implements SchedulingStrategy {
         this.schedulerOperations = checkNotNull(schedulerOperations);
         this.schedulingTopology = checkNotNull(schedulingTopology);
 
+        // 划分region 的  全联通分量算法; 算法的结构存储在本类的 成员中
         init();
     }
 
@@ -147,6 +148,7 @@ public class PipelinedRegionSchedulingStrategy implements SchedulingStrategy {
                 IterableUtils.toStream(schedulingTopology.getAllPipelinedRegions())
                         .filter(this::isSourceRegion)
                         .collect(Collectors.toSet());
+        // 从source region 开始调度
         maybeScheduleRegions(sourceRegions);
     }
 
@@ -207,11 +209,13 @@ public class PipelinedRegionSchedulingStrategy implements SchedulingStrategy {
     public void onPartitionConsumable(final IntermediateResultPartitionID resultPartitionId) {}
 
     private void maybeScheduleRegions(final Set<SchedulingPipelinedRegion> regions) {
+        // 给每个调度 region 排序
         final List<SchedulingPipelinedRegion> regionsSorted =
                 SchedulingStrategyUtils.sortPipelinedRegionsInTopologicalOrder(
                         schedulingTopology, regions);
 
         final Map<ConsumedPartitionGroup, Boolean> consumableStatusCache = new HashMap<>();
+        // 以每个region 为单位, 进行调度
         for (SchedulingPipelinedRegion region : regionsSorted) {
             maybeScheduleRegion(region, consumableStatusCache);
         }

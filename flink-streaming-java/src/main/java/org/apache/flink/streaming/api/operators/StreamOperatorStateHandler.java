@@ -149,6 +149,7 @@ public class StreamOperatorStateHandler {
         }
     }
 
+
     public OperatorSnapshotFutures snapshotState(
             CheckpointedStreamOperator streamOperator,
             Optional<InternalTimeServiceManager<?>> timeServiceManager,
@@ -164,8 +165,10 @@ public class StreamOperatorStateHandler {
                         ? keyedStateBackend.getKeyGroupRange()
                         : KeyGroupRange.EMPTY_KEY_GROUP_RANGE;
 
+        // 创建OperatorSnapshotFutures对象,封装当前算子对应的  状态快照操作
         OperatorSnapshotFutures snapshotInProgress = new OperatorSnapshotFutures();
 
+        // 存储快照过程需要的环境信息
         StateSnapshotContextSynchronousImpl snapshotContext =
                 new StateSnapshotContextSynchronousImpl(
                         checkpointId, timestamp, factory, keyGroupRange, closeableRegistry);

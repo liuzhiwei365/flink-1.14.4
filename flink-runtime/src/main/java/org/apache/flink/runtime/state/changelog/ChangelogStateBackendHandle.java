@@ -42,6 +42,12 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * were not not materialized at the time of the snapshot. Both are potentially empty lists as there
  * can be no state or multiple states (e.g. after rescaling).
  */
+
+/*
+ChangelogStateBackend 的 状态句柄
+     目前只有一个实现  ChangelogStateBackendHandleImpl
+
+ */
 @Internal
 public interface ChangelogStateBackendHandle extends KeyedStateHandle {
     List<KeyedStateHandle> getMaterializedStateHandles();
@@ -50,7 +56,17 @@ public interface ChangelogStateBackendHandle extends KeyedStateHandle {
 
     class ChangelogStateBackendHandleImpl implements ChangelogStateBackendHandle {
         private static final long serialVersionUID = 1L;
+        /*
+        由 base 部分 和  delta部分组成
+              base部分:  引用物化状态（例如SST文件）
+              delta部分:  引用快照时, 未物化的状态更改
+         */
         private final List<KeyedStateHandle> materialized;
+
+        // ChangelogStateHandle 两个实现：
+        //        InMemoryChangelogStateHandle
+        //        ChangelogStateHandleStreamImpl
+        //
         private final List<ChangelogStateHandle> nonMaterialized;
         private final KeyGroupRange keyGroupRange;
 

@@ -49,7 +49,8 @@ import java.util.Set;
  *       return myMethod(((DistinctType) type).getSourceType)}
  * </ul>
  */
-//  与sql 标准对应的基础类型
+//  与sql 标准对应的基础类型, 每个枚举参数都在描述其 具体枚举的特征
+//  不可再嵌套的 逻辑类型
 @PublicEvolving
 public enum LogicalTypeRoot {
     CHAR(LogicalTypeFamily.PREDEFINED, LogicalTypeFamily.CHARACTER_STRING),

@@ -85,6 +85,7 @@ public final class ResolvedSchema {
     }
 
     /** Shortcut for a resolved schema of only physical columns. */
+    // 将列名 和 列类型 组织成完整的 列 ,包装成ResolvedSchema （代表已解析的表结构）
     public static ResolvedSchema physical(
             List<String> columnNames, List<DataType> columnDataTypes) {
         Preconditions.checkArgument(

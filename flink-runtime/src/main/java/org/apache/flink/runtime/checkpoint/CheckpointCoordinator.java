@@ -542,7 +542,7 @@ public class CheckpointCoordinator {
         return request.onCompletionPromise;
     }
 
-    //
+    // 开始触发全局job 的 checkpoint
     private void startTriggeringCheckpoint(CheckpointTriggerRequest request) {
         try {
             synchronized (lock) {
@@ -1516,7 +1516,7 @@ public class CheckpointCoordinator {
         return restoredCheckpointId.isPresent();
     }
 
- 
+
     // 1 恢复最新的快照状态
     //    恢复状态（包括 6种）（状态句柄）、恢复 master hooks 状态、 恢复算子协调者状态
 

@@ -356,6 +356,8 @@ public final class StreamTableEnvironmentImpl extends TableEnvironmentImpl
         return toStreamInternal(table, schemaTranslationResult, ChangelogMode.insertOnly());
     }
 
+    //  toChangelogStream 总共三个重载方法
+
     @Override
     public DataStream<Row> toChangelogStream(Table table) {
         Preconditions.checkNotNull(table, "Table must not be null.");
@@ -404,18 +406,24 @@ public final class StreamTableEnvironmentImpl extends TableEnvironmentImpl
                         .map(
                                 projections ->
                                         operationTreeBuilder.project(
+                                                // 输出的 表达式列表
                                                 projections.stream()
                                                         .map(ApiExpressionUtils::unresolvedRef)
                                                         .collect(Collectors.toList()),
+                                                // 输入的 查询操作 （我们把表 理解为 查询操作的一种特殊情况; 因为任何一张表 都可以用查询操作表示）
                                                 table.getQueryOperation()))
                         .orElseGet(table::getQueryOperation);
 
+        // Schema 表示还未解析的结构, ResolvedSchema 表示解析过的结构
+        //  这里的 Schema ,来自 SchemaTranslator.createProducingResult 方法
         final ResolvedSchema resolvedSchema =
                 schemaResolver.resolve(schemaTranslationResult.getSchema());
 
         final UnresolvedIdentifier unresolvedIdentifier =
                 UnresolvedIdentifier.of(
                         "Unregistered_DataStream_Sink_" + ExternalModifyOperation.getUniqueId());
+
+        // ObjectIdentifier 是 catalog  database  table 三级定位
         final ObjectIdentifier objectIdentifier =
                 catalogManager.qualifyIdentifier(unresolvedIdentifier);
 
@@ -432,11 +440,15 @@ public final class StreamTableEnvironmentImpl extends TableEnvironmentImpl
         return toStreamInternal(table, modifyOperation);
     }
 
+    // 把表装换为普通流
     private <T> DataStream<T> toStreamInternal(Table table, ModifyOperation modifyOperation) {
+        // ModifyOperation 是 sql 中的概念
+        // Transformation 才是 flink 内核中的概念,  将ModifyOperation 转换成 Transformation
         final List<Transformation<?>> transformations =
                 planner.translate(Collections.singletonList(modifyOperation));
 
         final Transformation<T> transformation = getTransformation(table, transformations);
+
         executionEnvironment.addOperator(transformation);
 
         // reconfigure whenever planner transformations are added

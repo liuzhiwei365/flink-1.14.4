@@ -47,7 +47,7 @@ public class OperatorSnapshotFinalizer {
     public OperatorSnapshotFinalizer(@Nonnull OperatorSnapshotFutures snapshotFutures)
             throws ExecutionException, InterruptedException {
 
-        //  6  类  状态
+        //  触发 6  类  状态快照  的  future 逻辑 , 并阻塞获取 结果
         SnapshotResult<KeyedStateHandle> keyedManaged =
                 FutureUtils.runIfNotDoneAndGet(snapshotFutures.getKeyedStateManagedFuture());
 

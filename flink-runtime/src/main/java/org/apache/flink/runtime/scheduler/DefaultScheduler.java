@@ -178,6 +178,7 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
                 new ExecutionFailureHandler(
                         getSchedulingTopology(), failoverStrategy, restartBackoffTimeStrategy);
 
+        // 这里的实现 只有 PipelinedRegionSchedulingStrategy 策略
         this.schedulingStrategy =
                 schedulingStrategyFactory.createInstance(this, getSchedulingTopology());
 

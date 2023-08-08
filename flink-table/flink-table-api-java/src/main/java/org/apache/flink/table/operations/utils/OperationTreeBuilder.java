@@ -149,6 +149,9 @@ public final class OperationTreeBuilder {
                 new ValuesOperationFactory());
     }
 
+    // select  Expression1 , Expression2 ... from   child
+    // 表达式列表    相当于 select 后面的内容 (输出)
+    // child       相当于 from 后面的 子查询或表 (输入)
     public QueryOperation project(List<Expression> projectList, QueryOperation child) {
         return project(projectList, child, false);
     }

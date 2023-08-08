@@ -57,6 +57,7 @@ public abstract class QueryOperationDefaultVisitor<T> implements QueryOperationV
         return defaultMethod(windowAggregate);
     }
 
+    // join
     @Override
     public T visit(JoinQueryOperation join) {
         return defaultMethod(join);

@@ -447,13 +447,33 @@ object FlinkStreamRuleSets {
     PullUpWindowTableFunctionIntoWindowAggregateRule.INSTANCE,
     ExpandWindowTableFunctionTransposeRule.INSTANCE,
     StreamPhysicalWindowRankRule.INSTANCE,
-    // join
-    StreamPhysicalJoinRule.INSTANCE,
-    StreamPhysicalIntervalJoinRule.INSTANCE,
-    StreamPhysicalTemporalJoinRule.INSTANCE,
-    StreamPhysicalLookupJoinRule.SNAPSHOT_ON_TABLESCAN,
-    StreamPhysicalLookupJoinRule.SNAPSHOT_ON_CALC_TABLESCAN,
-    StreamPhysicalWindowJoinRule.INSTANCE,
+
+    /*
+                                 flink中join 优化与分类
+     普通join
+
+     区间join
+          流表 与 流表 之间的join
+          两张表时间语义必须相同
+     时态join
+          流表 与 维度流表 （比如 cdc 的维度表 ）之间的 join, 根据左表数据的时间, 去右表中查找对应时间的最新的数据版本进行关联
+          两张表时间语义必须相同
+     lookup join
+          流表 与 普通的维度表（相对不变的维度表）, 流表中新插入的数据时，数据库中的数据是啥样，就join出啥样的结果(可以设置缓存)
+
+     窗口 join （业务价值不大）
+          流表 与 流表 之间的join
+          两张流表都必须按窗口划分, 窗口相同的数据之间才能join
+          两张表时间语义必须相同
+     */
+
+    // join                                                 针对流join 的 物理优化规则
+    StreamPhysicalJoinRule.INSTANCE,                        // 普通join
+    StreamPhysicalIntervalJoinRule.INSTANCE,                // 区间join
+    StreamPhysicalTemporalJoinRule.INSTANCE,                // 时态join
+    StreamPhysicalLookupJoinRule.SNAPSHOT_ON_TABLESCAN,     // lookup join
+    StreamPhysicalLookupJoinRule.SNAPSHOT_ON_CALC_TABLESCAN,// lookup join  on calc
+    StreamPhysicalWindowJoinRule.INSTANCE,                  // 窗口 join
     // CEP
     StreamPhysicalMatchRule.INSTANCE,
     // correlate

@@ -70,14 +70,17 @@ public class OutputConversionOperator extends TableStreamOperator<Object>
         final RowData rowData = element.getValue();
 
         if (consumeRowtimeMetadata) {
-            // timestamp is TIMESTAMP_LTZ
+            // 如果元数据列 的所有列名中包含  "rowtime"
+            // timestamp 的具体java 类似是 TIMESTAMP_LTZ
             final long rowtime = rowData.getTimestamp(rowData.getArity() - 1, 3).getMillisecond();
             outRecord.setTimestamp(rowtime);
         } else if (rowtimeIndex != -1) {
+            // rowtimeIndex 是提前解析好的 "rowtime" 字段的下标
             // timestamp might be TIMESTAMP or TIMESTAMP_LTZ
             final long rowtime = rowData.getTimestamp(rowtimeIndex, 3).getMillisecond();
             outRecord.setTimestamp(rowtime);
         }
+
 
         final Object internalRecord;
         if (atomicFieldGetter != null) {

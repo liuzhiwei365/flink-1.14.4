@@ -256,12 +256,6 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         checkNotNull(options);
         checkNotNull(metrics);
 
-        // All of the following steps happen as an atomic step from the perspective of barriers and
-        // records/watermarks/timers/callbacks.
-        // We generally try to emit the checkpoint barrier as soon as possible to not affect
-        // downstream
-        // checkpoint alignments
-
         // 检查上一个checkpoint的 id是否比metadata的checkpoint id 小
         // 否则存在checkpoint barrier乱序的可能，终止掉metadata.getCheckpointId()对应的checkpoint操作
         if (lastCheckpointId >= metadata.getCheckpointId()) {
@@ -276,8 +270,6 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
 
         logCheckpointProcessingDelay(metadata);
 
-        // Step (0): Record the last triggered checkpointId and abort the sync phase of checkpoint
-        // if necessary.
         // 第0步，更新lastCheckpointId变量
         // 如果当前checkpoint被取消，广播CancelCheckpointMarker到下游，表明这个checkpoint被终止
         lastCheckpointId = metadata.getCheckpointId();
@@ -299,41 +291,51 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
             initInputsCheckpoint(metadata.getCheckpointId(), options);
         }
 
-        // Step (1): Prepare the checkpoint, allow operators to do some pre-barrier work.
-        //           The pre-barrier work should be nothing or minimal in the common case.
 
-        // 第1步，调用operatorChain的prepareSnapshotPreBarrier方法，执行checkpoint操作前的预处理逻辑
+        // 第1步,   调用operatorChain的prepareSnapshotPreBarrier方法，执行checkpoint操作前的预处理逻辑
+        //         大都是空实现
         operatorChain.prepareSnapshotPreBarrier(metadata.getCheckpointId());
 
-        // Step (2): Send the checkpoint barrier downstream
 
-        // 向下游发送 CheckpointBarriar 事件
-        // 这里有个关键点：第二个参数为isPriorityEvent，连续跟踪代码后发现调用的是PipelinedSubpartition中的add方法，
-        // 如果isPriorityEvent为true，表示把这个barrier插入到ResultSubpartition的头部
+        /*
+           第2步,   向下游发送 CheckpointBarriar 事件
+
+                    1 把 CheckpointBarrier 事件会添加到 PipelinedSubpartition 成员优先级队列buffers  的优先级部分
+
+                    2 如果是  非对齐的checkpoint ,会触发 ResultSubpartition的 实际上的持久化, 调用栈如下:
+                             OperatorChain.broadcastEvent(AbstractEvent, boolean)
+                             RecordWriterOutput.broadcastEvent
+                             RecordWriter.broadcastEvent(AbstractEvent, boolean)
+                             ResultPartitionWriter.broadcastEvent
+                             BufferWritingResultPartition.broadcastEvent
+                             PipelinedSubpartition.add(BufferConsumer, int)
+                             PipelinedSubpartition.add(BufferConsumer, int, boolean)
+                             PipelinedSubpartition.addBuffer
+                             PipelinedSubpartition.processPriorityBuffer
+                             ChannelStateWriter.addOutputData    做实际的持久化
+         */
         operatorChain.broadcastEvent(
                 new CheckpointBarrier(metadata.getCheckpointId(), metadata.getTimestamp(), options),
                 options.isUnalignedCheckpoint());
 
-        // Step (3): Prepare to spill the in-flight buffers for input and output
-        // 第3步是一个关键点，如果启用了unaligned checkpoint，将所有input channel中checkpoint barrier后的buffer
+        // 第3步,    是一个关键点，如果启用了unaligned checkpoint, 将所有input channel中checkpoint barrier后的buffer
         // 写入到checkpoint中
         if (options.isUnalignedCheckpoint()) {
             // output data already written while broadcasting event
             channelStateWriter.finishOutput(metadata.getCheckpointId());
         }
 
-        // Step (4): Take the state snapshot. This should be largely asynchronous, to not impact
-        // progress of the streaming topology
 
-        // 第4步，异步执行checkpoint操作，checkpoint数据落地
+        // 第4步,   用于存储所有本subtask中 所有算子的 所有状态类型的 快照操作
+        //         如果是非对齐且阻塞的 checkpoint 则不包括 inputChannel 和 ResultSubpartition 类型的状态？
         Map<OperatorID, OperatorSnapshotFutures> snapshotFutures = new HashMap<>(operatorChain.getNumberOfOperators());
 
         try {
-            // Task 利用operatorChain链,来具体到每个 算子的快照; takeSnapshotSync是核心
+            //  第5步, 把 operatorChain链中的 所有 快照逻辑 填充到 snapshotFutures中
             if (takeSnapshotSync(
                     snapshotFutures, metadata, metrics, options, operatorChain, isRunning)) {
 
-                // snapshotFutures 封装了所有执行snapshot的 future对象
+                //  第6步, 用线程池异步的执行 snapshotFutures , 并且向CheckpointCoodinator 汇报ack
                 finishAndReportAsync(
                         snapshotFutures,
                         metadata,
@@ -562,6 +564,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
                         });
     }
 
+    // 用线程池异步的执行 snapshotFutures , 并且向CheckpointCoodinator 汇报ack
     private void finishAndReportAsync(
             Map<OperatorID, OperatorSnapshotFutures> snapshotFutures,
             CheckpointMetaData metadata,
@@ -587,7 +590,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         registerAsyncCheckpointRunnable(
                 asyncCheckpointRunnable.getCheckpointId(), asyncCheckpointRunnable);
 
-        // 核心, 执行  AsyncCheckpointRunnable的 run 方法
+        // 核心, 用 线程池 执行  AsyncCheckpointRunnable的 run 方法
         asyncOperationsThreadPool.execute(asyncCheckpointRunnable);
     }
 
@@ -612,9 +615,13 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         long started = System.nanoTime();
 
         // 1  ChannelStateWriteResult 类中维护着 某checkpointId 下,
-        //     该subtask 的所有InputChannel 和 ResultSubpartition 的状态句柄
+        //    该subtask 的所有InputChannel 和 ResultSubpartition 的状态句柄
+
         // 2  如果 checkpoint 是非对齐的模式, 才需要 InputChannel 和 ResultSubpartition 的状态句柄
         //    否则, 不需要, 返回一个内容为空的ChannelStateWriteResult 对象
+
+        // 3  因为只有当checkpoint 是非对齐模式又需要保证 exactly-once 语义时,我们才需要
+        //    将inputChannel 和 ResultSubpartition的状态保存
         ChannelStateWriteResult channelStateWriteResult =
                 checkpointOptions.isUnalignedCheckpoint()
                         ? channelStateWriter.getAndRemoveWriteResult(checkpointId)
@@ -627,6 +634,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
 
         try {
             //  做算子链 的  状态快照;  内部会填充 operatorSnapshotsInProgress   map集合
+            //  这里还没有实际触发 快照的动作, 仅仅把快照操作封装成future对象 ,用operatorSnapshotsInProgress 暂存
             operatorChain.snapshotState(
                     operatorSnapshotsInProgress,
                     checkpointMetaData,

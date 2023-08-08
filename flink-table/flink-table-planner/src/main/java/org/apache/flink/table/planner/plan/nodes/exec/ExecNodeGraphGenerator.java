@@ -48,14 +48,21 @@ public class ExecNodeGraphGenerator {
         this.visitedRels = new IdentityHashMap<>();
     }
 
+    // 针对多个 relNodes
     public ExecNodeGraph generate(List<FlinkPhysicalRel> relNodes) {
         List<ExecNode<?>> rootNodes = new ArrayList<>(relNodes.size());
         for (FlinkPhysicalRel relNode : relNodes) {
+            //针对单个 relNode
             rootNodes.add(generate(relNode));
         }
         return new ExecNodeGraph(rootNodes);
     }
 
+    //  1  执行图由 ExecNode 和 ExecEdge 组成
+    //  2  RelNode  可按照输入的数据分为：
+    //          SingleRel 一个输入
+    //          BiRel     两个输入
+    //          SetOp     多个输入
     private ExecNode<?> generate(FlinkPhysicalRel rel) {
         ExecNode<?> execNode = visitedRels.get(rel);
         if (execNode != null) {
@@ -71,6 +78,11 @@ public class ExecNodeGraphGenerator {
             inputNodes.add(generate((FlinkPhysicalRel) input));
         }
 
+        // FlinkPhysicalRel 子类：
+        //             StreamPhysicalLookupJoin
+        //
+        //
+        //  FlinkPhysicalRel 变->  ExecNode
         execNode = rel.translateToExecNode();
         // connects the input nodes
         List<ExecEdge> inputEdges = new ArrayList<>(inputNodes.size());

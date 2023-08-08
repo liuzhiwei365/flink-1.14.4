@@ -149,6 +149,7 @@ public class ChannelStateWriterImpl implements ChannelStateWriter {
                 taskName + " result future already present for checkpoint " + checkpointId);
     }
 
+    //异步持久化 InputChannel 状态
     @Override
     public void addInputData(
             long checkpointId,
@@ -163,9 +164,11 @@ public class ChannelStateWriterImpl implements ChannelStateWriter {
                 startSeqNum);
         // 1 构建 InputChannel的 buffer 状态的 写出请求  （写入请求里面封装了具体的 buffer 的 checkpoint写出逻辑 ）
         // 2 放入 ChannelStateWriteRequestExecutorImpl.deque 队列里面排队
+        // 3 ChannelStateWriteRequestExecutorImpl.loop()方法  会不断的到队列中拿请求元素执行
         enqueue(write(checkpointId, info, iterator), false);
     }
 
+    //异步持久化 ResultSubpartition 状态,  参见addInputData 方法
     @Override
     public void addOutputData(
             long checkpointId, ResultSubpartitionInfo info, int startSeqNum, Buffer... data) {
@@ -182,12 +185,18 @@ public class ChannelStateWriterImpl implements ChannelStateWriter {
     @Override
     public void finishInput(long checkpointId) {
         LOG.debug("{} finishing input data, checkpoint {}", taskName, checkpointId);
+        // 添加  CheckpointInProgressRequest 对象 到队列
+        // CheckpointInProgressRequest 封装的 实际逻辑是 ChannelStateCheckpointWriter::completeInput
+        //    它会刷写然后关流 ,并且持有  inputChannel 通道状态句柄, 即InputChannelStateHandle 对象
         enqueue(completeInput(checkpointId), false);
     }
 
     @Override
     public void finishOutput(long checkpointId) {
         LOG.debug("{} finishing output data, checkpoint {}", taskName, checkpointId);
+        // 添加  CheckpointInProgressRequest 对象 到队列
+        // CheckpointInProgressRequest 封装的 实际逻辑是 ChannelStateCheckpointWriter::completeOutput
+        //    它会刷写然后关流 ,并且持有  ResultSubpartition 通道状态句柄,  即ResultSubpartitionStateHandle 对象
         enqueue(completeOutput(checkpointId), false);
     }
 
