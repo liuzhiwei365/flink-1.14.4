@@ -640,9 +640,17 @@ public class CheckpointCoordinator {
                                         于是到了具体算子的  checkpointComplete 方法
 
                             3.2 OperatorCoordinatorHolder.notifyCheckpointComplete    算子协调者提交流程开始处
-                                    SourceCoordinator.notifyCheckpointComplete
+                                   3.2.1 SourceCoordinator.notifyCheckpointComplete
+                                              3.2.1.1  SourceCoordinatorContext.onCheckpointComplete
+                                                       SplitAssignmentTracker.onCheckpointComplete
+                                              3.2.1.2  SplitEnumerator.notifyCheckpointComplete
 
+                                   3.2.2 CollectSinkOperatorCoordinator.notifyCheckpointComplete
+                                   3.2.3 RecreateOnResetOperatorCoordinator.checkpointCoordinator
 
+         总体来说, 可以精简为4 部分,
+             触发算子协调者    触发算子    提交算子    提交算子协调者
+         可以好好体会一下顺序, 必须这样安排
      */
     // 开始触发全局job 的 checkpoint   总 入口
     private void startTriggeringCheckpoint(CheckpointTriggerRequest request) {
