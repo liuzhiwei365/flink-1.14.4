@@ -234,21 +234,45 @@ final class AsyncCheckpointRunnable implements Runnable, Closeable {
 
         taskEnvironment
                 .getTaskStateManager()
-                // StreamTask.performCheckpoint
-                // SubtaskCheckpointCoordinatorImpl.checkpointState
-                // SubtaskCheckpointCoordinatorImpl.finishAndReportAsync
-                // AsyncCheckpointRunnable.run
-                // AsyncCheckpointRunnable.reportCompletedSnapshotStates
-                // TaskStateManagerImpl.reportTaskStateSnapshots   **********
-                // RpcCheckpointResponder.acknowledgeCheckpoint
+                /*
 
-                // JobMaster.acknowledgeCheckpoint
-                // SchedulerBase.acknowledgeCheckpoint
-                // ExecutionGraphHandler.acknowledgeCheckpoint
-                // CheckpointCoordinator.receiveAcknowledgeMessage
 
-                // reportTaskStateSnapshots 方法在 整个 StreamTask 执行checkpoint ,
-                // 然后给CheckpointCoodinator汇报 ack 调用栈中的位置;  如下:
+                   StreamTask.performCheckpoint
+                        说明：
+                              Checkpoint 的触发过程分为两种情况:
+                              一种是 CheckpointCoordinator  周期性地触发数据源节点中的checkpoint操作
+                              另一种是下游算子通过 CheckpointBarrier 事件触发checkpoint操作
+                   SubtaskCheckpointCoordinatorImpl.checkpointState
+                   SubtaskCheckpointCoordinatorImpl.finishAndReportAsync
+                   AsyncCheckpointRunnable.run
+                   AsyncCheckpointRunnable.reportCompletedSnapshotStates
+                   TaskStateManagerImpl.reportTaskStateSnapshots    -->   本方法 reportTaskStateSnapshots 在这里
+                   RpcCheckpointResponder.acknowledgeCheckpoint
+
+                   JobMaster.acknowledgeCheckpoint
+                   SchedulerBase.acknowledgeCheckpoint
+                   ExecutionGraphHandler.acknowledgeCheckpoint
+                   CheckpointCoordinator.receiveAcknowledgeMessage
+                   CheckpointCoordinator.completePendingCheckpoint
+                   CheckpointCoordinator.sendAcknowledgeMessages
+                   Execution.notifyCheckpointComplete
+                   TaskManagerGateway.notifyCheckpointComplete
+                   RpcTaskManagerGateway.notifyCheckpointComplete
+                   TaskExecutorGateway.confirmCheckpoint
+
+                   TaskExecutor.confirmCheckpoint
+                   Task.notifyCheckpointComplete
+                   StreamTask.notifyCheckpointCompleteAsync
+                   StreamTask.notifyCheckpointComplete
+                   SubtaskCheckpointCoordinatorImpl.notifyCheckpointComplete
+                   RegularOperatorChain.notifyCheckpointComplete
+                   StreamOperatorWrapper.notifyCheckpointComplete
+                        最后一直到具体的算子, 比如
+                            AbstractStreamOperator.notifyCheckpointComplete
+                            SourceOperator.notifyCheckpointComplete
+                            SinkOperator.notifyCheckpointComplete
+                            AbstractUdfStreamOperator.notifyCheckpointComplete
+                */
                 .reportTaskStateSnapshots(
                         checkpointMetaData,
                         checkpointMetrics

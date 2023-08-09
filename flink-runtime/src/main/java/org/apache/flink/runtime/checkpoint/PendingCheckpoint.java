@@ -515,6 +515,7 @@ public class PendingCheckpoint implements Checkpoint {
                 operatorStates.put(operatorId, operatorState);
             }
             if (stateHandle != null) {
+                // 核心
                 operatorState.setCoordinatorState(stateHandle);
             }
 

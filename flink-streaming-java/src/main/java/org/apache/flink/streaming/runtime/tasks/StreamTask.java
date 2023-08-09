@@ -1162,17 +1162,20 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         mainMailboxExecutor.execute(
                 () -> {
                     try {
+                        // 场景:如果依赖的上游都是"有界流", 且上游都计算完了,则会向下游下发 EndOfPartitionEvent 事件
+
+                        // 而这里只有所有依赖的上游的子任务都计算完成, noUnfinishedInputGates 才为 ture
                         boolean noUnfinishedInputGates =
                                 Arrays.stream(getEnvironment().getAllInputGates())
-                                        .allMatch(InputGate::isFinished); // 每个 inputGate 的
+                                        .allMatch(InputGate::isFinished);
 
                         if (noUnfinishedInputGates) {
-                            // 每个 inputGate 下面的 inputChannel都收到了 数据结束的事件 （ 不需要处理 barrier ）
+                            // triggerCheckpointAsyncInMailbox 中没有barrier的下发动作, 应为没有必要了
                             result.complete(
                                     triggerCheckpointAsyncInMailbox(
                                             checkpointMetaData, checkpointOptions));
                         } else {
-                            // inputGate 下面的 存在没接收到 数据结束 事件 的 inputChannel （一般情况，常态）
+                            // 一般情况, 会构建 并下发 barrier
                             result.complete(
                                     triggerUnfinishedChannelsCheckpoint(
                                             checkpointMetaData, checkpointOptions));
@@ -1244,6 +1247,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
             CheckpointMetaData checkpointMetaData, CheckpointOptions checkpointOptions)
             throws Exception {
         //  最开始由 InputProcessorUtil.createCheckpointBarrierHandler 方法构造
+        //        1 用户指定 exactly-once 语义,则是 SingleCheckpointBarrierHandler 实现类
+        //              精准一次, 还分为 阻塞对齐  与  阻塞非对齐 两套逻辑
+        //              阻塞对齐 就是 大名顶顶的 Chandy-Lamport 算法, 而阻塞非对齐 就是第一个barrier就开始做快照,
+        //              不过得把 inputChannel 和 ResultSubpartition 的状态也保存 (io 比较大)
+        //        2 用户指定 at least 语义,则是 CheckpointBarrierTracker 实现类
         Optional<CheckpointBarrierHandler> checkpointBarrierHandler = getCheckpointBarrierHandler();
         checkState(
                 checkpointBarrierHandler.isPresent(),
@@ -1255,10 +1263,11 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         checkpointMetaData.getTimestamp(),
                         checkpointOptions);
 
+        // 实际上,只有 source 类型的 task 才有可能会走到这里 ***
+        // 向每个InputGate 的 每一个 InputChannnel 的下发  barrier
         for (IndexedInputGate inputGate : getEnvironment().getAllInputGates()) {
             if (!inputGate.isFinished()) {
                 for (InputChannelInfo channelInfo : inputGate.getUnfinishedChannels()) {
-                    //
                     checkpointBarrierHandler.get().processBarrier(barrier, channelInfo, true);
                 }
             }
@@ -1345,11 +1354,50 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         subtaskCheckpointCoordinator.abortCheckpointOnBarrier(checkpointId, cause, operatorChain);
     }
 
-    // Checkpoint 的触发过程分为两种情况:
-    // 一种是 CheckpointCoordinator  周期性地触发数据源节点中的checkpoint操作
-    // 另一种是下游算子通过 CheckpointBarrier 事件触发checkpoint操作
+    /*
+       Checkpoint 的触发过程分为两种情况:
+       A 一种是 CheckpointCoordinator  周期性地触发数据源节点中的checkpoint操作
+             特别说明：
+                为了 支持有界流场景下 包含结束任务的 Checkpoint功能, flink对checkpoint 流程做了进一步优化
+                之前在进行 Checkpoint 时,JobManager 中的 Checkpoint 控制器将首先通知所有的源节点保存当前状态,
+             然后源节点将通过 Barrier 事件通知后续的算子。由于现在源节点可能已经执行完成,Checkpoint 控制器需要
+             改为通知那些本身尚未执行结束、但是所有的前驱任务都已经执行完成的任务
+                但是对于无界流场景,依然必定是触发最开始的 数据源节点
 
-    // 最终都是调用 performCheckpoint 做状态数据的持久化
+             CheckpointCoordinator.startTriggeringCheckpoint
+             CheckpointCoordinator.triggerCheckpointRequest
+             CheckpointCoordinator.triggerTasks
+             Execution.triggerCheckpoint
+             Execution.triggerCheckpointHelper
+             RpcTaskManagerGateway.triggerCheckpoint
+             TaskExecutor.triggerCheckpoint
+             Task.triggerCheckpointBarrier
+             StreamTask.triggerCheckpointAsyncInMailbox
+                    路径1：
+                   SourceOperatorStreamTask.triggerCheckpointAsync
+                       StreamTask.triggerCheckpointAsync
+                       StreamTask.triggerUnfinishedChannelsCheckpoint
+                       CheckpointBarrierHandler.processBarrier
+                    路径2：
+                   SourceStreamTask.triggerCheckpointAsync
+                      StreamTask.triggerCheckpointAsync
+                      StreamTask.triggerUnfinishedChannelsCheckpoint
+                      CheckpointBarrierHandler.processBarrier
+
+             而CheckpointBarrierHandler 总共有两种实现
+                   1  EXACTLY_ONCE: SingleCheckpointBarrierHandler (支持对齐与非对齐)
+                         SingleCheckpointBarrierHandler.unaligned 方法构建非对齐时的对象
+                         SingleCheckpointBarrierHandler.aligned 方法用来构建对齐时的对象
+                         两者 构建的对象一样， 但是成员变量不一样, 比如，前者多一个 SubtaskCheckpointCoordinator  成员
+
+                    2  AT_LEAST_ONCE: CheckpointBarrierTracker (不支持非对齐)
+
+       B 另一种是下游算子通过 CheckpointBarrier 事件触发checkpoint操作
+             StreamTask.triggerCheckpointOnBarrier
+
+       最终都是调用 performCheckpoint 做正式开始状态数据的持久化
+
+     */
     private boolean performCheckpoint(
             CheckpointMetaData checkpointMetaData,
             CheckpointOptions checkpointOptions,
