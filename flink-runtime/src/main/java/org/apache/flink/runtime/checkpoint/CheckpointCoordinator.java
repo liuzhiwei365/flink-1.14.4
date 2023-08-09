@@ -573,7 +573,7 @@ public class CheckpointCoordinator {
 
          step5 触发 master hook 状态快照
 
-         step6 触发 各个子任务的 checkpoint,
+         step6 触发 各个子任务的 checkpoint
 
                1  一种是  周期性地触发数据源节点中的checkpoint操作
                   特别说明：
@@ -585,6 +585,7 @@ public class CheckpointCoordinator {
 
                   CheckpointCoordinator.triggerCheckpointRequest
                   CheckpointCoordinator.triggerTasks
+                            触发各子任务算子的checkpoint,并且异步等待 ack响应(从TM到JM的响应),  FutureUtils.waitForAll(acks) **
                   Execution.triggerCheckpoint
                   Execution.triggerCheckpointHelper
                   RpcTaskManagerGateway.triggerCheckpoint
@@ -619,7 +620,27 @@ public class CheckpointCoordinator {
 
                 两种情况, 最终都是调用 StreamTask.performCheckpoint 做正式开始状态数据的持久化
 
-                3
+                3  走到这里一定已经收集齐了各个子任务下算子的acks
+                     然后再次触发全局完成提交工作,包括 "算子的提交工作" 和 "算子协调者的提交工作"
+
+                     CheckpointCoordinator.triggerCheckpointRequest
+                         CheckpointCoordinator.maybeCompleteCheckpoint   响应流程开始处
+                         CheckpointCoordinator.completePendingCheckpoint
+                         CheckpointCoordinator.sendAcknowledgeMessages
+
+                            3.1 Execution.notifyCheckpointComplete    算子提交流程开始处
+                                    RpcTaskManagerGateway.notifyCheckpointComplete
+                                    TaskExecutor.confirmCheckpoint
+                                    Task.notifyCheckpointComplete
+                                    StreamTask.notifyCheckpointCompleteAsync
+                                    StreamTask.notifyCheckpointComplete
+                                    SubtaskCheckpointCoordinatorImpl.notifyCheckpointComplete
+                                    RegularOperatorChain.notifyCheckpointComplete
+                                    StreamOperatorWrapper.notifyCheckpointComplete
+                                        于是到了具体算子的  checkpointComplete 方法
+
+                            3.2 OperatorCoordinatorHolder.notifyCheckpointComplete    算子协调者提交流程开始处
+                                    SourceCoordinator.notifyCheckpointComplete
 
 
      */
@@ -749,6 +770,10 @@ public class CheckpointCoordinator {
         }
     }
 
+    //  本方法核心逻辑
+
+    //  1  triggerTasks 方法
+    //  2  maybeCompleteCheckpoint 方法
     private void triggerCheckpointRequest(
             CheckpointTriggerRequest request, long timestamp, PendingCheckpoint checkpoint) {
         if (checkpoint.isDisposed()) {
@@ -759,7 +784,7 @@ public class CheckpointCoordinator {
                             checkpoint.getFailureCause()));
         } else {
             // triggerTasks 是核心
-            //触发所有 trigger 集合中的执行节点  的 checkpoint, 并等待它们执行完
+            //触发所有 trigger 集合中的执行节点  的 checkpoint, 并等待它们执行完后 并得到 task端的 ack响应
             triggerTasks(request, timestamp, checkpoint)
                     .exceptionally(
                             failure -> {
