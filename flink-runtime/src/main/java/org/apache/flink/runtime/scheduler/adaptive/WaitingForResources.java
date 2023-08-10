@@ -97,6 +97,8 @@ class WaitingForResources implements State, ResourceConsumer {
                     context.runIfState(
                             this, this::resourceTimeout, initialResourceAllocationTimeout);
         }
+
+        // 如果有新的资源来, 则触发调用 notifyNewResourcesAvailable
         context.runIfState(this, this::notifyNewResourcesAvailable, Duration.ZERO);
     }
 

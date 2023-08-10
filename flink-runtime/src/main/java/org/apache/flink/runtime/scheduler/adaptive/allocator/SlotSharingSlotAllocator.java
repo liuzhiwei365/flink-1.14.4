@@ -67,10 +67,12 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
                 reserveSlot, freeSlotFunction, isSlotAvailableAndFreeFunction);
     }
 
+    // 计算需要的槽位总数
     @Override
     public ResourceCounter calculateRequiredSlots(
             Iterable<JobInformation.VertexInformation> vertices) {
         int numTotalRequiredSlots = 0;
+        //  getMaxParallelismForSlotSharingGroups 是核心
         for (Integer requiredSlots : getMaxParallelismForSlotSharingGroups(vertices).values()) {
             numTotalRequiredSlots += requiredSlots;
         }
@@ -79,7 +81,11 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
 
     private static Map<SlotSharingGroupId, Integer> getMaxParallelismForSlotSharingGroups(
             Iterable<JobInformation.VertexInformation> vertices) {
+        //  保存 每个 共享槽位组 对应 的 最大并行度
+        //  由于存在 多个算子链 共享槽位的情况,   也就是说多个算子链 如果看成一个整体的化,它们共同需要 "最大并行度的算子链 的并行度" 个槽位
+        //  就可以完美覆盖槽位需求  (说成算子链共享槽位 , 其实比 说成算子共享槽位 更加准确 )
         final Map<SlotSharingGroupId, Integer> maxParallelismForSlotSharingGroups = new HashMap<>();
+
         for (JobInformation.VertexInformation vertex : vertices) {
             maxParallelismForSlotSharingGroups.compute(
                     vertex.getSlotSharingGroup().getSlotSharingGroupId(),

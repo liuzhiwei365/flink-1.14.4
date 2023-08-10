@@ -746,9 +746,15 @@ public class AdaptiveScheduler
 
     @Override
     public void goToWaitingForResources() {
+        // 计算需要的slot 资源数
         final ResourceCounter desiredResources = calculateDesiredResources();
         declarativeSlotPool.setResourceRequirements(desiredResources);
 
+        // 从Created状态  切换状态为  WaitingForResources状态
+        // 状态类别有9 中:
+        //    WaitingForResources 、CreatingExecutionGraph 、Finished
+        //    Executing、 Restarting 、 Failing
+        //    Cancaling、 StopWithSavepoint、 Created
         transitionToState(
                 new WaitingForResources.Factory(
                         this,
@@ -759,6 +765,7 @@ public class AdaptiveScheduler
     }
 
     private ResourceCounter calculateDesiredResources() {
+        // 计算需要的槽位总数
         return slotAllocator.calculateRequiredSlots(jobInformation.getVertices());
     }
 
@@ -1144,6 +1151,7 @@ public class AdaptiveScheduler
                     state.getClass().getSimpleName(),
                     targetState.getStateClass().getSimpleName());
 
+            // 状态A 切换成 状态B 时的  "状态A的 离开时的回调动作"
             state.onLeave(targetState.getStateClass());
             T targetStateInstance = targetState.getState();
             state = targetStateInstance;

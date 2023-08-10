@@ -187,6 +187,8 @@ public final class DefaultSlotPoolServiceSchedulerFactory
                 slotPoolServiceFactory, schedulerNGFactory);
     }
 
+
+    // 对 adptive 调度器的 配置
     private static AdaptiveSchedulerFactory getAdaptiveSchedulerFactoryFromConfiguration(
             Configuration configuration) {
         Duration allocationTimeoutDefault = JobManagerOptions.RESOURCE_WAIT_TIMEOUT.defaultValue();

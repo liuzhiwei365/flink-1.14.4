@@ -424,6 +424,9 @@ public class JobManagerOptions {
         Documentation.Sections.EXPERT_SCHEDULING,
         Documentation.Sections.ALL_JOB_MANAGER
     })
+
+
+    // 资源等待时间，作业提交或重启后，等待一定的时间获取完整资源。如果超过时间未获取全部资源，则降低并行度执行；如果不满足最小资源要求，则失败
     public static final ConfigOption<Duration> RESOURCE_WAIT_TIMEOUT =
             key("jobmanager.adaptive-scheduler.resource-wait-timeout")
                     .durationType()
@@ -450,6 +453,7 @@ public class JobManagerOptions {
         Documentation.Sections.EXPERT_SCHEDULING,
         Documentation.Sections.ALL_JOB_MANAGER
     })
+    // 定义获取可运行资源后的等待时间。当作业获取可运行资源但不足请求资源时，等待一定的时间，超过时间以后，启动作业
     public static final ConfigOption<Duration> RESOURCE_STABILIZATION_TIMEOUT =
             key("jobmanager.adaptive-scheduler.resource-stabilization-timeout")
                     .durationType()
