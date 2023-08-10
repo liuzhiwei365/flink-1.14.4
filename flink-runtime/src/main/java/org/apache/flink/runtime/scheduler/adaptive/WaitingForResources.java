@@ -141,11 +141,13 @@ class WaitingForResources implements State, ResourceConsumer {
 
     @Override
     public void notifyNewResourcesAvailable() {
+        // 检查 所需或足够的  可用资源
         checkDesiredOrSufficientResourcesAvailable();
     }
 
     private void checkDesiredOrSufficientResourcesAvailable() {
         if (context.hasDesiredResources(desiredResources)) {
+            // 如果想要的需求能否被完全满足,则去创建执行图
             createExecutionGraphWithAvailableResources();
             return;
         }

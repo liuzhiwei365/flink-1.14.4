@@ -100,7 +100,9 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
     @Override
     public Optional<VertexParallelismWithSlotSharing> determineParallelism(
             JobInformation jobInformation, Collection<? extends SlotInfo> freeSlots) {
-        // TODO: This can waste slots if the max parallelism for slot sharing groups is not equal
+        // 如果插槽共享组的最大并行度不相等, 这可能会浪费插槽
+
+        // 槽位个数 / 共享组个数
         final int slotsPerSlotSharingGroup =
                 freeSlots.size() / jobInformation.getSlotSharingGroups().size();
 
@@ -115,19 +117,20 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
         final Map<JobVertexID, Integer> allVertexParallelism = new HashMap<>();
 
         for (SlotSharingGroup slotSharingGroup : jobInformation.getSlotSharingGroups()) {
+            // 指定共享组中所有的 VertexInformation
             final List<JobInformation.VertexInformation> containedJobVertices =
                     slotSharingGroup.getJobVertexIds().stream()
-                            .map(jobInformation::getVertexInformation)
+                            .map(jobInformation::getVertexInformation)// JobVertexID -> VertexInformation
                             .collect(Collectors.toList());
 
+            // 用 Math.min(jobVertex.getParallelism(), slotsPerSlotSharingGroup) 来更新 JobVertx 的 并行度设置
             final Map<JobVertexID, Integer> vertexParallelism =
                     determineParallelism(containedJobVertices, slotsPerSlotSharingGroup);
 
             final Iterable<ExecutionSlotSharingGroup> sharedSlotToVertexAssignment =
-                    createExecutionSlotSharingGroups(vertexParallelism);
+                                                                  createExecutionSlotSharingGroups(vertexParallelism);
 
-            for (ExecutionSlotSharingGroup executionSlotSharingGroup :
-                    sharedSlotToVertexAssignment) {
+            for (ExecutionSlotSharingGroup executionSlotSharingGroup : sharedSlotToVertexAssignment) {
                 final SlotInfo slotInfo = slotIterator.next();
 
                 assignments.add(
@@ -141,6 +144,7 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
 
     private static Map<JobVertexID, Integer> determineParallelism(
             Collection<JobInformation.VertexInformation> containedJobVertices, int availableSlots) {
+
         final Map<JobVertexID, Integer> vertexParallelism = new HashMap<>();
         for (JobInformation.VertexInformation jobVertex : containedJobVertices) {
             final int parallelism = Math.min(jobVertex.getParallelism(), availableSlots);
@@ -151,14 +155,38 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
         return vertexParallelism;
     }
 
+    /*
+
+          A0->B0->C0         D0->E0->F0->G0         H0->J0           Slot0
+
+          A1->B1->C1         D0->E0->F0->G0         H1->J2           Slot1
+
+          A2->B2->C2         D0->E0->F0->G0                          Slot2
+
+          A3->B3->C3                                                 Slot3
+
+          如果 A、B、C、D、E、F、G、H、J  是共享槽位共享组
+          且 A、B、C 的算子并行度为 4
+             D、E、F、G 的算子并行度 为 3
+             H、J算子的并行度 为 2
+          则, 总共分配4 个槽位 即可满足需求
+
+          所以本方法返回的迭代器,元素也必定是 4
+     */
+    // 本方法针对的是 单个的 槽位共享组
+    // 所以 算法将同一个 subTaskIndex 编号的 ExecutionVertexID 放入到一个Set中, 因为它们将来会运行在同一个槽位中
     private static Iterable<ExecutionSlotSharingGroup> createExecutionSlotSharingGroups(
             Map<JobVertexID, Integer> containedJobVertices) {
+
         final Map<Integer, Set<ExecutionVertexID>> sharedSlotToVertexAssignment = new HashMap<>();
 
+        //遍历JobVertex
         for (Map.Entry<JobVertexID, Integer> jobVertex : containedJobVertices.entrySet()) {
+            // 遍历 JobVertex下所有的 subTaskIndex
             for (int i = 0; i < jobVertex.getValue(); i++) {
                 sharedSlotToVertexAssignment
                         .computeIfAbsent(i, ignored -> new HashSet<>())
+                         // ExecutionVertexID(jobVertexId, subtaskIndex)
                         .add(new ExecutionVertexID(jobVertex.getKey(), i));
             }
         }

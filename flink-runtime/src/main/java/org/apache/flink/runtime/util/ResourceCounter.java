@@ -162,6 +162,7 @@ public final class ResourceCounter {
      * @param decrement decrement is the number by which to decrease resourceProfile
      * @return new ResourceCounter containing the new value
      */
+    // 用resources 满足 resourceProfile 需求后,   把剩下的 资源重新再次包装成新的 ResourceCounter 返回
     public ResourceCounter subtract(ResourceProfile resourceProfile, int decrement) {
         final Map<ResourceProfile, Integer> newValues = new HashMap<>(resources);
         final int newValue = resources.getOrDefault(resourceProfile, 0) - decrement;

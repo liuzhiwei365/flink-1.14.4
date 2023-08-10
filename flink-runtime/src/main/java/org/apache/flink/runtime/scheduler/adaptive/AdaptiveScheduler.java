@@ -692,14 +692,19 @@ public class AdaptiveScheduler
 
     // ----------------------------------------------------------------
 
+    // 想要的需求能否被完全满足
     @Override
     public boolean hasDesiredResources(ResourceCounter desiredResources) {
         final Collection<? extends SlotInfo> allSlots =
                 declarativeSlotPool.getFreeSlotsInformation();
+
+        //总需求
         ResourceCounter outstandingResources = desiredResources;
 
+        //总供给
         final Iterator<? extends SlotInfo> slotIterator = allSlots.iterator();
 
+        //  如果需求不为空, 且有闲置的槽位资源
         while (!outstandingResources.isEmpty() && slotIterator.hasNext()) {
             final SlotInfo slotInfo = slotIterator.next();
             final ResourceProfile resourceProfile = slotInfo.getResourceProfile();
@@ -710,7 +715,9 @@ public class AdaptiveScheduler
                 outstandingResources = outstandingResources.subtract(ResourceProfile.UNKNOWN, 1);
             }
         }
+        // 需求 和 供给 有一方浩完都会退出 while 循环
 
+        // 若需求被完全满足,则返回ture
         return outstandingResources.isEmpty();
     }
 
@@ -725,6 +732,7 @@ public class AdaptiveScheduler
             throws NoResourceAvailableException {
 
         return slotAllocator
+                // 决定每个JobVertx 的并行度
                 .determineParallelism(jobInformation, declarativeSlotPool.getFreeSlotsInformation())
                 .orElseThrow(
                         () ->
@@ -894,6 +902,7 @@ public class AdaptiveScheduler
     public void goToCreatingExecutionGraph() {
         final CompletableFuture<CreatingExecutionGraph.ExecutionGraphWithVertexParallelism>
                 executionGraphWithAvailableResourcesFuture =
+                // 创建执行图
                         createExecutionGraphWithAvailableResourcesAsync();
 
         transitionToState(
@@ -907,14 +916,13 @@ public class AdaptiveScheduler
         final VertexParallelismStore adjustedParallelismStore;
 
         try {
+            // 维护一个map,  key 为 JobVertex , value 为其对应的最大并行度
             vertexParallelism = determineParallelism(slotAllocator);
+            // 拷贝一份 JobGraph
             JobGraph adjustedJobGraph = jobInformation.copyJobGraph();
 
             for (JobVertex vertex : adjustedJobGraph.getVertices()) {
                 JobVertexID id = vertex.getID();
-
-                // use the determined "available parallelism" to use
-                // the resources we have access to
                 vertex.setParallelism(vertexParallelism.getParallelism(id));
             }
 
