@@ -62,9 +62,21 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
         Preconditions.checkState(
                 executionGraph.getState() == JobStatus.RUNNING, "Assuming running execution graph");
 
+        // 开始部署执行图
         deploy();
 
-        // check if new resources have come available in the meantime
+        // 如果有新的资源来, 扩容,  并重新部署
+
+        // 调用链如下：
+        //      Executing.notifyNewResourcesAvailable
+        //      AdaptiveScheduler.goToRestarting
+        //      AdaptiveScheduler.transitionToState
+        //      Restarting 的 构造方法
+        //      Restarting的父类StateWithExecutionGraph 的 构造方法
+        //      Restarting.onGloballyTerminalState
+        //      AdaptiveScheduler.goToWaitingForResources
+        //
+        //      最终会转到WaitingForResources状态
         context.runIfState(this, this::notifyNewResourcesAvailable, Duration.ZERO);
     }
 

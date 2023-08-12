@@ -35,6 +35,8 @@ import java.util.Map;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
+
+// IntermediateResult 代表某类 中间数据集, 有多个分区
 public class IntermediateResult {
 
     private final IntermediateDataSetID id;

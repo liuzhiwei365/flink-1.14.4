@@ -35,17 +35,18 @@ import static org.apache.flink.util.Preconditions.checkState;
 /** Class that manages all the connections between tasks. */
 public class EdgeManager {
 
-    // 消费的顶点组   value设计成一个List 的原因是 为了兼顾 拆分流的场景
+    // 消费的顶点组
     private final Map<IntermediateResultPartitionID, List<ConsumerVertexGroup>> partitionConsumers =
             new HashMap<>();
-    // 被消费的分区组  value设计成一个List 的原因是为了兼顾 合并流的场景
+    // 被消费的分区组
     private final Map<ExecutionVertexID, List<ConsumedPartitionGroup>> vertexConsumedPartitions =
             new HashMap<>();
+
 
     private final Map<IntermediateResultPartitionID, List<ConsumedPartitionGroup>>
             consumedPartitionsById = new HashMap<>();
 
-    //所谓连接，无非就是把新来的ConsumerVertexGroup 添加到 EdgeManager 的
+    // 把新来的ConsumerVertexGroup 添加到 EdgeManager 的 partitionConsumers 成员变量
     public void connectPartitionWithConsumerVertexGroup(
             IntermediateResultPartitionID resultPartitionId,
             ConsumerVertexGroup consumerVertexGroup) {

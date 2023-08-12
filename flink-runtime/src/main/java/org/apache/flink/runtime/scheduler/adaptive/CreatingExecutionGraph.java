@@ -79,12 +79,14 @@ public class CreatingExecutionGraph implements State {
                     throwable);
             context.goToFinished(context.getArchivedExecutionGraph(JobStatus.FAILED, throwable));
         } else {
+            // 分配槽位 slots
             final AssignmentResult result =
                     context.tryToAssignSlots(executionGraphWithVertexParallelism);
 
             if (result.isSuccess()) {
                 log.debug(
                         "Successfully reserved and assigned the required slots for the ExecutionGraph.");
+                //
                 context.goToExecuting(result.getExecutionGraph());
             } else {
                 log.debug(

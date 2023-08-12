@@ -1017,6 +1017,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
                     });
 
             final ExecutionGraphInfo executionGraphInfo = schedulerNG.requestJob();
+
             futureExecutor.execute(
                     () -> jobCompletionActions.jobReachedGloballyTerminalState(executionGraphInfo));
         }

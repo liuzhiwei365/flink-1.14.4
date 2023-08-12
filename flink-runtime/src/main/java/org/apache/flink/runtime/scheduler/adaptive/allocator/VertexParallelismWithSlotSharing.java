@@ -26,7 +26,10 @@ import java.util.Map;
 /** {@link VertexParallelism} implementation for the {@link SlotSharingSlotAllocator}. */
 public class VertexParallelismWithSlotSharing implements VertexParallelism {
 
+    // 代表了整个作业分配的所有槽位
     private final Map<JobVertexID, Integer> vertexParallelism;
+
+    // 维护了每个JobVertexID 分配的 subTask 个数
     private final Collection<SlotSharingSlotAllocator.ExecutionSlotSharingGroupAndSlot> assignments;
 
     VertexParallelismWithSlotSharing(

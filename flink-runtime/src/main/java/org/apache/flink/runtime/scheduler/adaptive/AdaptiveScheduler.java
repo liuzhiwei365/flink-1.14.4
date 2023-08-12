@@ -203,6 +203,19 @@ public class AdaptiveScheduler
 
     private final SchedulerExecutionMode executionMode;
 
+    /*
+
+
+         1
+            当 flink standalone 模式启动JobMaster后，AdaptiveScheduler 初始化的时候处于 Created 状态
+
+
+         2  (Created -> WaitingForResources)
+             当有作业提交时， JobMaster 会调用 AdaptiveScheduler 的 startScheduling 方法来启动作业的调度执行
+
+         3
+
+     */
     public AdaptiveScheduler(
             JobGraph jobGraph,
             Configuration configuration,
@@ -253,6 +266,7 @@ public class AdaptiveScheduler
 
         this.slotAllocator = slotAllocator;
 
+        // 注册 监听器, 当有新的资源来时, 触发调用 AdaptiveScheduler.newResourcesAvailable 方法
         declarativeSlotPool.registerNewSlotsListener(this::newResourcesAvailable);
 
         this.componentMainThreadExecutor = mainThreadExecutor;
@@ -303,22 +317,25 @@ public class AdaptiveScheduler
      *     is specified on a given vertex
      * @return The parallelism store.
      */
+
+    // 计算 响应式模式  的  VertexParallelismStore
+    //  VertexParallelismStore 中存储了 每个JobVertexID 的最大最小并行度信息
     @VisibleForTesting
     static VertexParallelismStore computeReactiveModeVertexParallelismStore(
             Iterable<JobVertex> vertices,
             Function<JobVertex, Integer> defaultMaxParallelismFunc,
             boolean adjustParallelism) {
+
         DefaultVertexParallelismStore store = new DefaultVertexParallelismStore();
 
         for (JobVertex vertex : vertices) {
-            // if no max parallelism was configured by the user, we calculate and set a default
+
+            // 如果用户没有设置最大并行度, 我们重新计算 并且 设置一个默认值
             final int maxParallelism =
                     vertex.getMaxParallelism() == JobVertex.MAX_PARALLELISM_DEFAULT
-                            ? defaultMaxParallelismFunc.apply(vertex)
+                            ? defaultMaxParallelismFunc.apply(vertex) //  SchedulerBase::getDefaultMaxParallelism
                             : vertex.getMaxParallelism();
-            // If the parallelism has already been adjusted, respect what has been configured in the
-            // vertex. Otherwise, scale it to the max parallelism to attempt to be "as parallel as
-            // possible"
+
             final int parallelism;
             if (adjustParallelism) {
                 parallelism = maxParallelism;
@@ -354,12 +371,27 @@ public class AdaptiveScheduler
      * @param executionMode The mode of scheduler execution.
      * @return The parallelism store.
      */
+
+    // 计算每个顶点 的 并行度和 最大并行度
     private static VertexParallelismStore computeVertexParallelismStore(
             JobGraph jobGraph, SchedulerExecutionMode executionMode) {
+
+
+        // 1 响应式模式和非响应式模式 当没有设置最大并行度的时候，
+        //   都会调用  SchedulerBase::getDefaultMaxParallelism 计算默认的最大并行度
+        // 2 不同的是，前者的 并行度将会设置为 最大并行度的值,也就是最大程度的利用资源 ; 后者不会
         if (executionMode == SchedulerExecutionMode.REACTIVE) {
+
+            //AdaptiveScheduler.computeReactiveModeVertexParallelismStore
+            //SchedulerBase::getDefaultMaxParallelism
             return computeReactiveModeVertexParallelismStore(
                     jobGraph.getVertices(), SchedulerBase::getDefaultMaxParallelism, true);
         }
+
+        // SchedulerBase.computeVertexParallelismStore(JobGraph)
+        // SchedulerBase.computeVertexParallelismStore(Iterable<JobVertex>)
+        // SchedulerBase.computeVertexParallelismStore(Iterable<JobVertex>, Function<JobVertex,Integer>)
+        // SchedulerBase::getDefaultMaxParallelism
         return SchedulerBase.computeVertexParallelismStore(jobGraph);
     }
 
@@ -373,11 +405,15 @@ public class AdaptiveScheduler
      *     is specified on a given vertex
      * @return The parallelism store.
      */
+    // computeVertexParallelismStoreForExecution 与 computeVertexParallelismStore 方法的区别
+    // computeVertexParallelismStoreForExecution 多传入了一个  defaultMaxParallelismFunc
+    // 且 computeReactiveModeVertexParallelismStore 的第三个参数是 false
     @VisibleForTesting
     static VertexParallelismStore computeVertexParallelismStoreForExecution(
             JobGraph jobGraph,
             SchedulerExecutionMode executionMode,
             Function<JobVertex, Integer> defaultMaxParallelismFunc) {
+
         if (executionMode == SchedulerExecutionMode.REACTIVE) {
             return computeReactiveModeVertexParallelismStore(
                     jobGraph.getVertices(), defaultMaxParallelismFunc, false);
@@ -399,6 +435,67 @@ public class AdaptiveScheduler
         jobManagerJobMetricGroup.gauge(MetricNames.FULL_RESTARTS, numRestartsMetric);
     }
 
+    /*
+       *************************  本调度器的   "总入口"
+
+       说明：
+            AdaptiveScheduler 本身是一个有限状态机
+            作业启动、停止、重启、资源申请等操作都是在不同状态转换过程中委托给 相应的状态实现来完成的
+            状态类别有9 中:
+                  WaitingForResources 、CreatingExecutionGraph 、Finished
+                  Executing、 Restarting 、 Failing
+                  Cancaling、 StopWithSavepoint、 Created
+
+
+        Adaptive 的调度 和 状态机 切换的 流程全貌:
+
+        1 最开始成员变量 state 是 Created类型
+
+        Created.startScheduling
+        AdaptiveScheduler.goToWaitingForResources
+        AdaptiveScheduler.transitionToState（WaitingForResources.Factory）
+        WaitingForResources构造方法
+
+             1.1  如果用户配置的 jobmanager.adaptive-scheduler.resource-wait-timeout > 0, 则延迟调用
+
+                  WaitingForResources.resourceTimeout
+                  WaitingForResources.createExecutionGraphWithAvailableResources
+                  AdaptiveScheduler.goToCreatingExecutionGraph   （**）
+
+                      1.1.1  先创建执行图
+                      1.1.2  再切换状态
+                             AdaptiveScheduler.transitionToState（CreatingExecutionGraph.Factory）
+                             CreatingExecutionGraph 构造方法
+                             CreatingExecutionGraph.handleExecutionGraphCreation
+                                  1.1.2.1  先调用 AdaptiveScheduler.tryToAssignSlots  分配槽位
+                                  1.1.2.2  再调用 AdaptiveScheduler.goToExecuting(ExecutionGraph)  执行作业
+
+             1.2  当有新资源增加时
+                  WaitingForResources.notifyNewResourcesAvailable
+                  WaitingForResources.checkDesiredOrSufficientResourcesAvailable
+                      // 用新增加的资源重新 构建 执行图
+                      WaitingForResources.createExecutionGraphWithAvailableResources
+                      // 关键点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的
+                      AdaptiveScheduler.goToCreatingExecutionGraph   （**）
+
+
+                  注意, 我们要又到了 AdaptiveScheduler.goToCreatingExecutionGraph 方法, 下面的流程和 1.1 的该方法完全一样
+
+             1.3  本类构造方法中注册给 槽位池的 监听器, 当有新的资源来时,
+                  也会触发调用 AdaptiveScheduler.newResourcesAvailable 方法
+                             Executing.notifyNewResourcesAvailable
+                             AdaptiveScheduler.goToRestarting
+                             AdaptiveScheduler.transitionToState（Restarting.Factory）
+                                  Restarting的构造方法
+                                  Restartin的父类StateWithExecutionGraph的构造方法
+                                  Restarting.onGloballyTerminalState
+                                  AdaptiveScheduler.goToWaitingForResources  于是 和 1 的 步骤一致了
+
+                       或者
+                            WaitingForResources.notifyNewResourcesAvailable  于是 和 1.2 的步骤一致了
+
+
+     */
     @Override
     public void startScheduling() {
         state.as(Created.class)
@@ -731,6 +828,18 @@ public class AdaptiveScheduler
     private VertexParallelism determineParallelism(SlotAllocator slotAllocator)
             throws NoResourceAvailableException {
 
+        /*
+            VertexParallelism 只有一个实现类 VertexParallelismWithSlotSharing
+
+            有两个重要的成员变量:
+
+                  1  assignments 成员变量 ：  代表了整个作业分配的所有槽位
+
+                  2  vertexParallelism 成员变量 ：  维护了每个JobVertexID 分配的 subTask 个数
+
+
+            重点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的
+         */
         return slotAllocator
                 // 决定每个JobVertx 的并行度
                 .determineParallelism(jobInformation, declarativeSlotPool.getFreeSlotsInformation())
@@ -759,10 +868,6 @@ public class AdaptiveScheduler
         declarativeSlotPool.setResourceRequirements(desiredResources);
 
         // 从Created状态  切换状态为  WaitingForResources状态
-        // 状态类别有9 中:
-        //    WaitingForResources 、CreatingExecutionGraph 、Finished
-        //    Executing、 Restarting 、 Failing
-        //    Cancaling、 StopWithSavepoint、 Created
         transitionToState(
                 new WaitingForResources.Factory(
                         this,
@@ -777,16 +882,19 @@ public class AdaptiveScheduler
         return slotAllocator.calculateRequiredSlots(jobInformation.getVertices());
     }
 
+
     @Override
     public void goToExecuting(ExecutionGraph executionGraph) {
         final ExecutionGraphHandler executionGraphHandler =
                 new ExecutionGraphHandler(
                         executionGraph, LOG, ioExecutor, componentMainThreadExecutor);
+        // 初始化和 启动所有的算子协调者
         final OperatorCoordinatorHandler operatorCoordinatorHandler =
                 new DefaultOperatorCoordinatorHandler(executionGraph, this::handleGlobalFailure);
         operatorCoordinatorHandler.initializeOperatorCoordinators(componentMainThreadExecutor);
         operatorCoordinatorHandler.startAllOperatorCoordinators();
 
+        // 开始执行状态图, 执行部署逻辑封装在 Executing 中
         transitionToState(
                 new Executing.Factory(
                         executionGraph,
@@ -827,6 +935,7 @@ public class AdaptiveScheduler
                         LOG));
     }
 
+    // 重启也是进行状态的转换, 另外会增加重启次数
     @Override
     public void goToRestarting(
             ExecutionGraph executionGraph,
@@ -844,6 +953,11 @@ public class AdaptiveScheduler
                     attemptNumber + 1);
         }
 
+
+        // Restarting的父类是StateWithExecutionGraph
+        // StateWithExecutionGraph的初始化方法中有如下调用
+        //                    Restarting.onGloballyTerminalState
+        //                    AdaptiveScheduler.goToWaitingForResources
         transitionToState(
                 new Restarting.Factory(
                         this,
@@ -898,11 +1012,18 @@ public class AdaptiveScheduler
         transitionToState(new Finished.Factory(this, archivedExecutionGraph, LOG));
     }
 
+
+    //  1 先创建执行图
+    //  2 再切换状态  AdaptiveScheduler.transitionToState（CreatingExecutionGraph.Factory）
+    //              切换状态会调用    CreatingExecutionGraph 构造方法
+    //                              CreatingExecutionGraph.handleExecutionGraphCreation
+    //                                 2.1 先调用 AdaptiveScheduler.tryToAssignSlots  分配槽位
+    //                                 2.2 再调用 AdaptiveScheduler.goToExecuting(ExecutionGraph)  执行作业
     @Override
     public void goToCreatingExecutionGraph() {
         final CompletableFuture<CreatingExecutionGraph.ExecutionGraphWithVertexParallelism>
                 executionGraphWithAvailableResourcesFuture =
-                // 创建执行图
+                // 创建 执行图 和  VertexParallelism ,包装成 ExecutionGraphWithVertexParallelism
                         createExecutionGraphWithAvailableResourcesAsync();
 
         transitionToState(
@@ -912,12 +1033,18 @@ public class AdaptiveScheduler
 
     private CompletableFuture<CreatingExecutionGraph.ExecutionGraphWithVertexParallelism>
             createExecutionGraphWithAvailableResourcesAsync() {
+
+        // VertexParallelism 的实现类 VertexParallelismWithSlotSharing  有两个重要的成员变量:
+        //         1  assignments 成员变量 ：  代表了整个作业分配的所有槽位
+        //         2  vertexParallelism 成员变量 ：  维护了每个JobVertexID 分配的 subTask 个数
         final VertexParallelism vertexParallelism;
         final VertexParallelismStore adjustedParallelismStore;
 
         try {
-            // 维护一个map,  key 为 JobVertex , value 为其对应的最大并行度
+            // 使用槽位分配器 分配和计算槽位
+            /* 重点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的 */
             vertexParallelism = determineParallelism(slotAllocator);
+
             // 拷贝一份 JobGraph
             JobGraph adjustedJobGraph = jobInformation.copyJobGraph();
 
@@ -926,8 +1053,8 @@ public class AdaptiveScheduler
                 vertex.setParallelism(vertexParallelism.getParallelism(id));
             }
 
-            // use the originally configured max parallelism
-            // as the default for consistent runs
+            // 使用 最初配置的 最大并行度作为一致运行的 默认值
+            // 也就是 initialParallelismStore 在初始化的时候,所计算和配置的值
             adjustedParallelismStore =
                     computeVertexParallelismStoreForExecution(
                             adjustedJobGraph,
@@ -937,21 +1064,26 @@ public class AdaptiveScheduler
                                         initialParallelismStore.getParallelismInfo(vertex.getID());
                                 return vertexParallelismInfo.getMaxParallelism();
                             });
+
+            //
         } catch (Exception exception) {
             return FutureUtils.completedExceptionally(exception);
         }
 
+        //  利用adjustedParallelismStore 来创建执行图
+        //  用 执行图 和 vertexParallelism 封装成 ExecutionGraphWithVertexParallelism 返回
         return createExecutionGraphAndRestoreStateAsync(adjustedParallelismStore)
                 .thenApply(
                         executionGraph ->
                                 CreatingExecutionGraph.ExecutionGraphWithVertexParallelism.create(
                                         executionGraph, vertexParallelism));
+
     }
 
     @Override
     public CreatingExecutionGraph.AssignmentResult tryToAssignSlots(
-            CreatingExecutionGraph.ExecutionGraphWithVertexParallelism
-                    executionGraphWithVertexParallelism) {
+            CreatingExecutionGraph.ExecutionGraphWithVertexParallelism executionGraphWithVertexParallelism) {
+
         final ExecutionGraph executionGraph =
                 executionGraphWithVertexParallelism.getExecutionGraph();
 
@@ -982,10 +1114,12 @@ public class AdaptiveScheduler
                             .getCurrentExecutionAttempt()
                             .registerProducedPartitions(
                                     assignedSlot.getTaskManagerLocation(), false);
+
             Preconditions.checkState(
                     registrationFuture.isDone(),
                     "Partition registration must be completed immediately for reactive mode");
 
+            //  将executionVertex 的 currentExecutio 成员 赋值给 LogicalSlot的 Payload 字段
             executionVertex.tryAssignResource(assignedSlot);
         }
 
@@ -1005,6 +1139,7 @@ public class AdaptiveScheduler
                 backgroundTask.getResultFuture(), getMainThreadExecutor());
     }
 
+    //
     @Nonnull
     private ExecutionGraph createExecutionGraphAndRestoreState(
             VertexParallelismStore adjustedParallelismStore) throws Exception {

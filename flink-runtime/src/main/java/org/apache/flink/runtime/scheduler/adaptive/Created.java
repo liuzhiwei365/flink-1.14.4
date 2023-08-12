@@ -69,6 +69,7 @@ class Created implements State {
 
     /** Starts the scheduling by going into the {@link WaitingForResources} state. */
     void startScheduling() {
+        // 开始调度, 进入 WaitingForResources 状态
         context.goToWaitingForResources();
     }
 

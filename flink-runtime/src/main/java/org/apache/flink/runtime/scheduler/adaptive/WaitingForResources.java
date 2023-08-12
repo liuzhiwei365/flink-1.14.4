@@ -145,25 +145,43 @@ class WaitingForResources implements State, ResourceConsumer {
         checkDesiredOrSufficientResourcesAvailable();
     }
 
-    private void checkDesiredOrSufficientResourcesAvailable() {
+    /*
+    在这段代码中，有两个主要的判断：
+        第一个是 context.hasDesiredResources(desiredResources) 的判断，
+    通过 AdaptiveScheduler 的 hasDesiredResources 方法判断当前集群中是否有运行当前作业所需要的资源，
+    如果有，则进入下一个执行阶段。
+        第二个是 context.hasSufficientResources() 的判断，通过 AdaptiveScheduler 的 hasSufficientResources
+    方法判断当前集群是否有充足的资源至少以最小并行度运行当前作业（每个共享组所分配到的 slot 数 = 当前集群拥有的 slot 数 / 当前作业的 slot 共享组数目，
+    当每个共享组有可以分配到至少一个 slot 时，则说明当前集群有充足的资源。如果当前集群没有充足的资源时，则将资源等待计时器置空，
+    使调度器一直处于等待资源状态直到有新的 TaskManger 加入；如果当前集群有充足的资源时，则判断资源等待是否超时，如果超时，
+    则进入下一个执行阶段，如果没有超时，则使调度器处于等待资源状态并且继续检查集群资源是否满足当前作业的需求。
+    等待资源状态的下一个执行阶段是调用 WaitingForResources 对象的 createExecutionGraphWithAvailableResources
+    方法来重新创建执行图
+
+     */
+    private void checkDesiredOrSufficientResourcesAvailable() {//2
         if (context.hasDesiredResources(desiredResources)) {
             // 如果想要的需求能否被完全满足,则去创建执行图
-            createExecutionGraphWithAvailableResources();
+            createExecutionGraphWithAvailableResources();//1
             return;
         }
 
+        // 如果每个共享组分配的槽位数不为0 即可
         if (context.hasSufficientResources()) {
             if (resourceStabilizationDeadline == null) {
+                // resourceStabilizationTimeout 来自于全局配置
+                // jobmanager.adaptive-scheduler.resource-stabilization-timeout
                 resourceStabilizationDeadline =
                         Deadline.fromNowWithClock(resourceStabilizationTimeout, clock);
             }
+            // 如果超过了 稳定的时间段 ,去创建执行图
             if (resourceStabilizationDeadline.isOverdue()) {
-                createExecutionGraphWithAvailableResources();
+                createExecutionGraphWithAvailableResources();//1
             } else {
-                // schedule next resource check
+                // 如果 还在稳定期间内 ,则反复重新  递归地再走一遍流程 （** 直到超过稳定期 或者 完全满足需求 才会正式创建执行图执行）
                 context.runIfState(
                         this,
-                        this::checkDesiredOrSufficientResourcesAvailable,
+                        this::checkDesiredOrSufficientResourcesAvailable,//2
                         resourceStabilizationDeadline.timeLeft());
             }
         } else {
@@ -178,6 +196,7 @@ class WaitingForResources implements State, ResourceConsumer {
         createExecutionGraphWithAvailableResources();
     }
 
+    //  用新增加的资源重新 构建 执行图
     private void createExecutionGraphWithAvailableResources() {
         context.goToCreatingExecutionGraph();
     }

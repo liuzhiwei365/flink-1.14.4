@@ -272,16 +272,22 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
      *     is specified on a given vertex
      * @return the computed parallelism store
      */
+    //  计算 非响应式模式下的 VertexParallelismStore , 也就是每个顶点的并行度信息
+    //      并行度：     如果用户没设置, 默认值为1
+    //      最大并行度：     如果用户没设置, 用 defaultMaxParallelismFunc 计算一个值
     public static VertexParallelismStore computeVertexParallelismStore(
             Iterable<JobVertex> vertices, Function<JobVertex, Integer> defaultMaxParallelismFunc) {
+
         DefaultVertexParallelismStore store = new DefaultVertexParallelismStore();
 
+        // 遍历JobVertex
         for (JobVertex vertex : vertices) {
             int parallelism = normalizeParallelism(vertex.getParallelism());
 
             int maxParallelism = vertex.getMaxParallelism();
             final boolean autoConfigured;
-            // if no max parallelism was configured by the user, we calculate and set a default
+
+            // 如果没有最大的并行度 被 用户配置, 计算 并设置一个默认值
             if (maxParallelism == JobVertex.MAX_PARALLELISM_DEFAULT) {
                 maxParallelism = defaultMaxParallelismFunc.apply(vertex);
                 autoConfigured = true;

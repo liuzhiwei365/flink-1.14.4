@@ -90,16 +90,19 @@ public class EdgeManagerBuildUtil {
     }
 
     private static void connectAllToAll(
-            ExecutionVertex[] taskVertices,
-            IntermediateResult intermediateResult) { // 前置的IntermediateResult
+            ExecutionVertex[] taskVertices,// 代表下游的顶点
+            IntermediateResult intermediateResult) { // 代表上游的数据集
 
-        // 将所有的ExecutionVertex 与 所有的 IntermediateResultPartition 相连接
+        // step1： 让 下游顶点 持有 上游数据集 的信息
+        //        最终交给  EdgeManager.vertexConsumedPartitions 维护, 它的数据结构如下：
+        //        Map<ExecutionVertexID, List<ConsumedPartitionGroup>> vertexConsumedPartitions
+
         List<IntermediateResultPartitionID> consumedPartitions =
                 Arrays.stream(intermediateResult.getPartitions())
                         .map(IntermediateResultPartition::getPartitionId)
                         .collect(Collectors.toList());
 
-        // ConsumedPartitionGroup 是对 List<IntermediateResultPartitionID> 的封装
+        // 将 consumedPartitions 看成一个 ConsumedPartitionGroup
         ConsumedPartitionGroup consumedPartitionGroup =
                 createAndRegisterConsumedPartitionGroupToEdgeManager(
                         consumedPartitions, intermediateResult);
@@ -109,12 +112,16 @@ public class EdgeManagerBuildUtil {
             ev.addConsumedPartitionGroup(consumedPartitionGroup);
         }
 
+        // step2： 让 上游数据集 持有 下游顶点 的 信息
+        //         最终交给  EdgeManager.partitionConsumers 维护, 它的数据结构如下：
+        //         Map<IntermediateResultPartitionID, List<ConsumerVertexGroup>> partitionConsumers
+
         List<ExecutionVertexID> consumerVertices =
                 Arrays.stream(taskVertices)
                         .map(ExecutionVertex::getID)
                         .collect(Collectors.toList());
 
-        // 调用工厂方法,创建ConsumerVertexGroup 对象,ConsumerVertexGroup是对 List<ExecutionVertexID> 的封装
+        // 将所有下游的 ExecutionVertex 看成一个 ConsumerVertexGroup
         ConsumerVertexGroup consumerVertexGroup =
                 ConsumerVertexGroup.fromMultipleVertices(consumerVertices);
 
@@ -165,12 +172,22 @@ public class EdgeManagerBuildUtil {
                 /**
                  * 假设 sourceCount = 8 targetCount = 5
                  *
-                 * <p>当 index = 0 时, start = 0 ,end = 1 consumedPartitions 的容量为 1; 当 index = 1 时,
-                 * start = 1 ,end = 3 consumedPartitions 的容量为 2; 当 index = 2 时, start = 3 ,end = 4
-                 * consumedPartitions 的容量为 1; 当 index = 3 时, start = 4 ,end = 6 consumedPartitions
-                 * 的容量为 2; 当 index = 4 时, start = 6 ,end = 8 consumedPartitions 的容量为 2;
+                 * <p>
+                 *     当 index = 0 时, start = 0 ,end = 1 consumedPartitions 的容量为 1;
+                 *     当 index = 1 时, start = 1 ,end = 3 consumedPartitions 的容量为 2;
+                 *     当 index = 2 时, start = 3 ,end = 4 consumedPartitions 的容量为 1;
+                 *     当 index = 3 时, start = 4 ,end = 6 consumedPartitions 的容量为 2;
+                 *     当 index = 4 时, start = 6 ,end = 8 consumedPartitions 的容量为 2;
                  *
                  * <p>其实这也算一种散列算法
+                 *
+                 *    flink 内部使用类似的散列算法的 目的是为了 尽 可能地减少上下游的  逻辑上的 连接数
+                 *
+                 *    普通 all to all 连接的方式, 逻辑连接数 = 8 * 5 = 40
+                 *
+                 *    而 point-wise 连接的方式，逻辑连接数 = 1 + 2 + 1 + 2 + 2 = 8
+                 *
+                 *
                  */
                 int start = index * sourceCount / targetCount;
                 int end = (index + 1) * sourceCount / targetCount;
@@ -258,7 +275,10 @@ public class EdgeManagerBuildUtil {
         // 注意和上面的重载方法的不同
         ConsumedPartitionGroup consumedPartitionGroup =
                 ConsumedPartitionGroup.fromMultiplePartitions(consumedPartitions);
+
+        // 注册 被消费分区组 给 EdgeManager
         registerConsumedPartitionGroupToEdgeManager(consumedPartitionGroup, intermediateResult);
+
         return consumedPartitionGroup;
     }
 

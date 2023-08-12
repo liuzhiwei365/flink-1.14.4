@@ -141,6 +141,23 @@ public final class KeyGroupRangeAssignment {
 
         checkParallelismPreconditions(operatorParallelism);
 
+        /*
+             DEFAULT_LOWER_BOUND_MAX_PARALLELISM = 128   相当于本算法的最小值约束
+             UPPER_BOUND_MAX_PARALLELISM = 32768   相当于本算法的最大值约束
+
+             roundUpToPowerOfTwo 的实际效果是：
+              -1                0
+               0                0
+               1 -> 1           2 的 0次幂
+             (1,2] ->2          2 的 1次幂
+             (2,4] -> 4         2 的 2次幂
+             (4,8] -> 8         2 的 3次幂
+             (8,16] -> 16         2 的 4次幂
+             (16,32] -> 32        2 的 5次幂
+
+            总结 该方法就是把输入的数字 扩张到输入的最近的 2 次幂
+
+         */
         return Math.min(
                 Math.max(
                         MathUtils.roundUpToPowerOfTwo(

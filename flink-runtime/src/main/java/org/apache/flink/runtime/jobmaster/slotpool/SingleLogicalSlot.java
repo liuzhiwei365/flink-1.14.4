@@ -38,10 +38,16 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /** Implementation of the {@link LogicalSlot}. */
 public class SingleLogicalSlot implements LogicalSlot, PhysicalSlot.Payload {
 
+    // AtomicReferenceFieldUpdater是基于反射的工具类，用来将指定类型的指定的volatile引用字段进行原子更新，
+    // 对应的原子引用字段不能是private的。通常一个类volatile成员属性获取值、设定为某个值两个操作时非原子的，
+    // 若想将其变为原子的，则可通过AtomicReferenceFieldUpdater来实现
+
+    // 用于更新本类的 PayLoad 字段
     private static final AtomicReferenceFieldUpdater<SingleLogicalSlot, Payload> PAYLOAD_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleLogicalSlot.class, Payload.class, "payload");
 
+    // 用于更新本类的 State 字段
     private static final AtomicReferenceFieldUpdater<SingleLogicalSlot, State> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(SingleLogicalSlot.class, State.class, "state");
 

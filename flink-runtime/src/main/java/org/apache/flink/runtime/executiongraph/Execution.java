@@ -286,6 +286,8 @@ public class Execution
         if (state == SCHEDULED || state == CREATED) {
             if (assignedResource == null) {
                 assignedResource = logicalSlot;
+
+                // 将 Execution 对象 赋值给 LogicalSlot的 Payload 字段
                 if (logicalSlot.tryAssignPayload(this)) {
                     // check for concurrent modification (e.g. cancelling call)
                     if ((state == SCHEDULED || state == CREATED)
@@ -451,13 +453,17 @@ public class Execution
                     ExecutionAttemptID attemptId,
                     boolean notifyPartitionDataAvailable) {
 
+        // 生产者描述
         ProducerDescriptor producerDescriptor = ProducerDescriptor.create(location, attemptId);
 
-        Collection<IntermediateResultPartition> partitions =
-                vertex.getProducedPartitions().values();
+        // 拿到顶点将产生的所有的 ResultPartition抽象结果集,
+        // 每个ResultPartition内部包含的ResultSubpartition个数与下游并行度一致
+        Collection<IntermediateResultPartition> partitions = vertex.getProducedPartitions().values();
 
+        //
         Collection<CompletableFuture<ResultPartitionDeploymentDescriptor>> partitionRegistrations =
                 new ArrayList<>(partitions.size());
+
 
         for (IntermediateResultPartition partition : partitions) {
             PartitionDescriptor partitionDescriptor = PartitionDescriptor.from(partition);
@@ -466,6 +472,7 @@ public class Execution
                     getPartitionMaxParallelism(
                             partition,
                             vertex.getExecutionGraphAccessor()::getExecutionVertexOrThrow);
+
             CompletableFuture<? extends ShuffleDescriptor> shuffleDescriptorFuture =
                     vertex.getExecutionGraphAccessor()
                             .getShuffleMaster()
@@ -498,7 +505,9 @@ public class Execution
     private static int getPartitionMaxParallelism(
             IntermediateResultPartition partition,
             Function<ExecutionVertexID, ExecutionVertex> getVertexById) {
+
         final List<ConsumerVertexGroup> consumerVertexGroups = partition.getConsumerVertexGroups();
+
         Preconditions.checkArgument(
                 consumerVertexGroups.size() == 1,
                 "Currently there has to be exactly one consumer in real jobs");
