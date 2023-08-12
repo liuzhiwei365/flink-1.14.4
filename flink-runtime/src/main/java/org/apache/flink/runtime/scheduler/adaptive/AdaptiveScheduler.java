@@ -460,6 +460,8 @@ public class AdaptiveScheduler
 
                   WaitingForResources.resourceTimeout
                   WaitingForResources.createExecutionGraphWithAvailableResources
+                  //  关键点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的
+                  //  具体参见  AdaptiveScheduler.determineParallelism 方法
                   AdaptiveScheduler.goToCreatingExecutionGraph   （**）
 
                       1.1.1  先创建执行图
@@ -477,7 +479,6 @@ public class AdaptiveScheduler
                       WaitingForResources.createExecutionGraphWithAvailableResources
                       // 关键点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的
                       AdaptiveScheduler.goToCreatingExecutionGraph   （**）
-
 
                   注意, 我们要又到了 AdaptiveScheduler.goToCreatingExecutionGraph 方法, 下面的流程和 1.1 的该方法完全一样
 
