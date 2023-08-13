@@ -458,7 +458,7 @@ public class AdaptiveScheduler
                              CreatingExecutionGraph 构造方法
                              CreatingExecutionGraph.handleExecutionGraphCreation
                                   1.1.2.1  先调用 AdaptiveScheduler.tryToAssignSlots
-                                           这一步会 分配槽位; 并且填充 Execution 的 producedPartitions 和 assignedResource,
+                                           这一步会 实际分配槽位; 并且填充 Execution 的 producedPartitions 和 assignedResource,
                                            为下一步实际执行做准备, 因为实际执行的时候是拿着 Execution 当作句柄去 部署的
                                            可以参见  Execution.deploy 方法
                                   1.1.2.2  再调用 AdaptiveScheduler.goToExecuting(ExecutionGraph)  执行作业
