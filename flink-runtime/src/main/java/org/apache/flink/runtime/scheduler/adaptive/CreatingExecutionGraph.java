@@ -61,6 +61,7 @@ public class CreatingExecutionGraph implements State {
                             context.runIfState(
                                     this,
                                     () ->
+                                            //  拿着槽位规划,实际分配槽位,然后执行
                                             handleExecutionGraphCreation(
                                                     executionGraphWithVertexParallelism, throwable),
                                     Duration.ZERO);
@@ -79,14 +80,14 @@ public class CreatingExecutionGraph implements State {
                     throwable);
             context.goToFinished(context.getArchivedExecutionGraph(JobStatus.FAILED, throwable));
         } else {
-            // 分配槽位 slots
+            // 拿着槽位规划, 分配槽位 slots
             final AssignmentResult result =
                     context.tryToAssignSlots(executionGraphWithVertexParallelism);
 
             if (result.isSuccess()) {
                 log.debug(
                         "Successfully reserved and assigned the required slots for the ExecutionGraph.");
-                //
+                //去执行
                 context.goToExecuting(result.getExecutionGraph());
             } else {
                 log.debug(

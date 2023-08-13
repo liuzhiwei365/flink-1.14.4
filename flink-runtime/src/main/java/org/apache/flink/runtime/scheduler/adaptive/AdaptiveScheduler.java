@@ -1004,7 +1004,8 @@ public class AdaptiveScheduler
     }
 
 
-    //  1 先创建执行图
+    //  1 先创建执行图,规划槽位,并行度以及最大并行度
+    //
     //  2 再切换状态  AdaptiveScheduler.transitionToState（CreatingExecutionGraph.Factory）
     //              切换状态会调用    CreatingExecutionGraph 构造方法
     //                              CreatingExecutionGraph.handleExecutionGraphCreation
@@ -1017,6 +1018,7 @@ public class AdaptiveScheduler
                 // 创建 执行图 和  VertexParallelism ,包装成 ExecutionGraphWithVertexParallelism
                         createExecutionGraphWithAvailableResourcesAsync();
 
+        // 拿着槽位规划,实际分配槽位,然后执行
         transitionToState(
                 new CreatingExecutionGraph.Factory(
                         this, executionGraphWithAvailableResourcesFuture, LOG));
@@ -1075,6 +1077,7 @@ public class AdaptiveScheduler
 
     }
 
+    // 拿着槽位规划, 分配槽位 slots
     @Override
     public CreatingExecutionGraph.AssignmentResult tryToAssignSlots(
             CreatingExecutionGraph.ExecutionGraphWithVertexParallelism executionGraphWithVertexParallelism) {
