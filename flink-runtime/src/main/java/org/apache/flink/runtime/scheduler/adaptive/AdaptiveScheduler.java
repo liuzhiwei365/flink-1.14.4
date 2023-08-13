@@ -831,7 +831,7 @@ public class AdaptiveScheduler
             重点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的
          */
         return slotAllocator
-                // 决定每个JobVertx 的并行度
+                // 返回槽位分配结果  和  每个JobVertex 的并行度决定结果
                 .determineParallelism(jobInformation, declarativeSlotPool.getFreeSlotsInformation())
                 .orElseThrow(
                         () ->

@@ -97,6 +97,7 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
         return maxParallelismForSlotSharingGroups;
     }
 
+    // 返回槽位分配结果  和  每个JobVertex 的并行度决定结果
     @Override
     public Optional<VertexParallelismWithSlotSharing> determineParallelism(
             JobInformation jobInformation, Collection<? extends SlotInfo> freeSlots) {
@@ -128,10 +129,13 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
                             .map(jobInformation::getVertexInformation)// JobVertexID -> VertexInformation
                             .collect(Collectors.toList());
 
+            // step1：
             // 用 Math.min(jobVertex.getParallelism(), slotsPerSlotSharingGroup) 来更新 JobVertx 的 并行度设置
+            // ** 如果用户配置的并行度过高,现有的槽位 不足以满足，则按照现有的算法来 决定并行度
             final Map<JobVertexID, Integer> vertexParallelism =
                     determineParallelism(containedJobVertices, slotsPerSlotSharingGroup);
 
+            // step2：
             // 返回的迭代器元素的个数 对应 "指定的槽位共享组" 分配的槽位个数
             final Iterable<ExecutionSlotSharingGroup> sharedSlotToVertexAssignment =
                                                                   createExecutionSlotSharingGroups(vertexParallelism);
@@ -146,6 +150,25 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
             allVertexParallelism.putAll(vertexParallelism);
         }
 
+        /*
+
+          A0->B0->C0         D0->E0->F0->G0         H0->J0           Slot0
+
+          A1->B1->C1         D0->E0->F0->G0         H1->J2           Slot1
+
+          A2->B2->C2         D0->E0->F0->G0                          Slot2
+
+          A3->B3->C3                                                 Slot3
+
+          如果 A、B、C、D、E、F、G、H、J  是共享槽位共享组
+          且 A、B、C 的算子并行度为 4
+             D、E、F、G 的算子并行度 为 3
+             H、J算子的并行度 为 2
+          则, 总共分配4 个槽位 即可满足需求
+
+          而 assignments 中元素的个数 = 4 + 3 + 2 = 9 个
+
+     */
         return Optional.of(new VertexParallelismWithSlotSharing(allVertexParallelism, assignments));
     }
 
@@ -154,6 +177,9 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
 
         final Map<JobVertexID, Integer> vertexParallelism = new HashMap<>();
         for (JobInformation.VertexInformation jobVertex : containedJobVertices) {
+
+            // 如果用户配置的并行度过高,现有的槽位 不足以满足，则按照现有的算法来 决定并行度
+            // 否则，就按照用户
             final int parallelism = Math.min(jobVertex.getParallelism(), availableSlots);
 
             vertexParallelism.put(jobVertex.getJobVertexID(), parallelism);
@@ -181,7 +207,9 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
           所以本方法返回的迭代器,元素也必定是 4
      */
     // 本方法针对的是 单个的 槽位共享组
-    // 所以 算法将同一个 subTaskIndex 编号的 ExecutionVertexID 放入到一个Set中, 因为它们将来会运行在同一个槽位中
+    // 1 所以 算法将同一个 subTaskIndex 编号的 ExecutionVertexID 放入到一个Set中, 因为它们将来会运行在同一个槽位中
+    // 2 这样一来,本算法返回的迭代器中元素个数 必定等于 槽位数
+    // 3 迭代器每个元素 内部含有 Set<ExecutionVertexID> 集合
     private static Iterable<ExecutionSlotSharingGroup> createExecutionSlotSharingGroups(
             Map<JobVertexID, Integer> containedJobVertices) {
 
