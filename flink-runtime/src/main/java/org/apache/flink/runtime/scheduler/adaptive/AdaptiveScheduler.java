@@ -395,7 +395,6 @@ public class AdaptiveScheduler
      */
     // computeVertexParallelismStoreForExecution 与 computeVertexParallelismStore 方法的区别
     // computeVertexParallelismStoreForExecution 多传入了一个  defaultMaxParallelismFunc
-    // 且 computeReactiveModeVertexParallelismStore 的第三个参数是 false
     @VisibleForTesting
     static VertexParallelismStore computeVertexParallelismStoreForExecution(
             JobGraph jobGraph,
@@ -403,6 +402,7 @@ public class AdaptiveScheduler
             Function<JobVertex, Integer> defaultMaxParallelismFunc) {
 
         if (executionMode == SchedulerExecutionMode.REACTIVE) {
+            // 第三个参数为false ,代表只设置最大并行度, 不调整并行度
             return computeReactiveModeVertexParallelismStore(
                     jobGraph.getVertices(), defaultMaxParallelismFunc, false);
         }
@@ -815,6 +815,7 @@ public class AdaptiveScheduler
                 .isPresent();
     }
 
+    // 返回槽位分配结果  和  每个JobVertex 的并行度决定结果
     private VertexParallelism determineParallelism(SlotAllocator slotAllocator)
             throws NoResourceAvailableException {
 
@@ -1032,20 +1033,24 @@ public class AdaptiveScheduler
         final VertexParallelismStore adjustedParallelismStore;
 
         try {
-            // 使用槽位分配器 分配和计算槽位
+            // step1  获得 槽位分配结果  和  每个JobVertex 的并行度决定结果
             /* 重点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的 */
             vertexParallelism = determineParallelism(slotAllocator);
 
-            // 拷贝一份 JobGraph
+            // step2  拷贝一份 JobGraph
             JobGraph adjustedJobGraph = jobInformation.copyJobGraph();
 
+            // step3  将决定好的并行度信息 赋值给每个JobVertex
             for (JobVertex vertex : adjustedJobGraph.getVertices()) {
                 JobVertexID id = vertex.getID();
                 vertex.setParallelism(vertexParallelism.getParallelism(id));
             }
 
-            // 使用 最初配置的 最大并行度作为一致运行的 默认值
-            // 也就是 initialParallelismStore 在初始化的时候,所计算和配置的值
+            // step4  如果用户没有额外配置最大并行度,则将先前决定好的 最大并行度 设置给每个JobVertex
+            //        1 也就是 initialParallelismStore 在初始化的时候,所计算和配置的值
+            //        2 用户配置了,按用户配置的来
+            //        3 不管是响应式 还是非响应式,在这里都只强调 最大并行度的调整
+            //               normalizeParallelism 在此时没有意义, 因为此时，并行度已经设置了
             adjustedParallelismStore =
                     computeVertexParallelismStoreForExecution(
                             adjustedJobGraph,
@@ -1056,7 +1061,6 @@ public class AdaptiveScheduler
                                 return vertexParallelismInfo.getMaxParallelism();
                             });
 
-            //
         } catch (Exception exception) {
             return FutureUtils.completedExceptionally(exception);
         }
