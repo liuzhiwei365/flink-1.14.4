@@ -203,19 +203,7 @@ public class AdaptiveScheduler
 
     private final SchedulerExecutionMode executionMode;
 
-    /*
 
-
-         1
-            当 flink standalone 模式启动JobMaster后，AdaptiveScheduler 初始化的时候处于 Created 状态
-
-
-         2  (Created -> WaitingForResources)
-             当有作业提交时， JobMaster 会调用 AdaptiveScheduler 的 startScheduling 方法来启动作业的调度执行
-
-         3
-
-     */
     public AdaptiveScheduler(
             JobGraph jobGraph,
             Configuration configuration,
@@ -484,6 +472,7 @@ public class AdaptiveScheduler
 
              1.3  本类构造方法中注册给 槽位池的 监听器, 当有新的资源来时,
                   也会触发调用 AdaptiveScheduler.newResourcesAvailable 方法
+                             // 如果能扩容才重启，否则没必要
                              Executing.notifyNewResourcesAvailable
                              AdaptiveScheduler.goToRestarting
                              AdaptiveScheduler.transitionToState（Restarting.Factory）
@@ -1032,6 +1021,7 @@ public class AdaptiveScheduler
                         this, executionGraphWithAvailableResourcesFuture, LOG));
     }
 
+    // 创建 执行图 和  VertexParallelism ,包装成 ExecutionGraphWithVertexParallelism
     private CompletableFuture<CreatingExecutionGraph.ExecutionGraphWithVertexParallelism>
             createExecutionGraphWithAvailableResourcesAsync() {
 

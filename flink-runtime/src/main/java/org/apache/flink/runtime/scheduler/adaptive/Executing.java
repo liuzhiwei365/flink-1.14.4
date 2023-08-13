@@ -165,6 +165,7 @@ class Executing extends StateWithExecutionGraph implements ResourceConsumer {
 
     @Override
     public void notifyNewResourcesAvailable() {
+        // 如果能扩容才重启，否则没必要
         if (context.canScaleUp(getExecutionGraph())) {
             getLogger().info("New resources are available. Restarting job to scale up.");
             context.goToRestarting(
