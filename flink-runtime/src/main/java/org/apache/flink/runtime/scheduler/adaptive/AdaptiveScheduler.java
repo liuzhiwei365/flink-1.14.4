@@ -457,7 +457,7 @@ public class AdaptiveScheduler
                              AdaptiveScheduler.transitionToState（CreatingExecutionGraph.Factory）
                              CreatingExecutionGraph 构造方法
                              CreatingExecutionGraph.handleExecutionGraphCreation
-                                  1.1.2.1  先调用 AdaptiveScheduler.tryToAssignSlots  分配槽位
+                                  1.1.2.1  先调用 AdaptiveScheduler.tryToAssignSlots  分配槽位; 并且填充 Execution 的 producedPartitions 和 assignedResource
                                   1.1.2.2  再调用 AdaptiveScheduler.goToExecuting(ExecutionGraph)  执行作业
 
              1.2  当有新资源增加时
@@ -1077,7 +1077,8 @@ public class AdaptiveScheduler
 
     }
 
-    // 拿着槽位规划, 分配槽位 slots
+    // 拿着槽位规划, 分配槽位 slots, 并且填充 Execution 的 producedPartitions 和 assignedResource
+    // 为下一步实际执行 执行图 做准备
     @Override
     public CreatingExecutionGraph.AssignmentResult tryToAssignSlots(
             CreatingExecutionGraph.ExecutionGraphWithVertexParallelism executionGraphWithVertexParallelism) {
@@ -1094,10 +1095,17 @@ public class AdaptiveScheduler
         final VertexParallelism vertexParallelism =
                 executionGraphWithVertexParallelism.getVertexParallelism();
         return slotAllocator
+                 // 返回 ReservedSlots对象 ,内部持有一个 ExecutionVertexID 到 LogicalSlot 分配的逻辑槽位的映射 map
                 .tryReserveResources(vertexParallelism)
                 .map(
                         reservedSlots ->
                                 CreatingExecutionGraph.AssignmentResult.success(
+
+                                        // 1 填充 Execution 的 producedPartitions 成员
+                                        // 其 类型结构为 Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor>
+
+                                        // 2 进一步,  让 Execution 的assignedResource 成员持有 逻辑槽位
+                                        // 并将executionVertex 的 currentExecutio 成员 赋值给 LogicalSlot的 Payload 字段
                                         assignSlotsToExecutionGraph(executionGraph, reservedSlots)))
                 .orElseGet(CreatingExecutionGraph.AssignmentResult::notPossible);
     }
@@ -1110,6 +1118,8 @@ public class AdaptiveScheduler
             final CompletableFuture<Void> registrationFuture =
                     executionVertex
                             .getCurrentExecutionAttempt()
+                            // 填充 Execution 的 producedPartitions 成员
+                            // 其 类型结构为 Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor>
                             .registerProducedPartitions(
                                     assignedSlot.getTaskManagerLocation(), false);
 
@@ -1117,6 +1127,7 @@ public class AdaptiveScheduler
                     registrationFuture.isDone(),
                     "Partition registration must be completed immediately for reactive mode");
 
+            //  让 Execution 的assignedResource 成员持有 逻辑槽位
             //  将executionVertex 的 currentExecutio 成员 赋值给 LogicalSlot的 Payload 字段
             executionVertex.tryAssignResource(assignedSlot);
         }

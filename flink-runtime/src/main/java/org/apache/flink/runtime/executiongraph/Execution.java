@@ -285,6 +285,7 @@ public class Execution
         // note: we also accept resource assignment when being in state CREATED for testing purposes
         if (state == SCHEDULED || state == CREATED) {
             if (assignedResource == null) {
+                // 重点, 让 Execution 的assignedResource 成员持有 逻辑槽位
                 assignedResource = logicalSlot;
 
                 // 将 Execution 对象 赋值给 LogicalSlot的 Payload 字段
@@ -407,19 +408,33 @@ public class Execution
     //  Actions
     // --------------------------------------------------------------------------------------------
 
+    // 填充 Execution 的 producedPartitions 成员
+    // 其 类型结构为 Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor>
+    // 本方法也是执行执行图 的 前置步骤
     public CompletableFuture<Void> registerProducedPartitions(
             TaskManagerLocation location, boolean notifyPartitionDataAvailable) {
 
         assertRunningInJobMasterMainThread();
 
+        // FutureUtils.thenApplyAsyncIfNotDone 方法的含义在这里是：
+        //      如果 step 1 已经执行完, 则同步执行 step 2; 否则,用获取的执行器异步 执行 step2
         return FutureUtils.thenApplyAsyncIfNotDone(
+
+                // step 1
                 registerProducedPartitions(
                         vertex, location, attemptId, notifyPartitionDataAvailable),
+
+                // 获取执行器
                 vertex.getExecutionGraphAccessor().getJobMasterMainThreadExecutor(),
 
-                // 1 下面的逻辑要么异步,要么同步,终归会执行; 2 producedPartitionCache  来自registerProducedPartitions
+                // step 2
+                // 1 下面的逻辑要么异步,要么同步,终归会执行;
+                // 2 producedPartitionCache  来自registerProducedPartitions方法的返回值
                 // 方法的执行结果
                 producedPartitionsCache -> {
+
+                    // 重点来了 ,让 Execution 的 producedPartitions 成员持有 ResultPartitionDeploymentDescriptor 描述
+                    // 为后续的执行 做 铺垫工作       ***
                     producedPartitions = producedPartitionsCache;
 
                     if (getState() == SCHEDULED) {
@@ -444,9 +459,14 @@ public class Execution
                 });
     }
 
+    // 本方法的主要目的就是为了将 ExecutionVertex.resultPartitions 成员变量 解析,装换 变成
+    // 具体的实际执行是需要的 ResultPartitionDeploymentDescriptor
+    //
+    //      而 ResultPartitionDeploymentDescriptor  内部又包含
+    //                                    PartitionDescriptor
+    //                                    ShuffleDescriptor
     @VisibleForTesting
-    static CompletableFuture<
-                    Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor>>
+    static CompletableFuture<Map<IntermediateResultPartitionID, ResultPartitionDeploymentDescriptor>>
             registerProducedPartitions(
                     ExecutionVertex vertex,
                     TaskManagerLocation location,
@@ -456,8 +476,8 @@ public class Execution
         // 生产者描述
         ProducerDescriptor producerDescriptor = ProducerDescriptor.create(location, attemptId);
 
-        // 拿到顶点将产生的所有的 ResultPartition抽象结果集,
-        // 每个ResultPartition内部包含的ResultSubpartition个数与下游并行度一致
+        // 1 拿到顶点将产生的所有的 抽象结果集, 集合的元素个数 = 抽象数据集 的个数, 也就是用户计算的 结果种类
+        // 2 IntermediateResultPartition 的成员IntermediateResultPartitionID 的成员 partitionNum 都等于 subTaskIndex
         Collection<IntermediateResultPartition> partitions = vertex.getProducedPartitions().values();
 
         //
@@ -468,6 +488,7 @@ public class Execution
         for (IntermediateResultPartition partition : partitions) {
             PartitionDescriptor partitionDescriptor = PartitionDescriptor.from(partition);
 
+            // 拿到 partition 的下游 JobVertex的 最大并行度
             int maxParallelism =
                     getPartitionMaxParallelism(
                             partition,
@@ -476,7 +497,7 @@ public class Execution
             CompletableFuture<? extends ShuffleDescriptor> shuffleDescriptorFuture =
                     vertex.getExecutionGraphAccessor()
                             .getShuffleMaster()
-                            .registerPartitionWithProducer( // 注册给 NettyShuffleMaster
+                            .registerPartitionWithProducer(
                                     vertex.getJobId(), partitionDescriptor, producerDescriptor);
 
             CompletableFuture<ResultPartitionDeploymentDescriptor> partitionRegistration =
@@ -506,12 +527,14 @@ public class Execution
             IntermediateResultPartition partition,
             Function<ExecutionVertexID, ExecutionVertex> getVertexById) {
 
+        // 拿到所有下游的 消费顶点组
         final List<ConsumerVertexGroup> consumerVertexGroups = partition.getConsumerVertexGroups();
 
         Preconditions.checkArgument(
                 consumerVertexGroups.size() == 1,
                 "Currently there has to be exactly one consumer in real jobs");
         final ConsumerVertexGroup consumerVertexGroup = consumerVertexGroups.get(0);
+        // 拿到下游 的最大并行度
         return getVertexById
                 .apply(consumerVertexGroup.getFirst())
                 .getJobVertex()

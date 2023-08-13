@@ -69,7 +69,8 @@ public class ExecutionVertex
 
     private final ExecutionJobVertex jobVertex;
 
-    // 产生的结果分区将来会发给下游
+    // 1 resultPartitions 的 元素个数 = 抽象数据集 的个数, 也就是用户计算的 结果种类
+    // 2 在这里, 所有的 IntermediateResultPartitionID 中的 partitionNum 成员的值 都是 subTaskIndex,都是相同的一个值
     private final Map<IntermediateResultPartitionID, IntermediateResultPartition> resultPartitions;
 
     private final int subTaskIndex;

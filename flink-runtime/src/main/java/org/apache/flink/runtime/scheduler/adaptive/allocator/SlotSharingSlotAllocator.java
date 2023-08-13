@@ -231,6 +231,7 @@ public class SlotSharingSlotAllocator implements SlotAllocator {
                 .collect(Collectors.toList());
     }
 
+    // 返回 ReservedSlots ,内部持有一个 ExecutionVertexID 到 LogicalSlot 分配的逻辑槽位的映射
     @Override
     public Optional<ReservedSlots> tryReserveResources(VertexParallelism vertexParallelism) {
         Preconditions.checkArgument(
