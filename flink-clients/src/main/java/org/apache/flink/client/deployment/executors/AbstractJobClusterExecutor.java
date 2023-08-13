@@ -61,6 +61,9 @@ public class AbstractJobClusterExecutor<
         this.clusterClientFactory = checkNotNull(clusterClientFactory);
     }
 
+    //  只有 这两个方法都调到这里
+    // ExecutionEnvironment.executeAsync
+    // StreamExecutionEnvironment.executeAsync
     @Override
     public CompletableFuture<JobClient> execute(
             @Nonnull final Pipeline pipeline,
@@ -79,6 +82,8 @@ public class AbstractJobClusterExecutor<
             final ClusterSpecification clusterSpecification =
                     clusterClientFactory.getClusterSpecification(configuration);
 
+            // k8s 和 standalone 都不支持 per-job 模式, 只有yarn 支持per-job 模式
+            // 这里 执行 yarn-per-job 作业
             final ClusterClientProvider<ClusterID> clusterClientProvider =
                     clusterDescriptor.deployJobCluster(
                             clusterSpecification, jobGraph, configAccessor.getDetachedMode());

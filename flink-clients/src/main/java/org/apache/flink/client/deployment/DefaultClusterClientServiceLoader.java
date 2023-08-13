@@ -42,13 +42,14 @@ public class DefaultClusterClientServiceLoader implements ClusterClientServiceLo
     private static final Logger LOG =
             LoggerFactory.getLogger(DefaultClusterClientServiceLoader.class);
 
+    //spi 加载 ClusterClientFactory 接口
     @Override
     public <ClusterID> ClusterClientFactory<ClusterID> getClusterClientFactory(
             final Configuration configuration) {
         checkNotNull(configuration);
 
         final ServiceLoader<ClusterClientFactory> loader =
-                ServiceLoader.load(ClusterClientFactory.class);
+                                       ServiceLoader.load(ClusterClientFactory.class);
 
         final List<ClusterClientFactory> compatibleFactories = new ArrayList<>();
         final Iterator<ClusterClientFactory> factories = loader.iterator();

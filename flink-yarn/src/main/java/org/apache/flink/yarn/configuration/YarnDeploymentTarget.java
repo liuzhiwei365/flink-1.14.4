@@ -68,6 +68,10 @@ public enum YarnDeploymentTarget {
 
     public static boolean isValidYarnTarget(final String configValue) {
         return configValue != null
+                //    PER_JOB("yarn-per-job"),
+                //    SESSION("yarn-session"),
+                //    APPLICATION("yarn-application");
+                //  三个枚举
                 && Arrays.stream(YarnDeploymentTarget.values())
                         .anyMatch(
                                 yarnDeploymentTarget ->

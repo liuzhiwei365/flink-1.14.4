@@ -57,13 +57,19 @@ public class ApplicationClusterDeployer implements ApplicationDeployer {
 
         LOG.info("Submitting application in 'Application Mode'.");
 
+        //spi 加载 ClusterClientFactory 接口
         final ClusterClientFactory<ClusterID> clientFactory =
                 clientServiceLoader.getClusterClientFactory(configuration);
+
         try (final ClusterDescriptor<ClusterID> clusterDescriptor =
-                clientFactory.createClusterDescriptor(configuration)) {
+                                                 clientFactory.createClusterDescriptor(configuration)) {
             final ClusterSpecification clusterSpecification =
                     clientFactory.getClusterSpecification(configuration);
 
+            // 部署集群,目前有三个实现:
+            //     KubernetesClusterDescriptor
+            //     StandaloneClusterDescriptor
+            //     YarnClusterDescriptor
             clusterDescriptor.deployApplicationCluster(
                     clusterSpecification, applicationConfiguration);
         }

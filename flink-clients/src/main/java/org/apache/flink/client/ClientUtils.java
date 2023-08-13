@@ -111,6 +111,7 @@ public enum ClientUtils {
                     suppressSysout);
 
             try {
+                // 非交互式的执行 用户代码
                 program.invokeInteractiveModeForExecution();
             } finally {
                 ContextEnvironment.unsetAsContext();

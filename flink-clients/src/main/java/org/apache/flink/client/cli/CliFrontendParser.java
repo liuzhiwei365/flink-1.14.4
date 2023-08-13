@@ -327,16 +327,17 @@ public class CliFrontendParser {
         return options;
     }
 
+    // 加载 -j  -c  -C  -p  -a 等后面的内容 到 options 中
     private static Options getProgramSpecificOptions(Options options) {
-        options.addOption(JAR_OPTION);
-        options.addOption(CLASS_OPTION);
-        options.addOption(CLASSPATH_OPTION);
-        options.addOption(PARALLELISM_OPTION);
-        options.addOption(ARGS_OPTION);
-        options.addOption(DETACHED_OPTION);
-        options.addOption(SHUTDOWN_IF_ATTACHED_OPTION);
-        options.addOption(YARN_DETACHED_OPTION);
-        options.addOption(PY_OPTION);
+        options.addOption(JAR_OPTION); // -j
+        options.addOption(CLASS_OPTION); // -c
+        options.addOption(CLASSPATH_OPTION); // -C
+        options.addOption(PARALLELISM_OPTION);//-p
+        options.addOption(ARGS_OPTION);//-a
+        options.addOption(DETACHED_OPTION); // -d
+        options.addOption(SHUTDOWN_IF_ATTACHED_OPTION); //- sae
+        options.addOption(YARN_DETACHED_OPTION); //-yd
+        options.addOption(PY_OPTION); //- py
         options.addOption(PYFILES_OPTION);
         options.addOption(PYMODULE_OPTION);
         options.addOption(PYREQUIREMENTS_OPTION);
@@ -365,8 +366,8 @@ public class CliFrontendParser {
     public static Options getRunCommandOptions() {
         Options options = buildGeneralOptions(new Options());
         options = getProgramSpecificOptions(options);
-        options.addOption(SAVEPOINT_PATH_OPTION);
-        return options.addOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION);
+        options.addOption(SAVEPOINT_PATH_OPTION); //-s
+        return options.addOption(SAVEPOINT_ALLOW_NON_RESTORED_OPTION);//-n 指定跳过恢复状态 来重启作业
     }
 
     static Options getInfoCommandOptions() {

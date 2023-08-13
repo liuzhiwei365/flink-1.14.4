@@ -2053,21 +2053,24 @@ public class StreamExecutionEnvironment {
                 configuration.get(DeploymentOptions.TARGET));
 
         /*
-           RemoteExecutorFactory
-           WebSubmissionExecutorFactory
-           YarnJobClusterExecutorFactory
-           LocalExecutorFactory
-           EmbeddedExecutorFactory
-           MiniClusterPipelineExecutorFactory
+                              所有的 job 执行方式
 
-           YarnSessionClusterExecutorFactory
-           KubernetesSessionClusterExecutorFactory
-           // 作业 执行方式如上
+        AbstractJobClusterExecutor
+            1 YarnJobClusterExecutor                YarnJobClusterExecutorFactory                yarn-per-job 执行
+
+        AbstractSessionClusterExecutor
+            2 KubernetesSessionClusterExecutor      KubernetesSessionClusterExecutorFactory      向 k8s创建的 flink集群 提交作业
+            3 YarnSessionClusterExecutor            YarnSessionClusterExecutorFactory            向 yarn创建的 flink集群 提交作业
+            4 RemoteExecutor                        RemoteExecutorFactory                        向 standalone flink集群 提交作业
+
+        5 LocalExecutor                             LocalExecutorFactory                               本地执行
+
+        6 EmbeddedExecutor        EmbeddedExecutorFactory 或者 WebSubmissionExecutorFactory    命令行提交standalone作业 或者 web页面提交standalone作业
+
         */
         CompletableFuture<JobClient> jobClientFuture =
                 executorFactory
                         .getExecutor(configuration)
-                        // per job  YarnJobClusterExecutor
                         .execute(streamGraph, configuration, userClassloader);
 
         try {

@@ -166,6 +166,7 @@ public class CliFrontend {
     //  Execute Actions
     // --------------------------------------------------------------------------------------------
 
+    // runApplication 是来部署集群的
     protected void runApplication(String[] args) throws Exception {
         LOG.info("Running 'run-application' command.");
 
@@ -231,20 +232,25 @@ public class CliFrontend {
             return;
         }
 
+        // 校验并拿到 顺位激活的命令行 类型
         final CustomCommandLine activeCommandLine =
                 validateAndGetActiveCommandLine(checkNotNull(commandLine));
 
+        // 从激活的命令行中 抽取 程序运行的选项 （也就是抽取一部分配置）
         final ProgramOptions programOptions = ProgramOptions.create(commandLine);
 
+        // 拿到所有jar包 的 url
         final List<URL> jobJars = getJobJarAndDependencies(programOptions);
 
+        // 再次, 整合配置
         final Configuration effectiveConfiguration =
                 getEffectiveConfiguration(activeCommandLine, commandLine, programOptions, jobJars);
 
         LOG.debug("Effective executor configuration: {}", effectiveConfiguration);
 
+        // 构建 PackagedProgram 对象, 其代表了对  用户程序的一个封装
         try (PackagedProgram program = getPackagedProgram(programOptions, effectiveConfiguration)) {
-            // 执行用户代码
+            // 执行用户程序 （非交互式地执行）
             executeProgram(effectiveConfiguration, program);
         }
     }
@@ -684,11 +690,16 @@ public class CliFrontend {
         }
     }
 
+    // flink 对命令行的处理，使用的是common-cli 框架
     public CommandLine getCommandLine(
             final Options commandOptions, final String[] args, final boolean stopAtNonOptions)
             throws CliArgsException {
+
+        // 将commandOptions 与 customCommandLineOptions 的配置合并
         final Options commandLineOptions =
                 CliFrontendParser.mergeOptions(commandOptions, customCommandLineOptions);
+
+        // args 代表的是 传入java类的 参数列表
         return CliFrontendParser.parse(commandLineOptions, args, stopAtNonOptions);
     }
 
@@ -837,10 +848,14 @@ public class CliFrontend {
 
         String[] programArgs = runOptions.getProgramArgs();
         String jarFilePath = runOptions.getJarFilePath();
+
+        // -C 指定的类路径
         List<URL> classpaths = runOptions.getClasspaths();
 
-        // Get assembler class
+        // flink 命令中 -c 指定的,  也就是用户代码的主类
         String entryPointClass = runOptions.getEntryPointClassName();
+
+        // flink 命令中 -j 指定的,  用户主类所在的jar包
         File jarFile = jarFilePath != null ? getJarFile(jarFilePath) : null;
 
         return PackagedProgram.newBuilder()
@@ -988,6 +1003,7 @@ public class CliFrontend {
                 "Effective configuration after Flink conf, and custom commandline: {}",
                 effectiveConfiguration);
 
+
         final ClusterClientFactory<ClusterID> clusterClientFactory =
                 clusterClientServiceLoader.getClusterClientFactory(effectiveConfiguration);
 
@@ -1043,10 +1059,14 @@ public class CliFrontend {
             return 1;
         }
 
-        // get action
+        // action 就 对应 你用flink 命令时, 传的第一个参数
+        /*
+           比如, 你输入 flink run ... , 那么 action 就是 "run";
+           比如, 你输入 flink  run-application ..., 那么 action 就是 "run-application"
+         */
         String action = args[0];
 
-        // remove action from parameters
+        // 获得 flink 命令 后面所有的内容
         final String[] params = Arrays.copyOfRange(args, 1, args.length);
 
         try {
@@ -1070,7 +1090,7 @@ public class CliFrontend {
                 case ACTION_STOP:
                     stop(params);
                     return 0;
-                case ACTION_SAVEPOINT:
+                case ACTION_SAVEPOINT: // 将一个已经运行的作业进行savepoint操作
                     savepoint(params);
                     return 0;
                 case "-h":
@@ -1115,14 +1135,14 @@ public class CliFrontend {
     public static void main(final String[] args) {
         EnvironmentInformation.logEnvironmentInfo(LOG, "Command Line Client", args);
 
-        // 1. find the configuration directory
+        // 1. 从环境获取配置目录, 有可能是  "FLINK_CONF_DIR" 、 "../conf"、 "conf" 这三个目录的其中一个
         final String configurationDirectory = getConfigurationDirectoryFromEnv();
 
-        // 2. load the global configuration
+        // 2. 从上一步解析的 配置目录 加载 flink-conf.yaml 配置文件
         final Configuration configuration =
                 GlobalConfiguration.loadConfiguration(configurationDirectory);
 
-        // 3. load the custom command lines
+        // 3. 加载用户的命令行输入
         final List<CustomCommandLine> customCommandLines =
                 loadCustomCommandLines(configuration, configurationDirectory);
 
@@ -1147,10 +1167,12 @@ public class CliFrontend {
     // --------------------------------------------------------------------------------------------
 
     public static String getConfigurationDirectoryFromEnv() {
+        // step1  从系统环境变量中拿到 FLINK_CONF_DIR 的值
         String location = System.getenv(ConfigConstants.ENV_FLINK_CONF_DIR);
 
         if (location != null) {
             if (new File(location).exists()) {
+                // FLINK_CONF_DIR 的值所对应的目录存在,则返回
                 return location;
             } else {
                 throw new RuntimeException(
@@ -1161,8 +1183,10 @@ public class CliFrontend {
                                 + "' environment variable, does not exist.");
             }
         } else if (new File(CONFIG_DIRECTORY_FALLBACK_1).exists()) {
+            // step2   看看  ../conf 目录是否存在, 存在则返回
             location = CONFIG_DIRECTORY_FALLBACK_1;
         } else if (new File(CONFIG_DIRECTORY_FALLBACK_2).exists()) {
+            // step3   看看   conf 目录是否存在 , 存在则返回
             location = CONFIG_DIRECTORY_FALLBACK_2;
         } else {
             throw new RuntimeException(
@@ -1231,11 +1255,22 @@ public class CliFrontend {
      * @param commandLine The input to the command-line.
      * @return custom command-line which is active (may only be one at a time)
      */
+
+    // 校验并拿到 顺位激活的命令行 类型
+    // 总共有4类:  GenericCLI 、FlinkYarnSessionCli、  FallBackFlinkYarnSessionCli 和 DefaultCLI
     public CustomCommandLine validateAndGetActiveCommandLine(CommandLine commandLine) {
         LOG.debug("Custom commandlines: {}", customCommandLines);
+
+
+        // 此时,  customCommandLines 中 包含
+        //           "GenericCLI 和 FlinkYarnSessionCli 和 DefaultCLI"
+        //        或者  "GenericCLI 和 FallBackFlinkYarnSessionCli 和 DefaultCLI"
+        // 参见 CliFrontend.loadCustomCommandLines 方法
         for (CustomCommandLine cli : customCommandLines) {
             LOG.debug(
                     "Checking custom commandline {}, isActive: {}", cli, cli.isActive(commandLine));
+
+            // 根据实际的命令行的输入, 依次判断这些 命令行类型是否激活;  不同的命令行类型 其配置的参数和含义 是不一样的
             if (cli.isActive(commandLine)) {
                 return cli;
             }
