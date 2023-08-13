@@ -95,6 +95,7 @@ public class DefaultExecutionGraphFactory implements ExecutionGraphFactory {
             VertexParallelismStore vertexParallelismStore,
             Logger log)
             throws Exception {
+        // 某个 Execution 部署成功, 会触发相关回调逻辑
         ExecutionDeploymentListener executionDeploymentListener =
                 new ExecutionDeploymentTrackerDeploymentListenerAdapter(executionDeploymentTracker);
         ExecutionStateUpdateListener executionStateUpdateListener =

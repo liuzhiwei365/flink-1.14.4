@@ -1761,13 +1761,13 @@ public class CheckpointCoordinator {
                     allowNonRestoredState,
                     LOG);
 
-            // * step3-5   重点, 重置恢复 算子协调者的状态
+            // * step3-6   重点, 重置恢复 算子协调者的状态
             //             例如对于 SourceCoordinator , 会重置恢复 分片枚举器
             if (operatorCoordinatorRestoreBehavior != OperatorCoordinatorRestoreBehavior.SKIP) {
                 restoreStateToCoordinators(latest.getCheckpointID(), operatorStates);
             }
 
-            // step3-5    更新 metrics 监控统计量, 没实际意义
+            // step3-7    更新 metrics 监控统计量, 没实际意义
             if (statsTracker != null) {
                 long restoreTimestamp = System.currentTimeMillis();
                 RestoredCheckpointStats restored =

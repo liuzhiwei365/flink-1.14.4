@@ -404,7 +404,7 @@ public abstract class SchedulerBase implements SchedulerNG, CheckpointScheduling
 
         // 全局恢复与局部恢复的区别在于：
         //     1 前者,要恢复或者重置算子协调者的状态; 后者忽略恢复算子协调者
-        //     2 前者,
+        //     2 前者,是job 挂了恢复； 后者某个subTask 挂了恢复
         if (isGlobalRecovery) {
             // 全局恢复
             final Set<ExecutionJobVertex> jobVerticesToRestore = getInvolvedExecutionJobVertices(vertices);
