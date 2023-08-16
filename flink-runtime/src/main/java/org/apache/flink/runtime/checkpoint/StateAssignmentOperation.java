@@ -91,6 +91,7 @@ public class StateAssignmentOperation {
     }
 
     // 状态重新分配的算法
+    // 分配完成后, 相关状态内容会封装进入每个 ExecutionJobVertex 的 Execution 中; 以方便后续启动 subTask
     public void assignStates() {
 
         // step1  复制一份 operatorStates , 本方法的主题和目的，就是要对operatorStates 做重新划分
@@ -264,9 +265,11 @@ public class StateAssignmentOperation {
 
         // 遍历算子链中所有的算子
         for (OperatorIDPair operatorID : operatorIDs) {
+            // OperatorInstanceID 内部包含 subtaskId(新的状态结构的句柄 的 subtaskId) 和 operatorId
             OperatorInstanceID instanceID =
                     OperatorInstanceID.of(subTaskIndex, operatorID.getGeneratedOperatorID());
 
+            // OperatorSubtaskState 封装了 指定算子下 指定 subTask下 的 全部状态句柄集合
             OperatorSubtaskState operatorSubtaskState = assignment.getSubtaskState(instanceID);
 
             taskState.putSubtaskStateByOperatorID(
@@ -276,6 +279,8 @@ public class StateAssignmentOperation {
         JobManagerTaskRestore taskRestore =
                 new JobManagerTaskRestore(restoreCheckpointId, taskState);
 
+        // taskRestore 代表了  指定算子链下（也就是多个算子）下指定 subTask下 的 全部状态句柄集合
+        // 我们 将其 赋值给 Execution 的 taskRestore 成员变量, 以方便 sub task 的执行和启动
         currentExecutionAttempt.setInitialState(taskRestore);
     }
 

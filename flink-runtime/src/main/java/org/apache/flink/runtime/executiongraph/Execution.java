@@ -167,6 +167,7 @@ public class Execution
     /**
      * Information to restore the task on recovery, such as checkpoint id and task state snapshot.
      */
+    //
     @Nullable private JobManagerTaskRestore taskRestore;
 
     /** This field holds the allocation id once it was assigned successfully. */
