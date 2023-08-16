@@ -61,6 +61,7 @@ public final class YarnApplicationClusterEntryPoint extends ApplicationClusterEn
         return configuration.getString(YarnConfigOptions.APPLICATION_MASTER_PORT);
     }
 
+    // 如果是yarn application 模式 , yarn的 app master 启动后, 会反射回调 本方法
     public static void main(final String[] args) {
         // startup checks and logging
         EnvironmentInformation.logEnvironmentInfo(

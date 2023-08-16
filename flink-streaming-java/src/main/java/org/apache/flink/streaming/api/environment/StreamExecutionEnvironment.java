@@ -2057,15 +2057,74 @@ public class StreamExecutionEnvironment {
 
         AbstractJobClusterExecutor
             1 YarnJobClusterExecutor                YarnJobClusterExecutorFactory                yarn-per-job 执行
+                  JobDispatcherLeaderProcessFactoryFactory.createFactory
+
+                     DefaultDispatcherGatewayServiceFactory.create
+                          1.1  JobDispatcherFactory.createDispatcher
+                               MiniDispatcher 构造
+                          1.2  MiniDispatcher.start
+                               父类Dispatcher.start
+                                    Dispatcher.onStart
+                                    Dispatcher.startRecoveredJobs
+                                    Dispatcher.runRecoveredJob
+                                    Dispatcher.runJob
+                                    Dispatcher.createJobManagerRunner
+                                        JobMasterServiceLeadershipRunner.start
+                                        JobMasterServiceLeadershipRunner.startJobMasterServiceProcessAsync
+                                        JobMasterServiceLeadershipRunner.verifyJobSchedulingStatusAndCreateJobMasterServiceProcess
+                                        JobMasterServiceLeadershipRunner.createNewJobMasterServiceProcess
+                                        DefaultJobMasterServiceProcessFactory.create
+                                        DefaultJobMasterServiceProcess 构造方法
+                                        DefaultJobMasterServiceFactory.createJobMasterService
+                                        DefaultJobMasterServiceFactory.internalCreateJobMasterService
+                                            JobMaster.start
+                                            JobMaster.onStart
+                                            JobMaster.startJobExecution
+                                            JobMaster.startScheduling
+                                            于是开始了 作业的调度
+
 
         AbstractSessionClusterExecutor
-            2 KubernetesSessionClusterExecutor      KubernetesSessionClusterExecutorFactory      向 k8s创建的 flink集群 提交作业
-            3 YarnSessionClusterExecutor            YarnSessionClusterExecutorFactory            向 yarn创建的 flink集群 提交作业
-            4 RemoteExecutor                        RemoteExecutorFactory                        向 standalone flink集群 提交作业
+            2 KubernetesSessionClusterExecutor      KubernetesSessionClusterExecutorFactory      向 k8s创建的  集群 提交作业 （是session集群）
+            3 YarnSessionClusterExecutor            YarnSessionClusterExecutorFactory            向 yarn创建的 集群 提交作业 （是session集群）
+            4 RemoteExecutor                        RemoteExecutorFactory                        向 standalone 集群 提交作业
 
         5 LocalExecutor                             LocalExecutorFactory                               本地执行
 
-        6 EmbeddedExecutor        EmbeddedExecutorFactory 或者 WebSubmissionExecutorFactory    命令行提交standalone作业 或者 web页面提交standalone作业
+        6 EmbeddedExecutor        EmbeddedExecutorFactory
+                                  用于 application 模式 提交作业, 这里提交作业的方法是在JobMannager 内部进行的,而不是客户端,所以用"Embedded"这个单词
+
+                                  session 模式 和 per-job 模式, 用户代码都是在客户端执行的
+
+                                  ( 这里的application 模式,包括 k8s application、 yarn application 和 standlone application 三种)
+
+                                  DefaultDispatcherResourceManagerComponentFactory.create
+                                  DefaultDispatcherRunnerFactory.createDispatcherRunner
+                                  DefaultDispatcherRunner.create
+                                  DispatcherRunnerLeaderElectionLifecycleManager.createFor
+                                  DispatcherRunnerLeaderElectionLifecycleManager 构造方法
+
+                                  DefaultDispatcherRunner.grantLeadership
+                                  AbstractDispatcherLeaderProcess.start
+                                  AbstractDispatcherLeaderProcess.startInternal
+                                  SessionDispatcherLeaderProcess.onStart
+                                  SessionDispatcherLeaderProcess.createDispatcherIfRunning
+                                  SessionDispatcherLeaderProcess.createDispatcher
+                                       ApplicationDispatcherGatewayServiceFactory.create
+                                       ApplicationDispatcherBootstrap.ApplicationDispatcherBootstrap  构造方法
+                                       ApplicationDispatcherBootstrap.fixJobIdAndRunApplicationAsync
+                                       ApplicationDispatcherBootstrap.runApplicationAsync
+                                       ApplicationDispatcherBootstrap.runApplicationEntryPoint
+                                           6.1 先创建  EmbeddedExecutorServiceLoader
+                                           6.2 再执行用户代码  ClientUtils.executeProgram
+                                                  PackagedProgram.invokeInteractiveModeForExecution
+                                                  PackagedProgram.callMainMethod
+                                                  用户代码最终一定会使用
+                                                     ExecutionEnvironment.executeAsync 或者 StreamExecutionEnvironment.executeAsync
+                                                     由6.1 ,我们可以推断,此时加载的 PipelineExecutorFactory 一定是 EmbeddedExecutorFactory,
+                                                     创建的执行器一定是  EmbeddedExecutor
+
+        7 EmbeddedExecutor        WebSubmissionExecutorFactory     web页面提交standalone作业
 
         */
         CompletableFuture<JobClient> jobClientFuture =

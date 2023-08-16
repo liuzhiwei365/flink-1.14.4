@@ -261,9 +261,9 @@ public class ApplicationDispatcherBootstrap implements DispatcherBootstrap {
             ClientUtils.executeProgram(
                     executorServiceLoader,
                     configuration,
-                    application,
+                    application, // PackagedProgram 类型
                     enforceSingleJobExecution,
-                    true /* suppress sysout */);
+                    true );// suppress sysout
 
             if (applicationJobIds.isEmpty()) {
                 jobIdsFuture.completeExceptionally(

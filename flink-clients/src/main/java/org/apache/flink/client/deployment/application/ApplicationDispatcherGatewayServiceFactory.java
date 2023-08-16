@@ -96,7 +96,7 @@ public class ApplicationDispatcherGatewayServiceFactory
                             recoveredJobs,
                             (dispatcherGateway, scheduledExecutor, errorHandler) ->
                                     new ApplicationDispatcherBootstrap(
-                                            application,
+                                            application, //  PackagedProgram ,即将被执行的用户程序
                                             recoveredJobIds,
                                             configuration,
                                             dispatcherGateway,

@@ -46,6 +46,15 @@ public final class DefaultDispatcherRunner implements DispatcherRunner, LeaderCo
 
     private final FatalErrorHandler fatalErrorHandler;
 
+    // DispatcherLeaderProcessFactory 有两个实现：
+    // JobDispatcherLeaderProcessFactory   per-job 模式
+    // SessionDispatcherLeaderProcessFactory   session 模式 和 application 模式
+    //
+    //    虽然 session模式 和 application模式, 它们都用 SessionDispatcherLeaderProcessFactory 对象,但是在这两种模式下,
+    //    成员变量 dispatcherGatewayServiceFactory 的类型还是不一样的
+    //       session 模式是    DefaultDispatcherGatewayServiceFactory
+    //       application 模式是    ApplicationDispatcherGatewayServiceFactory
+    //
     private final DispatcherLeaderProcessFactory dispatcherLeaderProcessFactory;
 
     private final CompletableFuture<Void> terminationFuture;

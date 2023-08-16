@@ -135,6 +135,12 @@ public class SessionDispatcherLeaderProcess extends AbstractDispatcherLeaderProc
         }
     }
 
+    /*
+      JobGraphStore 有三个实现：
+           SingleJobJobGraphStore  目前 flink没有用到
+           StandaloneJobGraphStore   非ha 模式 , 相关的 JobGarph 集合为空
+           DefaultJobGraphStore   ha 模式 , 从 k8s 的config map 或者 zk 中取回 所有的JobGarph
+     */
     private JobGraph recoverJob(JobID jobId) {
         log.info("Trying to recover job with job id {}.", jobId);
         try {

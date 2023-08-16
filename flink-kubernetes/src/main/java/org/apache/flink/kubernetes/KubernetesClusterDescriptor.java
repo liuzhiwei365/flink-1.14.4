@@ -269,10 +269,13 @@ public class KubernetesClusterDescriptor implements ClusterDescriptor<String> {
                                             KubernetesUtils.loadPodFromTemplateFile(
                                                     client, file, Constants.MAIN_CONTAINER_NAME))
                             .orElse(new FlinkPod.Builder().build());
+
+            // 创建 JobManager 在 k8s 上面的配置
             final KubernetesJobManagerSpecification kubernetesJobManagerSpec =
                     KubernetesJobManagerFactory.buildKubernetesJobManagerSpecification(
                             podTemplate, kubernetesJobManagerParameters);
 
+            // 部署 deployment 资源
             client.createJobManagerComponent(kubernetesJobManagerSpec);
 
             return createClusterClientProvider(clusterId);

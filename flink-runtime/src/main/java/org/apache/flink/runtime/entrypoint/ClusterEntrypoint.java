@@ -265,14 +265,12 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
     private void runCluster(Configuration configuration, PluginManager pluginManager)
             throws Exception {
         synchronized (lock) {
-            /*
-                初始化大量的服务组件 以 RpcService 为核心;
-                这里面 初始化的服务和 后面的 dispatcher  ResourceManager webMonitorEndpoint 不同
 
-            */
+             // step1  创建和启动 大量的  辅助服务组件
+
             initializeServices(configuration, pluginManager);
 
-            // write host information into configuration
+
             configuration.setString(JobManagerOptions.ADDRESS, commonRpcService.getAddress());
             configuration.setInteger(JobManagerOptions.PORT, commonRpcService.getPort());
 
@@ -281,6 +279,7 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
                             // 该方法针对不同的子类有不同的实现 ,
                             createDispatcherResourceManagerComponentFactory(configuration);
 
+            // step2 创建和启动 dispatcher  ResourceManager webMonitorEndpoint 等重要核心组件
             clusterComponent =
                     dispatcherResourceManagerComponentFactory.create(
                             configuration,
@@ -370,6 +369,16 @@ public abstract class ClusterEntrypoint implements AutoCloseableAsync, FatalErro
                     Executors.newFixedThreadPool(
                             ClusterEntrypointUtils.getPoolSize(configuration),
                             new ExecutorThreadFactory("cluster-io"));
+            /*
+              haServices 有5种 实现：
+                AbstractNonHaServices
+                     StandaloneHaServices
+                     EmbeddedHaServices
+                     EmbeddedHaServicesWithLeadershipControl
+                AbstractHaServices
+                     ZooKeeperHaServices
+                     KubernetesHaServices
+             */
             haServices = createHaServices(configuration, ioExecutor, rpcSystem);
             blobServer = new BlobServer(configuration, haServices.createBlobStore());
             blobServer.start();

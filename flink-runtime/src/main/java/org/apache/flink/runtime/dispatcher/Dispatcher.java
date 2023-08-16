@@ -97,6 +97,21 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * job submissions, persisting them, spawning JobManagers to execute the jobs and to recover them in
  * case of a master failure. Furthermore, it knows about the state of the Flink session cluster.
  */
+/*
+
+    1 Dispatcher分发器提供了提交作业、取消作业、查看作业列表、查看作业执行结果等操作。
+
+    2 Dispatcher可以接收多个作业,每接收一个作业Dispatcher就会为这个作业分配一个JobMaster,JobMaster会负责本次作业的各项协调工作
+
+    3 Dispatcher 有两个实现：
+        3.1 StandaloneDispatcher：Flink会话集群创建的Dispatcher，它可以服务于多个Job作业。
+
+        3.2  MiniDispatcher：Flink单作业集群模式创建的Dispatcher，它在作业提交后创建并只服务于该作业，
+           它的生命周期也跟随作业的结束而结束
+
+    4  Dispather继承结构：  参见图片的路径,学习资料/Dispather继承结构.png
+
+ */
 public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<DispatcherId>
         implements DispatcherGateway {
 
@@ -205,6 +220,7 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     @Override
     public void onStart() throws Exception {
         try {
+            // 注册 DispatcherMetrics
             startDispatcherServices();
         } catch (Throwable t) {
             final DispatcherException exception =
@@ -214,11 +230,14 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
             throw exception;
         }
 
-        // Dispatcher 起来后 ,会在指定的目录下恢复 job
-        // 不过 per job 模式走这里的时候  恢复的job 只有一个 ,实际上就是提交job
+        //  Dispatcher 起来后 ,会在指定的目录下恢复 job
+        //  per job 模式    走这里的时候,   恢复的job 只有一个 ,实际上就是提交job
+        //  session 模式    走这里的时候,   如果ha 恢复多个； 如果非ha 一个没有
+        //  application模式 走这里的时候,
         startRecoveredJobs();
-        this.dispatcherBootstrap =
-                this.dispatcherBootstrapFactory.create(
+
+        // 这个创建的是 NoOpDispatcherBootstrap, 没任何逻辑的空实现
+        this.dispatcherBootstrap = this.dispatcherBootstrapFactory.create(
                         getSelfGateway(DispatcherGateway.class),
                         this.getRpcService().getScheduledExecutor(),
                         this::onFatalError);
@@ -297,7 +316,22 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     // RPCs
     // ------------------------------------------------------
 
-    // Dispatcher  处理 JobGraph 的入口
+    /*
+          Dispatcher是   处理 JobGraph 的入口
+
+          调用时机和场景：
+              1 EmbeddedExecutor.submitJob    application 模式
+
+              2 MiniDispatcher.submitJob      yarn-per-job 模式
+
+              3 SessionDispatcherLeaderProcess.submitAddedJob    session模式
+
+              4 MiniCluster.submitJob      本地模式
+
+              5 JobSubmitHandler.handleRequest
+
+     */
+
     @Override
     public CompletableFuture<Acknowledge> submitJob(JobGraph jobGraph, Time timeout) {
         log.info(
@@ -377,6 +411,7 @@ public abstract class Dispatcher extends PermanentlyFencedRpcEndpoint<Dispatcher
     private CompletableFuture<Acknowledge> internalSubmitJob(JobGraph jobGraph) {
         log.info("Submitting job '{}' ({}).", jobGraph.getName(), jobGraph.getJobID());
 
+        // 核心 persistAndRunJob
         final CompletableFuture<Acknowledge> persistAndRunFuture =
                 waitForTerminatingJob(jobGraph.getJobID(), jobGraph, this::persistAndRunJob)
                         .thenApply(ignored -> Acknowledge.get());

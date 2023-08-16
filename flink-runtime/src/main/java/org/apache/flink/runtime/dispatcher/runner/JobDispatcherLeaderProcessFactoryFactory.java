@@ -40,6 +40,7 @@ public class JobDispatcherLeaderProcessFactoryFactory
         this.jobGraphRetriever = jobGraphRetriever;
     }
 
+    // 只有per-job 模式才会走到这里
     @Override
     public DispatcherLeaderProcessFactory createFactory(
             JobGraphStoreFactory jobGraphStoreFactory,
@@ -51,7 +52,10 @@ public class JobDispatcherLeaderProcessFactoryFactory
         final JobGraph jobGraph;
 
         try {
-            // 把job graph 从文件系统中读回来
+            //  1 利用 JobGraphRetriever 把job graph 从文件系统中读回来,
+            //  这和session模式 有区别, session 模式是通过 JobGraphStore.recoverJobGraph 方法 取回多个JobGraph
+            //
+            //  2 后续, Dispatcher.runRecoveredJob 在运行作业的时候 会用到这里的JobGraph
             jobGraph =
                     jobGraphRetriever.retrieveJobGraph(
                             partialDispatcherServices.getConfiguration());

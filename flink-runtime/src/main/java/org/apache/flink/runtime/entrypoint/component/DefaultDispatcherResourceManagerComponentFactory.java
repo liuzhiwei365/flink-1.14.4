@@ -160,7 +160,40 @@ public class DefaultDispatcherResourceManagerComponentFactory
                                     dispatcherGatewayRetriever,
                                     executor);
 
-            // web monitor endpoint 内部有一个内置netty web 服务器
+            // 1  web monitor endpoint 内部有一个内置netty web 服务器
+            //
+            // 2  WebMonitorEndpoint 有两个实现：
+            //            DispatcherRestEndpoint      针对 session 模式
+            //            MiniDispatcherRestEndpoint    针对  yarn-per-job 模式  和  application 模式  （有点诡异，但就是这么设计的）
+            //
+
+            //
+            // 3  JobRestEndpointFactory      会创建  MiniDispatcherRestEndpoint
+            //    SessionRestEndpointFactory  会创建  DispatcherRestEndpoint
+            //
+            //    我们追踪 restEndpointFactory 的来源,只有三处
+            //
+            //    3.1  application 模式运行时：
+            //    ApplicationClusterEntryPoint.createDispatcherResourceManagerComponentFactory
+            //          传入的  restEndpointFactory 是  JobRestEndpointFactory 类型
+            //
+            //    3,2 yarn-per-job 模式运行时：
+            //    YarnJobClusterEntrypoint.createDispatcherResourceManagerComponentFactory
+            //    DefaultDispatcherResourceManagerComponentFactory.createJobComponentFactory
+            //          传入的  restEndpointFactory 还是  JobRestEndpointFactory 类型
+            //
+            //
+            //    3.3 本地模式 和 session模式运行时：
+            //    MiniCluster.createDispatcherResourceManagerComponentFactory
+            //     或者  StandaloneSessionClusterEntrypoint.createDispatcherResourceManagerComponentFactory
+            //     或者  KubernetesSessionClusterEntrypoint.createDispatcherResourceManagerComponentFactory
+            //     或者  YarnSessionClusterEntrypoint.createDispatcherResourceManagerComponentFactory
+            //
+            //        都会调用  DefaultDispatcherResourceManagerComponentFactory.createSessionComponentFactory
+            //          传入的 restEndpointFactory 是 SessionRestEndpointFactory
+            //
+            //   总结, application 模式 和  yarn-per-job 模式 不能通过web 的方式提交作业 ; 本地模式 和 session 模式都可以
+            //
             webMonitorEndpoint =
                     restEndpointFactory.createRestEndpoint(
                             configuration,
@@ -172,7 +205,12 @@ public class DefaultDispatcherResourceManagerComponentFactory
                             highAvailabilityServices.getClusterRestEndpointLeaderElectionService(),
                             fatalErrorHandler);
 
-            // 启动 web 服务器
+            // 启动 web 服务器： 主要逻辑是添加很多 Handler , 相当于Serlet
+            //   1  DispatcherRestEndpoint
+            //        先把父类 WebMonitorEndpoint 中 初始化的 Handlers 添加进来, 再把 特殊的 JobSubmitHandler 添加进来
+            //   2  MiniDispatcherRestEndpoint
+            //        只会添加 父类 WebMonitorEndpoint 中 初始化的 Handlers, 自己没有额外的逻辑
+            //  而  JobSubmitHandler 是负责提交作业的 处理器, 由此可见, yarn-per-job 模式 和 application 模式  不能通过web 的方法提交作业
             log.debug("Starting Dispatcher REST endpoint.");
             webMonitorEndpoint.start();
 

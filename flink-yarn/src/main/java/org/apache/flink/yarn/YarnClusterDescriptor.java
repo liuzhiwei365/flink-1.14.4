@@ -517,16 +517,28 @@ public class YarnClusterDescriptor implements ClusterDescriptor<ApplicationId> {
         }
     }
 
-    /**
-     * This method will block until the ApplicationMaster/JobManager have been deployed on YARN.
-     *
-     * @param clusterSpecification Initial cluster specification for the Flink cluster to be
-     *     deployed
-     * @param applicationName name of the Yarn application to start
-     * @param yarnClusterEntrypoint Class name of the Yarn cluster entry point.
-     * @param jobGraph A job graph which is deployed with the Flink cluster, {@code null} if none
-     * @param detached True if the cluster should be started in detached mode
-     */
+   /*
+        yarn 所有的部署方式：  yarn-per-job 、 yarn-session 、 yarn-application 都会调用本模版方法
+
+        ** 特别注意：  第三个参数, 传入的是一个类名, 在 app master 启动后,会反射回调 该类的 main 方法,这是yarn 的固定流程规范
+
+           yarn-per-job模式：
+                org.apache.flink.yarn.entrypoint.YarnJobClusterEntrypoint
+
+                YarnJobClusterEntrypoint.main
+                ClusterEntrypoint.runClusterEntrypoint
+                ClusterEntrypoint.startCluster
+                ClusterEntrypoint.runCluster
+
+
+           yarn-session模式：
+                org.apache.flink.yarn.entrypoint.YarnSessionClusterEntrypoint
+
+           yarn-application模式：
+                org.apache.flink.yarn.entrypoint.YarnApplicationClusterEntryPoint
+
+
+    */
     private ClusterClientProvider<ApplicationId> deployInternal(
             ClusterSpecification clusterSpecification,
             String applicationName,
@@ -620,8 +632,8 @@ public class YarnClusterDescriptor implements ClusterDescriptor<ApplicationId> {
 
         // 启动 AppMaster
         // 启动 App master后 , app master 内部会
-        // 回调 YarnJobClusterEntrypoint YarnApplicationClusterEntrypoint YarnSessionClusterEntrypoint
-        // 的  main 方法
+        // 回调 YarnJobClusterEntrypoint YarnApplicationClusterEntrypoint YarnSessionClusterEntrypoint的  main 方法
+        //
         ApplicationReport report =
                 startAppMaster(
                         flinkConfiguration,

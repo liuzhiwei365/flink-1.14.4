@@ -80,6 +80,7 @@ public class DispatcherRestEndpoint extends WebMonitorEndpoint<DispatcherGateway
         webSubmissionExtension = WebMonitorExtension.empty();
     }
 
+    // 先把父类 WebMonitorEndpoint 中 初始化的 Handlers 添加进来, 再把 特殊的 JobSubmitHandler 添加进来
     @Override
     protected List<Tuple2<RestHandlerSpecification, ChannelInboundHandler>> initializeHandlers(
             final CompletableFuture<String> localAddressFuture) {

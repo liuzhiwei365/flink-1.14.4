@@ -1,0 +1,315 @@
+
+
+===================flink-dist/src/main/flink-bin/bin/flink 执行脚本：
+
+   调用的是 CliFrontend的 main 方法
+
+1 flink run 命令 路由到 CliFrontend.run 方法
+    调用栈：
+    CliFrontend.run
+    CliFrontend.executeProgram
+    ClientUtils.executeProgram
+    PackagedProgram.invokeInteractiveModeForExecution
+    PackagedProgram.callMainMethod
+    Method.invoke
+        //反射调用用户主类,用户代码一定会调用  StreamExecutionEnvironment.executeAsync  或者  ExecutionEnvironment.executeAsync
+        1.1 yarn-per-job 模式 "部署集群" 和 "提交作业"
+            AbstractJobClusterExecutor.execute
+            YarnClusterDescriptor.deployJobCluster
+                deployInternal(
+                     clusterSpecification,
+                     "Flink per-job cluster",
+                     getYarnJobClusterEntrypoint(),
+                     jobGraph,
+                     detached);
+            根据yarn 的流程,可知, app master 启动后,反射回调
+            YarnJobClusterEntrypoint.main
+            ClusterEntrypoint.runClusterEntrypoint
+            ClusterEntrypoint.startCluster
+            ClusterEntrypoint.runCluster
+            DefaultDispatcherResourceManagerComponentFactory.create  （后续流程参考下篇）
+
+        1.2 session 模式 "提交作业"
+            AbstractSessionClusterExecutor.execute
+            // 利用Rest 客户端提交作业
+            RestClusterClient.submitJob
+            // 向web 服务器发送请求 , 请求中带有 所有的jar路径
+            RestClusterClient.sendRetriableRequest
+            RestClient.sendRequest
+
+            // 由web 服务器的 JobSubmitHandler 来处理请求
+            JobSubmitHandler.handleRequest
+                1.2.1 先上传 jobGraph, 用户的 artifacts 的所有jar包 , 第三方依赖的所有jar包
+                JobSubmitHandler.uploadJobGraphFiles
+                1.2.2 再正式提交作业
+                Dispatcher.submitJob
+                Dispatcher.internalSubmitJob
+                Dispatcher.persistAndRunJob
+                Dispatcher.runJob
+                JobMasterServiceLeadershipRunner.start
+
+                    JobMasterServiceLeadershipRunner.grantLeadership
+                    JobMasterServiceLeadershipRunner.startJobMasterServiceProcessAsync
+                    JobMasterServiceLeadershipRunner.verifyJobSchedulingStatusAndCreateJobMasterServiceProcess
+                    // 创建 JobMaster进程
+                    JobMasterServiceLeadershipRunner.createNewJobMasterServiceProcess
+                    DefaultJobMasterServiceProcessFactory.create
+                    DefaultJobMasterServiceProcess  构造方法
+                    DefaultJobMasterServiceFactory.createJobMasterService
+                    DefaultJobMasterServiceFactory.internalCreateJobMasterService
+                         JobMaster的构造与启动
+                         JobMaster.onStart
+                         JobMaster.startJobExecution
+                         JobMaster.startScheduling   于是开始了作业的调度
+
+
+
+
+
+2 flink run-application 命令 路由到 CliFrontend.runApplication方法
+    调用栈：
+    CliFrontend.runApplication
+    ApplicationClusterDeployer.run
+    ClusterDescriptor.deployApplicationCluster  开始部署 application模式的 集群
+        /* ClusterDescriptor 有三个实现类
+                KubernetesClusterDescriptor
+                StandaloneClusterDescriptor
+                YarnClusterDescriptor
+        */
+        2.1  yarn application 模式  "部署集群"和"提交作业"
+             YarnClusterDescriptor.deployApplicationCluster
+                  deployInternal(
+                       clusterSpecification,
+                       "Flink Application Cluster",
+                       YarnApplicationClusterEntryPoint.class.getName(),
+                       null,
+                       false)
+             根据yarn 的流程,可知, app master 启动后,反射回调
+                 YarnApplicationClusterEntryPoint.main 方法
+                 ClusterEntrypoint.runClusterEntrypoint
+                 ClusterEntrypoint.startCluster
+                 ClusterEntrypoint.runCluster
+                 DefaultDispatcherResourceManagerComponentFactory.create  （后续流程参考下篇）
+
+        2.2  k8s application 模式  "部署集群" 和 "提交作业"
+             deployClusterInternal(
+                   KubernetesApplicationClusterEntrypoint.class.getName(),
+                   clusterSpecification,
+                   false);
+             老规矩,回调 KubernetesApplicationClusterEntrypoint.main
+                    ClusterEntrypoint.runClusterEntrypoint
+                    ClusterEntrypoint.startCluster
+                    ClusterEntrypoint.runCluster
+                    DefaultDispatcherResourceManagerComponentFactory.create  （后续流程参考下篇）
+
+
+
+
+=================== flink-dist/src/main/flink-bin/yarn-bin/yarn-session.sh  脚本
+
+yarn-session 模式 集群的部署: 由yarn-session.sh 的脚本作为入口
+
+脚本最后执行 org.apache.flink.yarn.cli.FlinkYarnSessionCli.main 方法
+   调用栈：
+   FlinkYarnSessionCli.run
+   YarnClusterDescriptor.deploySessionCluster
+       deployInternal(
+           clusterSpecification,
+           "Flink session cluster",
+           getYarnSessionClusterEntrypoint(),
+           null,
+           false);
+   根据yarn 的流程,可知, app master 启动后,反射回调
+       YarnSessionClusterEntrypoint.main
+       ClusterEntrypoint.runClusterEntrypoint
+       ClusterEntrypoint.startCluster
+       ClusterEntrypoint.runCluster
+       DefaultDispatcherResourceManagerComponentFactory.create  （后续流程参考下篇）
+
+
+===================   flink-dist/src/main/flink-bin/kubernetes-bin/kubernetes-session.sh 脚本
+
+k8s session 模式 集群的部署：
+脚本最后执行 org.apache.flink.kubernetes.cli.KubernetesSessionCli.main 方法
+  调用栈：
+  KubernetesSessionCli.run
+  KubernetesClusterDescriptor.deploySessionCluster
+  deployClusterInternal(
+       KubernetesSessionClusterEntrypoint.class.getName(),
+       clusterSpecification,
+       false);
+     老规矩,回调   KubernetesSessionClusterEntrypoint.main
+     ClusterEntrypoint.runClusterEntrypoint
+     ClusterEntrypoint.startCluster
+     ClusterEntrypoint.runCluster
+     DefaultDispatcherResourceManagerComponentFactory.create  （后续流程参考下篇）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+====================三类集群启动后, 对触发job 的影响如下：
+
+DefaultDispatcherResourceManagerComponentFactory.create
+DefaultDispatcherRunnerFactory.createDispatcherRunner
+    1 首先 根据 DispatcherLeaderProcessFactoryFactory 创建 DispatcherLeaderProcessFactory （根据工厂的工厂  创建工厂）
+        DispatcherLeaderProcessFactoryFactory 有三个实现：
+
+           JobDispatcherLeaderProcessFactoryFactory
+               对应 per-job 模式       创建 JobDispatcherLeaderProcessFactory
+
+           ApplicationDispatcherLeaderProcessFactoryFactory
+               对应 application 模式   创建  SessionDispatcherLeaderProcessFactory
+               第一个参数是 ApplicationDispatcherGatewayServiceFactory 类型 （与 session模式 的不同之处）
+
+           SessionDispatcherLeaderProcessFactoryFactory
+               对应 session 模式       创建  SessionDispatcherLeaderProcessFactory
+                第一个参数是 DefaultDispatcherGatewayServiceFactory 类型 （与 application模式 的不同之处）
+
+
+    2
+    DefaultDispatcherRunner.create( LeaderElectionService,FatalErrorHandler,DispatcherLeaderProcessFactory )
+         第三个参数不一样：
+         DispatcherRunnerLeaderElectionLifecycleManager.createFor
+             DispatcherRunnerLeaderElectionLifecycleManager 构造方法
+             构造方法中要启动 DefaultDispatcherRunner ,而 DefaultDispatcherRunner中就包含 前面提到的那不一样的第三个参数
+             LeaderElectionService.start（DefaultDispatcherRunner）
+
+                 DefaultDispatcherRunner.grantLeadership
+                 DefaultDispatcherRunner.startNewDispatcherLeaderProcess
+                 AbstractDispatcherLeaderProcess.start
+                 AbstractDispatcherLeaderProcess.startInternal
+
+                     2.1 JobDispatcherLeaderProcess.onStart  （per-job 模式）
+                         DefaultDispatcherGatewayServiceFactory.create
+                            2.1.1 JobDispatcherFactory.createDispatcher  创建 MiniDispatcher
+                                  重点来了, MiniDispather 在构建的时候 只传入了一个 JobGraph ,后续会执行它,
+                                  这非常符合 per-job 的特点
+                            2.1.2 启动 MiniDispatcher
+                                  父类 Dispatcher.onStart
+                                      Dispatcher.startRecoveredJobs
+                                         /*
+                                          1 这里的JobGraph 必定只有一个,且最开始来源于 JobDispatcherLeaderProcessFactoryFactory.createFactory
+                                         方法, 该方法中利用 JobGraphRetriever 把job graph 从文件系统中读回来
+                                          2 而 YarnClusterDescriptor.startAppMaster 的时候会把 JobGraph 上传到文件系统；而yarn session 模式
+                                         和 yarn application 模式 在调用这个方法的时候 传入的JobGraph 为null
+                                         */
+                                         Dispatcher.runRecoveredJob
+                                         Dispatcher.runJob
+                                         Dispatcher.createJobManagerRunner
+                                            JobMasterServiceLeadershipRunner.start
+                                            JobMasterServiceLeadershipRunner.startJobMasterServiceProcessAsync
+                                            JobMasterServiceLeadershipRunner.verifyJobSchedulingStatusAndCreateJobMasterServiceProcess
+                                            JobMasterServiceLeadershipRunner.createNewJobMasterServiceProcess
+                                            DefaultJobMasterServiceProcessFactory.create
+                                            DefaultJobMasterServiceProcess 构造方法
+                                            DefaultJobMasterServiceFactory.createJobMasterService
+                                            DefaultJobMasterServiceFactory.internalCreateJobMasterService
+                                                 JobMaster.start
+                                                 JobMaster.onStart
+                                                 JobMaster.startJobExecution
+                                                 JobMaster.startScheduling
+                                                 于是开始了 作业的调度
+
+                     2.2 SessionDispatcherLeaderProcess.onStart   （session 或者 application）
+                            2.2.1 SessionDispatcherLeaderProcess.recoverJobsAsync
+                                  SessionDispatcherLeaderProcess.recoverJobsIfRunning
+                                  SessionDispatcherLeaderProcess.recoverJobs
+                                  SessionDispatcherLeaderProcess.recoverJob（针对单个 JobId）
+                                     JobGraphStore.recoverJobGraph
+                                     DefaultJobGraphStore.recoverJobGraph
+
+                            2.2.2 SessionDispatcherLeaderProcess.createDispatcher（Collection<JobGraph> ）
+
+                                 2.2.2.1  session 模式
+                                 DefaultDispatcherGatewayServiceFactory.create
+                                     创建 StandaloneDispatcher
+                                     启动 StandaloneDispatcher
+                                         父类 Dispatcher.onStart
+                                            /* 1 重点来了,此时，session 模式是通过 JobGraphStore.recoverJobGraph 方法 取回多个JobGraph
+                                               2 JobGraphStore 有三个实现：
+                                                    SingleJobJobGraphStore  目前 flink没有用到
+                                                    StandaloneJobGraphStore   非ha 模式 , 相关的 JobGarph 集合为空
+                                                    DefaultJobGraphStore   ha 模式 , 从 k8s 的config map 或者 zk 中取回 所有的JobGarph
+                                            */
+                                            Dispatcher.startRecoveredJobs
+
+                                            // 重点来了, 通过 DispatcherBootstrapFactory  创建 DispatcherBootstrap
+                                            // 而此时 DispatcherBootstrapFactory 必定是 如下的函数对象
+                                            // 注意这个对象与 application 模式的区别, 这里 NoOpDispatcherBootstrap 只是个空实现
+                                            (dispatcherGateway, scheduledExecutor, errorHandler) -> new NoOpDispatcherBootstrap()
+
+
+
+                                 2.2.2.2  application 模式
+                                 ApplicationDispatcherGatewayServiceFactory.create
+                                      创建 StandaloneDispatcher
+                                      启动 StandaloneDispatcher
+                                          父类 Dispatcher.onStart
+                                               /*
+                                               重点来了:
+                                               A 此时 application模式也是 通过 JobGraphStore.recoverJobGraph 方法 取回多个JobGraph,这点和session一样;
+                                               不过,虽然有这个流程,但是实际上是不会恢复执行任何作业的,因为application模式 全局都没有进行过jobGraph的上传动作
+
+                                               B application 模式的 JobGraph 是 dispatcher 自己在执行用户时 解析的; 参见 2.2.2.2.2 步骤可知
+
+                                               C flink 官网说：
+                                                    与per-job 相比,application 模式 允许提交由多个作业组成的应用程序。
+                                                    作业执行的顺序不受部署模式的影响，而是受用于启动作业的调用的影响。
+                                                    使用execute（）它是阻塞的,这将导致“下一个”作业的执行被推迟到“这个”作业完成。
+                                                    使用executeAsync（）,它是非阻塞的,几个作业可以同时一起跑
+
+                                               */
+                                               Dispatcher.startRecoveredJobs
+
+                                               // 重点来了, 通过 DispatcherBootstrapFactory  创建 DispatcherBootstrap
+                                               // 而此时 DispatcherBootstrapFactory 必定是 如下的函数对象
+                                               (dispatcherGateway, scheduledExecutor, errorHandler) ->
+                                                                                   new ApplicationDispatcherBootstrap(
+                                                                                           application,
+                                                                                           recoveredJobIds,
+                                                                                           configuration,
+                                                                                           dispatcherGateway,
+                                                                                           scheduledExecutor,
+                                                                                           errorHandler)
+                                               ApplicationDispatcherBootstrap 构造方法
+                                               ApplicationDispatcherBootstrap.fixJobIdAndRunApplicationAsync
+                                               ApplicationDispatcherBootstrap.runApplicationAsync
+                                               ApplicationDispatcherBootstrap.runApplicationEntryPoint
+                                                   2.2.2.2.1 先创建  EmbeddedExecutorServiceLoader
+                                                   2.2.2.2.2 再执行用户代码  ClientUtils.executeProgram
+                                                             PackagedProgram.invokeInteractiveModeForExecution
+                                                             PackagedProgram.callMainMethod
+                                                             用户代码最终一定会使用
+                                                                 ExecutionEnvironment.executeAsync 或者 StreamExecutionEnvironment.executeAsync
+                                                              由2.2.2.2.1  ,我们可以推断,此时加载的 PipelineExecutorFactory 一定是 EmbeddedExecutorFactory,
+                                                              创建的执行器一定是  EmbeddedExecutor
+
+                                                              EmbeddedExecutor.execute
+                                                                 // 先把 StreamGraph 解析成JobGraph
+                                                                 2.2.2.2.2.1 PipelineExecutorUtils.getJobGraph
+                                                                 // 再 向JobGraph 提交作业
+                                                                 2.2.2.2.2.2 EmbeddedExecutor.submitJob
+                                                                             DispatcherGateway.submitJob
+                                                                             Dispatcher.submitJob
+
+
+
+
+
+
+
+
+//==========================================================================================================//
