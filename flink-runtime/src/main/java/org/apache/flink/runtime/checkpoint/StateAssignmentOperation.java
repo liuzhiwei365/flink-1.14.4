@@ -116,7 +116,7 @@ public class StateAssignmentOperation {
 
                 OperatorState operatorState = localOperators.remove(operatorID);
                 if (operatorState == null) {
-                    // 构造一个新的 OperatorState,不过内部的成员变量 没有维护实际的状态
+                    // 如果某个 operatorID 不存在自己的OperatorState , 则构造一个空的
                     operatorState = new OperatorState(
                                     operatorID,
                                     executionJobVertex.getParallelism(),
@@ -148,10 +148,8 @@ public class StateAssignmentOperation {
             }
         }
 
-        // step4
-        // 以ExecutionJobVertex 为单位
-        // 将算法重新布局的 状态分布, 封装进入每个 ExecutionJobVertex 的 Execution 中
-        // 以方便后续启动 subTask
+        // step4  以ExecutionJobVertex 为单位
+        // 将算法重新布局的 状态分布, 封装进入每个 ExecutionJobVertex 的 Execution 中; 以方便后续启动 subTask
         for (TaskStateAssignment stateAssignment : vertexAssignments.values()) {
             if (stateAssignment.hasNonFinishedState || stateAssignment.isFullyFinished) {
                 assignTaskStateToExecutionJobVertices(stateAssignment);
