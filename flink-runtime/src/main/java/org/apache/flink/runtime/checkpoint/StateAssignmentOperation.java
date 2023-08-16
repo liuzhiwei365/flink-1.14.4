@@ -141,6 +141,7 @@ public class StateAssignmentOperation {
         for (TaskStateAssignment stateAssignment : vertexAssignments.values()) {
             if (stateAssignment.hasNonFinishedState) {
                 // 一个ExecutionJobVertex 对应 一个TaskStateAssignment
+                //  核心   ****
                 assignAttemptState(stateAssignment);
             }
         }
@@ -184,7 +185,7 @@ public class StateAssignmentOperation {
                         taskStateAssignment.newParallelism);
 
 
-        // 重新分布 管理算子状态
+        // 重新分布 管理算子状态  （RoundRobin 重分布策略）
         reDistributePartitionableStates(
                 taskStateAssignment.oldState,
                 taskStateAssignment.newParallelism,
@@ -192,7 +193,7 @@ public class StateAssignmentOperation {
                 RoundRobinOperatorStateRepartitioner.INSTANCE,
                 taskStateAssignment.subManagedOperatorState);
 
-        // 重新分布 原始算子状态
+        // 重新分布 原始算子状态  （RoundRobin 重分布策略）
         reDistributePartitionableStates(
                 taskStateAssignment.oldState,
                 taskStateAssignment.newParallelism,
@@ -206,12 +207,19 @@ public class StateAssignmentOperation {
            3 重分布 ResultSubpartition 一定使用 SubtaskStateMapper.ARBITRARY 策略
            4 重分布 InputChannel 一定使用 FIRST FULL RANGE ROUND_ROBIN 四种的其中一种
         */
-        // 重新分布InputChannel 状态
+        // 重新分布InputChannel 状态 （FIRST FULL RANGE ROUND_ROBIN 四种的其中一种, 具体取决于上游的分区策略）
+        // InputChannel 的重分布策略针对不同的 分区器 有不同的实现, 对应关系如下：
+        //     BinaryHashPartitioner                                    FULL
+        //     GlobalPartitioner                                        FIRST
+        //     KeyGroupStreamPartitioner                                RANGE
+        //     ShufflePartitioner                                       ROUND_ROBIN
+        //     RebalancePartitioner                                     ROUND_ROBIN
         reDistributeInputChannelStates(taskStateAssignment);
-        // 重新分布ResultSubpartition 状态
+
+        // 重新分布ResultSubpartition 状态 （SubtaskStateMapper.ARBITRARY 策略）
         reDistributeResultSubpartitionStates(taskStateAssignment);
 
-        // 重新分布 管理Keyed状态  和 原始keyed状态
+        // 重新分布 管理Keyed状态  和 原始keyed状态 （key group range 重分布策略）
         reDistributeKeyedStates(keyGroupPartitions, taskStateAssignment);
     }
 
@@ -343,7 +351,9 @@ public class StateAssignmentOperation {
         }
     }
 
-    //  重新分布 管理算子状态 和 重新分布 原始算子状态 都会调用本方法
+    //  重新分布 管理算子状态
+    //  和 重新分布 原始算子状态
+    //  都会调用本方法
     public static <T extends StateObject> void reDistributePartitionableStates(
             Map<OperatorID, OperatorState> oldOperatorStates,
             int newParallelism,

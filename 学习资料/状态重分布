@@ -1,0 +1,10 @@
+
+
+
+
+状态重分布入口：
+
+    StateAssignmentOperation.assignStates
+         StateAssignmentOperation.assignAttemptState
+
+
