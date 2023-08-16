@@ -94,6 +94,7 @@ public class StateAssignmentOperation {
     public void assignStates() {
 
         // step1  复制一份 operatorStates , 本方法的主题和目的，就是要对operatorStates 做重新划分
+        //        operatorStates 来源于 CheckpointCoordinator.extractOperatorStates 方法
         Map<OperatorID, OperatorState> localOperators = new HashMap<>(operatorStates);
 
         checkStateMappingCompleteness(allowNonRestoredState, operatorStates, tasks);
@@ -115,7 +116,7 @@ public class StateAssignmentOperation {
 
                 OperatorState operatorState = localOperators.remove(operatorID);
                 if (operatorState == null) {
-                    // 构造一个新的 OperatorState,不过此时内部的成员变量 没有维护实际的状态
+                    // 构造一个新的 OperatorState,不过内部的成员变量 没有维护实际的状态
                     operatorState = new OperatorState(
                                     operatorID,
                                     executionJobVertex.getParallelism(),
@@ -124,6 +125,7 @@ public class StateAssignmentOperation {
                 operatorStates.put(operatorIDPair.getGeneratedOperatorID(), operatorState);
             }
 
+            //stateAssignment 对象中 operatorStates 就是即将被重分配的 老的状态 ***
             final TaskStateAssignment stateAssignment =
                     new TaskStateAssignment(
                             executionJobVertex,

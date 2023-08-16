@@ -4,8 +4,27 @@
 
 状态重分布入口：
 
-    StateAssignmentOperation.assignStates
-         StateAssignmentOperation.assignAttemptState
+        // 1 恢复最新的快照状态
+        //    恢复状态（包括 6种）（状态句柄）、恢复 master hooks 状态、 恢复算子协调者状态
+
+        // 2 调用时机：
+        //     2.1  手动 savepoint 重启,重新构建执行图时 （DefaultExecutionGraphFactory.createAndRestoreExecutionGraph方法）
+        //            2.1.1 先尝试从 CheckpointCoordinator.completedCheckpointStore 中 存储的最新的CompletedCheckpoint 对象
+        //                 恢复执行图中 每个节点的 状态句柄
+        //            2.1.2  如果不成功,则加载 savepoint 到 CheckpointCoordinator.completedCheckpointStore 中,
+        //                 然后，再次尝试恢复执行图中 每个节点的 状态句柄
+        //     2.2 全局作业失败后, 全局恢复, restoreLatestCheckpointedStateToAll
+        //     2.3 单个task失败后, 局部恢复, restoreLatestCheckpointedStateToSubtasks
+        //
+        //  严格来说, 本方法的调用时机有3个, 能调用到本方法的方法有 4 个
+
+        CheckpointCoordinator.restoreLatestCheckpointedStateInternal
+
+            StateAssignmentOperation.assignStates
+
+             // 以 ExecutionJobVertex 为单位进行状态重分配
+             StateAssignmentOperation.assignAttemptState
+
                  step1: 计算在新的并行度下,  每个sub task 的 键组range划分
 
                  step2：重新分布 管理算子状态  （RoundRobin 重分布策略）
