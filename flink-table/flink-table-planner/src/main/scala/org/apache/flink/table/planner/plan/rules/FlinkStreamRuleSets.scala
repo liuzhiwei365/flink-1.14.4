@@ -469,6 +469,7 @@ object FlinkStreamRuleSets {
 
     // join                                                 针对流join 的 物理优化规则
     StreamPhysicalJoinRule.INSTANCE,                        // 普通join
+
     StreamPhysicalIntervalJoinRule.INSTANCE,                // 区间join
     StreamPhysicalTemporalJoinRule.INSTANCE,                // 时态join
     StreamPhysicalLookupJoinRule.SNAPSHOT_ON_TABLESCAN,     // lookup join
