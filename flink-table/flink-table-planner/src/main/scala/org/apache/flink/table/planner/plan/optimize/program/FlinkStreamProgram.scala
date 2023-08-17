@@ -114,8 +114,8 @@ object FlinkStreamProgram {
           .addProgram(new FlinkDecorrelateProgram)
           .build())
 
-    // default rewrite, includes: predicate simplification, expression reduction, window
-    // properties rewrite, etc.
+
+    // 谓词简化、表达式化简、窗口属性重写等
     chainedProgram.addLast(
       DEFAULT_REWRITE,
       FlinkHepRuleSetProgramBuilder.newBuilder

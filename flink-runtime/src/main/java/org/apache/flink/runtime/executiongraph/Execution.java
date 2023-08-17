@@ -167,7 +167,7 @@ public class Execution
     /**
      * Information to restore the task on recovery, such as checkpoint id and task state snapshot.
      */
-    //
+    // taskRestore 代表了  指定算子链下（也就是多个算子）下指定 subTask下 的 全部状态句柄集合
     @Nullable private JobManagerTaskRestore taskRestore;
 
     /** This field holds the allocation id once it was assigned successfully. */
