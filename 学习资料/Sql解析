@@ -13,3 +13,5 @@ PlannerBase.translate
 
 flink流的优化策略入口
 program.FlinkStreamProgram.buildProgram
+     对特殊 join 的优化
+     FlinkStreamRuleSets.PHYSICAL_OPT_RULES
