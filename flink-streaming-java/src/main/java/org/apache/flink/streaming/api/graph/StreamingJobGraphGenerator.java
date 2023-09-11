@@ -1071,6 +1071,10 @@ public class StreamingJobGraphGenerator {
 
         for (Map.Entry<Integer, JobVertex> entry : jobVertices.entrySet()) {
 
+            // 特殊说明：
+            //     如果StreamGraph  的结构如下:
+            //     1  -> 2 -> 3   ---   4 -> 5    ---   6 -> 7 -> 8 ->9
+            //     jobVertices map 成员中的 keys 一定是 1、 4 、6 头部编号
             final JobVertex vertex = entry.getValue();
             final String slotSharingGroupKey =
                     streamGraph.getStreamNode(entry.getKey()).getSlotSharingGroup();
@@ -1090,6 +1094,7 @@ public class StreamingJobGraphGenerator {
                                     SlotSharingGroup ssg = new SlotSharingGroup();
                                     streamGraph
                                             .getSlotSharingGroupResource(k)
+                                            //很重要,给槽位共享组设置 资源
                                             .ifPresent(ssg::setResourceProfile);
                                     return ssg;
                                 });

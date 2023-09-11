@@ -253,39 +253,22 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
 
     @Override
     public final void notifyCheckpointComplete(long checkpointId) throws Exception {
-        // the following scenarios are possible here
-        //
-        //  (1) there is exactly one transaction from the latest checkpoint that
-        //      was triggered and completed. That should be the common case.
-        //      Simply commit that transaction in that case.
-        //
-        //  (2) there are multiple pending transactions because one previous
-        //      checkpoint was skipped. That is a rare case, but can happen
-        //      for example when:
-        //
-        //        - the master cannot persist the metadata of the last
-        //          checkpoint (temporary outage in the storage system) but
-        //          could persist a successive checkpoint (the one notified here)
-        //
-        //        - other tasks could not persist their status during
-        //          the previous checkpoint, but did not trigger a failure because they
-        //          could hold onto their state and could successfully persist it in
-        //          a successive checkpoint (the one notified here)
-        //
-        //      In both cases, the prior checkpoint never reach a committed state, but
-        //      this checkpoint is always expected to subsume the prior one and cover all
-        //      changes since the last successful one. As a consequence, we need to commit
-        //      all pending transactions.
-        //
-        //  (3) Multiple transactions are pending, but the checkpoint complete notification
-        //      relates not to the latest. That is possible, because notification messages
-        //      can be delayed (in an extreme case till arrive after a succeeding checkpoint
-        //      was triggered) and because there can be concurrent overlapping checkpoints
-        //      (a new one is started before the previous fully finished).
-        //
-        // ==> There should never be a case where we have no pending transaction here
-        //
 
+
+        /*
+           以下情况在这里是可能的
+
+          (1) 从最近的检查点正好有一个事务已触发并完成。这应该是常见的情况。在这种情况下,只需提交该事务即可。
+
+          (2) 存在多个待提交的事务,比如
+              master无法持久化checkpoint（由于存储系统中的临时中断），但是我们可以仍然会进行下一次checkpoint
+              某个task不能持久化某次checkpoint , 但是还没有触发 failure, 这时有可能又开始下一次checkpoint
+
+          (3) 多个事务处于挂起状态，但checkpoint完成通知与最新情况无关。这是可能的，因为通知消息可以延迟（在极端情况下，
+             直到到达下一个checkpoint之后被触发）,并且因为可能同时存在重叠的checkpoint（在上一个完全完成之前启动一个新的）
+
+         */
+        // 获取所有待提交的事务
         Iterator<Map.Entry<Long, TransactionHolder<TXN>>> pendingTransactionIterator =
                 pendingCommitTransactions.entrySet().iterator();
         Throwable firstError = null;
@@ -294,6 +277,7 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
             Map.Entry<Long, TransactionHolder<TXN>> entry = pendingTransactionIterator.next();
             Long pendingTransactionCheckpointId = entry.getKey();
             TransactionHolder<TXN> pendingTransaction = entry.getValue();
+            // 只提交在checkpointId之前的事务
             if (pendingTransactionCheckpointId > checkpointId) {
                 continue;
             }
@@ -307,6 +291,10 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
 
             logWarningIfTimeoutAlmostReached(pendingTransaction);
             try {
+                // 逐个提交之前preCommit过的事务 , 目前只有kafka的实现
+                //               FlinkKafkaProducer.commit
+                //               FlinkKafkaInternalProducer.commitTransaction
+                //               KafkaProducer.commitTransaction
                 commit(pendingTransaction.handle);
             } catch (Throwable t) {
                 if (firstError == null) {
@@ -316,6 +304,7 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
 
             LOG.debug("{} - committed checkpoint transaction {}", name(), pendingTransaction);
 
+            // 将提交过的事务从待提交事务列表中清除
             pendingTransactionIterator.remove();
         }
 
@@ -331,9 +320,6 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
 
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        // this is like the pre-commit of a 2-phase-commit transaction
-        // we are ready to commit and remember the transaction
-
         long checkpointId = context.getCheckpointId();
         LOG.debug(
                 "{} - checkpoint {} triggered, flushing transaction '{}'",
@@ -342,19 +328,25 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
                 currentTransactionHolder);
 
         if (currentTransactionHolder != null) {
+            // 核心, 预提交
+            //    目前只有kafka的实现, FlinkKafkaProducer.preCommit
+            //                         FlinkKafkaProducer.flush
+            //                           KafkaProducer.flush
             preCommit(currentTransactionHolder.handle);
+            // 在未提交,但是已经与提交的 事务列表(pendingCommitTransactions)中记录该事务
             pendingCommitTransactions.put(checkpointId, currentTransactionHolder);
             LOG.debug("{} - stored pending transactions {}", name(), pendingCommitTransactions);
         }
 
-        // no need to start new transactions after sink function is closed (no more input data)
         if (!finished) {
+            // 开启新的事务
             currentTransactionHolder = beginTransactionInternal();
         } else {
             currentTransactionHolder = null;
         }
         LOG.debug("{} - started new transaction '{}'", name(), currentTransactionHolder);
 
+        // 清空state，然后记录当前事务 和 未提但是已经预提交的 事务
         state.clear();
         state.add(
                 new State<>(
@@ -363,23 +355,16 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
                         userContext));
     }
 
+    /*
+      1  获取状态存储变量state。
+      2  提交所有已经执行过preCommit的事务。
+      3  终止所有尚未preCommit的事务。
+      4  创建一个新事务。
+     */
     @Override
     public void initializeState(FunctionInitializationContext context) throws Exception {
-        // when we are restoring state with pendingCommitTransactions, we don't really know whether
-        // the
-        // transactions were already committed, or whether there was a failure between
-        // completing the checkpoint on the master, and notifying the writer here.
 
-        // (the common case is actually that is was already committed, the window
-        // between the commit on the master and the notification here is very small)
-
-        // it is possible to not have any transactions at all if there was a failure before
-        // the first completed checkpoint, or in case of a scale-out event, where some of the
-        // new task do not have and transactions assigned to check)
-
-        // we can have more than one transaction to check in case of a scale-in event, or
-        // for the reasons discussed in the 'notifyCheckpointComplete()' method.
-
+        // step1 获取状态存储变量state
         state = context.getOperatorStateStore().getListState(stateDescriptor);
 
         boolean recoveredUserContext = false;
@@ -390,6 +375,8 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
                 List<TransactionHolder<TXN>> recoveredTransactions =
                         operatorState.getPendingCommitTransactions();
                 List<TXN> handledTransactions = new ArrayList<>(recoveredTransactions.size() + 1);
+
+                // step2 提交所有已经执行过preCommit的事务
                 for (TransactionHolder<TXN> recoveredTransaction : recoveredTransactions) {
                     // If this fails to succeed eventually, there is actually data loss
                     recoverAndCommitInternal(recoveredTransaction);
@@ -398,6 +385,16 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
                 }
 
                 {
+                    /*
+                       代码块说明：
+                        局部代码块：用于限定变量生命周期，及早释放，提高内存利用率。
+                        静态代码块：主要用于对静态属性进行初始化。
+                        实例（构造）代码块：调用构造方法都会执行，并且在构造方法前执行。
+                        同步代码块：一种多线程保护机制。
+
+                        这里是局部代码块
+                     */
+                    // step3 终止所有尚未preCommit的事务
                     if (operatorState.getPendingTransaction() != null) {
                         TXN transaction = operatorState.getPendingTransaction().handle;
                         recoverAndAbort(transaction);
@@ -419,11 +416,11 @@ public abstract class TwoPhaseCommitSinkFunction<IN, TXN, CONTEXT> extends RichS
         // if in restore we didn't get any userContext or we are initializing from scratch
         if (!recoveredUserContext) {
             LOG.info("{} - no state to restore", name());
-
             userContext = initializeUserContext();
         }
         this.pendingCommitTransactions.clear();
 
+        // step4 创建一个新事务
         currentTransactionHolder = beginTransactionInternal();
         LOG.debug("{} - started new transaction '{}'", name(), currentTransactionHolder);
     }

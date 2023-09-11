@@ -1,0 +1,61 @@
+
+
+
+
+
+
+
+
+
+2 StreamGraph -> JobGraph
+
+PipelineExecutorUtils.getJobGraph
+FlinkPipelineTranslationUtil.getJobGraph
+     2.1 先创建  FlinkPipelineTranslator   有针对 sql plan  和  streamGraph 的两种实现
+          sql plan:       PlanTranslator
+          streamGraph:   StreamGraphTranslator
+         FlinkPipelineTranslationUtil.getPipelineTranslator
+     2.2
+       2.2.1 针对流图
+             StreamGraphTranslator.translateToJobGraph
+             StreamGraph.getJobGraph(JobID)
+             StreamingJobGraphGenerator.createJobGraph(StreamGraph, JobID)
+             StreamingJobGraphGenerator.createJobGraph()
+
+       2.2.2 针对SqlPlan
+             PlanTranslator.translateToJobGraph
+             PlanTranslator.compilePlan
+             2.2.2.1 先走优化器优化
+                 Optimizer.compile(Plan)
+             2.2.2.2 再将 优化后的 Plan 编译成 JobGraph
+                JobGraphGenerator.compileJobGraph(OptimizedPlan, JobID)
+
+3 JobGraph -> ExecutionGraph
+
+JobMasterServiceLeadershipRunner.createNewJobMasterServiceProcess
+DefaultJobMasterServiceProcessFactory.create
+DefaultJobMasterServiceProcess.DefaultJobMasterServiceProcess 构造方法
+DefaultJobMasterServiceFactory.createJobMasterService
+DefaultJobMasterServiceFactory.internalCreateJobMasterService
+JobMaster构造方法
+JobMaster.createScheduler
+    DefaultSlotPoolServiceSchedulerFactory.createScheduler
+        3.1 DefaultSchedulerFactory.createInstance
+            DefaultScheduler 构造方法
+            父类 SchedulerBase.SchedulerBase 构造方法
+                 SchedulerBase.createAndRestoreExecutionGraph
+                     DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+                     DefaultExecutionGraphBuilder.buildGraph
+
+        或者
+        3.2 AdaptiveSchedulerFactory.createInstance
+            AdaptiveScheduler.createExecutionGraphAndRestoreState
+
+
+
+
+            DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+            DefaultExecutionGraphBuilder.buildGraph
+
+
+

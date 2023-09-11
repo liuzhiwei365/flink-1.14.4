@@ -1,0 +1,109 @@
+                            Checkpoint 全局流程
+
+       step1  构建CheckpointPlan
+
+       step2  初始化checkpoint,  拿到checkpointId 和 存储地址
+
+       step3  创建即将执行的PendingCheckpoint对象 ,并添加到运行时各类数据结构中
+
+       step4  触发所有算子协调者, 核心方法栈:
+                 1  OperatorCoordinatorCheckpoints.triggerAndAcknowledgeAllCoordinatorCheckpointsWithCompletion
+                    OperatorCoordinatorCheckpoints.triggerAndAcknowledgeAllCoordinatorCheckpoints
+
+                       1.1 trigger部分
+                           OperatorCoordinatorCheckpoints.triggerAllCoordinatorCheckpoints
+                           OperatorCoordinatorCheckpoints.triggerCoordinatorCheckpoint
+                           OperatorCoordinatorHolder.checkpointCoordinator
+                           OperatorCoordinatorHolder.checkpointCoordinatorInternal
+                           OperatorCoordinator.checkpointCoordinator
+                           OperatorCoordinator flink目前只有三个实现 , hudi 对算子协调者也做了实现
+                              1.1.1 SourceCoordinator.checkpointCoordinator
+                              1.1.2 CollectSinkOperatorCoordinator.checkpointCoordinator
+                              1.1.3 RecreateOnResetOperatorCoordinator.checkpointCoordinator
+
+                       1.2  ack部分
+                            OperatorCoordinatorCheckpoints.acknowledgeAllCoordinators
+                            PendingCheckpoint.acknowledgeCoordinatorState
+                            OperatorState.setCoordinatorState
+
+         step5 触发 master hook 状态快照
+
+         step6 触发 各个子任务的 checkpoint
+
+               1  一种是  周期性地触发数据源节点中的checkpoint操作
+                  特别说明：
+                      为了 支持有界流场景下 包含结束任务的 Checkpoint功能, flink对checkpoint 流程做了进一步优化
+                   之前在进行 Checkpoint 时,JobManager 中的 Checkpoint 控制器将首先通知所有的源节点保存当前状态,
+                   然后源节点将通过 Barrier 事件通知后续的算子。由于现在源节点可能已经执行完成,Checkpoint 控制器需要
+                   改为通知那些本身尚未执行结束、但是所有的前驱任务都已经执行完成的任务
+                       但是对于无界流场景,依然必定是触发最开始的 数据源节点
+
+                  CheckpointCoordinator.triggerCheckpointRequest
+                  CheckpointCoordinator.triggerTasks
+                            触发各子任务算子的checkpoint,并且异步等待 ack响应(从TM到JM的响应),  FutureUtils.waitForAll(acks) **
+                  Execution.triggerCheckpoint
+                  Execution.triggerCheckpointHelper
+                  RpcTaskManagerGateway.triggerCheckpoint
+                  TaskExecutor.triggerCheckpoint
+                  Task.triggerCheckpointBarrier
+                  StreamTask.triggerCheckpointAsyncInMailbox
+                      1.1   SourceOperatorStreamTask.triggerCheckpointAsync
+                            StreamTask.triggerCheckpointAsync
+                            StreamTask.triggerUnfinishedChannelsCheckpoint
+                            CheckpointBarrierHandler.processBarrier
+                      1.2   SourceStreamTask.triggerCheckpointAsync
+                            StreamTask.triggerCheckpointAsync
+                            StreamTask.triggerUnfinishedChannelsCheckpoint
+                            CheckpointBarrierHandler.processBarrier
+
+
+                2  另一种是  下游算子通过 CheckpointBarrier 事件触发checkpoint操作
+                             CheckpointedInputGate.handleEvent
+                             CheckpointBarrierHandler.processBarrier
+                             BarrierHandlerState.barrierReceived
+                             这里使用状态机的设计, 不好描述,请参见具体代码
+
+
+                    特别说明：
+                          而CheckpointBarrierHandler 总共有两种实现
+                          EXACTLY_ONCE:
+                               SingleCheckpointBarrierHandler (支持对齐与非对齐)
+                                     SingleCheckpointBarrierHandler.unaligned 方法构建非对齐时的对象
+                                     SingleCheckpointBarrierHandler.aligned 方法用来构建对齐时的对象
+                               两者 构建的对象一样， 但是成员变量不一样, 比如，前者多一个 SubtaskCheckpointCoordinator  成员
+                           AT_LEAST_ONCE:
+                               CheckpointBarrierTracker (不支持非对齐)
+
+                两种情况, 最终都是调用 StreamTask.performCheckpoint 做正式开始状态数据的持久化
+
+                3  走到这里一定已经收集齐了各个子任务下算子的acks
+                     然后再次触发全局完成提交工作,包括 "算子的提交工作" 和 "算子协调者的提交工作"
+
+                     CheckpointCoordinator.triggerCheckpointRequest
+                         CheckpointCoordinator.maybeCompleteCheckpoint   响应流程开始处
+                         CheckpointCoordinator.completePendingCheckpoint
+                         CheckpointCoordinator.sendAcknowledgeMessages
+
+                            3.1 Execution.notifyCheckpointComplete    算子提交流程开始处
+                                    RpcTaskManagerGateway.notifyCheckpointComplete
+                                    TaskExecutor.confirmCheckpoint
+                                    Task.notifyCheckpointComplete
+                                    StreamTask.notifyCheckpointCompleteAsync
+                                    StreamTask.notifyCheckpointComplete
+                                    SubtaskCheckpointCoordinatorImpl.notifyCheckpointComplete
+                                    RegularOperatorChain.notifyCheckpointComplete
+                                    StreamOperatorWrapper.notifyCheckpointComplete
+                                        于是到了具体算子的  checkpointComplete 方法
+
+                            3.2 OperatorCoordinatorHolder.notifyCheckpointComplete    算子协调者提交流程开始处
+                                   3.2.1 SourceCoordinator.notifyCheckpointComplete
+                                              3.2.1.1  SourceCoordinatorContext.onCheckpointComplete
+                                                       SplitAssignmentTracker.onCheckpointComplete
+                                              3.2.1.2  SplitEnumerator.notifyCheckpointComplete
+
+                                   3.2.2 CollectSinkOperatorCoordinator.notifyCheckpointComplete
+                                   3.2.3 RecreateOnResetOperatorCoordinator.checkpointCoordinator
+
+         总体来说, 可以精简为4 部分,
+             触发算子协调者    触发算子    提交算子    提交算子协调者
+         可以好好体会一下顺序, 必须这样安排

@@ -1,0 +1,52 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+2 在StreamGraph变成JobGraph的时候设置 槽位调用栈：
+
+    StreamingJobGraphGenerator.createJobGraph()
+        StreamingJobGraphGenerator.setSlotSharingAndCoLocation
+            StreamingJobGraphGenerator.setSlotSharing
+            会循环遍历所有的JobVertex, 给每个JobVertex 设置 槽位共享组, 并且给槽位共享组设置 ResourceProfile
+                JobVertex.setSlotSharingGroup 和 SlotSharingGroup.setResourceProfile
+
+
+3 在JobGraph 变成 ExecutionGraph的时候调用栈:
+
+JobMasterServiceLeadershipRunner.createNewJobMasterServiceProcess
+DefaultJobMasterServiceProcessFactory.create
+DefaultJobMasterServiceProcess.DefaultJobMasterServiceProcess 构造方法
+DefaultJobMasterServiceFactory.createJobMasterService
+DefaultJobMasterServiceFactory.internalCreateJobMasterService
+JobMaster构造方法
+JobMaster.createScheduler
+    DefaultSlotPoolServiceSchedulerFactory.createScheduler
+        3.1 DefaultSchedulerFactory.createInstance
+            DefaultScheduler 构造方法
+            父类 SchedulerBase.SchedulerBase 构造方法
+                 SchedulerBase.createAndRestoreExecutionGraph
+                     DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+                     DefaultExecutionGraphBuilder.buildGraph
+                        DefaultExecutionGraph.attachJobGraph
+                        会循环遍历所有的 JobVertex, 然后构建 ExecutionJobVertex 对象
+                        ExecutionJobVertex 构造方法
+                        会提取JobVertex的相关成员来给 ExecutionJobVertex 的 slotSharingGroup成员赋值 （内部包含ResourceProfile资源信息）
+
+
+        或者
+        3.2 AdaptiveSchedulerFactory.createInstance
+            AdaptiveScheduler构造方法
+               在构造方法中会注册一个监听器,当有新的资源来时, 触发调用 AdaptiveScheduler.newResourcesAvailable 方法 来处理动态扩容
+
+            DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+            DefaultExecutionGraphBuilder.buildGraph
+

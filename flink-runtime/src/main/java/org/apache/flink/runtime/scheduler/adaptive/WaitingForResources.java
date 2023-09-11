@@ -91,7 +91,7 @@ class WaitingForResources implements State, ResourceConsumer {
                 !resourceStabilizationTimeout.isNegative(),
                 "Resource stabilization timeout must not be negative");
 
-        // since state transitions are not allowed in state constructors, schedule calls for later.
+        //initialResourceAllocationTimeout 最终来自 jobmanager.adaptive-scheduler.resource-wait-timeout  参数,默认5 mins
         if (!initialResourceAllocationTimeout.isNegative()) {
             resourceTimeoutFuture =
                     context.runIfState(

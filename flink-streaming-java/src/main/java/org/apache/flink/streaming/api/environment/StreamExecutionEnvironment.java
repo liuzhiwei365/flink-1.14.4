@@ -210,7 +210,7 @@ public class StreamExecutionEnvironment {
 
     private final List<JobListener> jobListeners = new ArrayList<>();
 
-    // Records the slot sharing groups and their corresponding fine-grained ResourceProfile
+    // 记录插槽共享组 , 及其对应的细粒度ResourceProfile
     private final Map<String, ResourceProfile> slotSharingGroupResources = new HashMap<>();
 
     // --------------------------------------------------------------------------------------------
@@ -373,6 +373,7 @@ public class StreamExecutionEnvironment {
         if (!resourceSpec.equals(ResourceSpec.UNKNOWN)) {
             this.slotSharingGroupResources.put(
                     slotSharingGroup.getName(),
+                    // 网络内存是共享的,所以这里强制设置为 MemorySize.ZERO
                     ResourceProfile.fromResourceSpec(
                             SlotSharingGroupUtils.extractResourceSpec(slotSharingGroup),
                             MemorySize.ZERO));

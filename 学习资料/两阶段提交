@@ -1,0 +1,23 @@
+
+flink 内部的两阶段提交依靠的是  TwoPhaseCommitSinkFunction 类
+
+
+在 snapshotState 方法中 会执行 preCommit 预提交方法
+
+当subtask的预提交执行后,会发送ack 给协调者, 当收到所有subTask acks后,再次触发subTask的提交
+
+在 notifyCheckpointComplete 方法中 会执行commit 提交的方法
+
+
+=======================================================
+目前只有kafka的实现
+
+预提交：
+  FlinkKafkaProducer.preCommit
+     FlinkKafkaProducer.flush
+        KafkaProducer.flush
+
+提交：
+   FlinkKafkaProducer.commit
+   FlinkKafkaInternalProducer.commitTransaction
+   KafkaProducer.commitTransaction

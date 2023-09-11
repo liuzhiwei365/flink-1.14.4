@@ -583,6 +583,7 @@ public class CheckpointCoordinator {
                    改为通知那些本身尚未执行结束、但是所有的前驱任务都已经执行完成的任务
                        但是对于无界流场景,依然必定是触发最开始的 数据源节点
 
+                  调用链
                   CheckpointCoordinator.triggerCheckpointRequest
                   CheckpointCoordinator.triggerTasks
                             触发各子任务算子的checkpoint,并且异步等待 ack响应(从TM到JM的响应),  FutureUtils.waitForAll(acks) **
@@ -621,7 +622,7 @@ public class CheckpointCoordinator {
                 两种情况, 最终都是调用 StreamTask.performCheckpoint 做正式开始状态数据的持久化
 
                 3  走到这里一定已经收集齐了各个子任务下算子的acks
-                     然后再次触发全局完成提交工作,包括 "算子的提交工作" 和 "算子协调者的提交工作"
+                     然后再次触发全局完成提交工作,包括 "算子的完成提交工作" 和 "算子协调者的完成提交工作"
 
                      CheckpointCoordinator.triggerCheckpointRequest
                          CheckpointCoordinator.maybeCompleteCheckpoint   响应流程开始处
@@ -651,6 +652,40 @@ public class CheckpointCoordinator {
          总体来说, 可以精简为4 部分,
              触发算子协调者    触发算子    提交算子    提交算子协调者
          可以好好体会一下顺序, 必须这样安排
+
+         两阶段提交指的是：
+            1
+                StreamTask.performCheckpoint
+                SubtaskCheckpointCoordinator.checkpointState
+                  1.1  SubtaskCheckpointCoordinatorImpl.takeSnapshotSync
+                       RegularOperatorChain.snapshotState
+                       RegularOperatorChain.buildOperatorSnapshotFutures
+                       1.1.1
+                          RegularOperatorChain.checkpointStreamOperator
+                               AbstractStreamOperator.snapshotState
+                               StreamOperatorStateHandler.snapshotState
+                               StreamOperatorStateHandler.snapshotState(
+                                                     streamOperator,
+                                                     timeServiceManager,
+                                                     operatorName,
+                                                     checkpointId,
+                                                     timestamp,
+                                                     checkpointOptions,
+                                                     factory,
+                                                     snapshotInProgress,
+                                                     snapshotContext,
+                                                     isUsingCustomRawKeyedState)
+                                     AbstractStreamOperator.snapshotState
+                                     AbstractUdfStreamOperator.snapshotState
+                                          StreamingFunctionUtils.snapshotFunctionState
+                                          StreamingFunctionUtils.trySnapshotFunctionState
+                                          然后到了用户函数的 snapshotState 方法
+                                          1.1.1.1 CheckpointedFunction.snapshotState
+                                                  TwoPhaseCommitSinkFunction.snapshotState
+
+                      1.1.2  OperatorSnapshotFutures.setInputChannelStateFuture
+                      1.1.3  OperatorSnapshotFutures.setResultSubpartitionStateFuture
+
      */
     // 开始触发全局job 的 checkpoint   总 入口
     private void startTriggeringCheckpoint(CheckpointTriggerRequest request) {
@@ -753,7 +788,7 @@ public class CheckpointCoordinator {
                                                 onTriggerFailure(checkpoint, throwable);
                                             }
                                         } else {
-                                            // 触发 各个子任务的 checkpoint
+                                            // 触发 各个子任务的 checkpoint   （核心）
                                             triggerCheckpointRequest(
                                                     request, timestamp, checkpoint);
                                         }

@@ -1,0 +1,25 @@
+
+TypeInformation 接口
+
+   基于Java和Scala语言，Flink实现了一套自己的一套类型系统，类型分为：
+
+   基本类型
+   数组类型
+   复合类型
+   辅助类型
+   通用类型
+
+
+   TypeInformation是Flink类型系统的核心类。Flink使用TypeInformation来描述所有Flink支持的数据类型。
+每一种Flink支持的数据类型都对应的是TypeInformation的子类。
+
+  例如：POJO类型对应的是PojoTypeInfo、基础数据类型数组对应的是BasicArrayTypeInfo、Map类型对应的是
+MapTypeInfo、值类型对应的是ValueTypeInfo
+
+  除了对类型地描述之外，TypeInformation还提供了序列化的支撑。在TypeInformation中有一个方法：
+createSerializer方法, 该方法会创建该类型对应的序列化器（它们都是TypeSerializer的实现类 ）
+
+  Flink推荐我们在 operator间传递的数据是POJOs类型，对于POJOs类型，Flink默认会使用Flink自身的
+PojoSerializer 进行序列化，而对于Flink无法自己描述或推断的数据类型，Flink会将其识别为GenericType，并使用
+Kryo 进行序列化。Flink在处理POJOs时更高效，此外POJOs类型会使得 stream的 grouping／joining／aggregating
+等操作变得简单，因为可以使用如：dataSet.keyBy（＂username＂）这样的方式直接操作数据流中的数据字段

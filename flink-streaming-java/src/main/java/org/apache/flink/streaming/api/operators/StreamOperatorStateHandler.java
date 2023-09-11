@@ -173,6 +173,7 @@ public class StreamOperatorStateHandler {
                 new StateSnapshotContextSynchronousImpl(
                         checkpointId, timestamp, factory, keyGroupRange, closeableRegistry);
 
+        // 核心
         snapshotState(
                 streamOperator,
                 timeServiceManager,

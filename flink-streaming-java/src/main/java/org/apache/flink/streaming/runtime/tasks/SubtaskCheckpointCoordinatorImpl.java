@@ -332,7 +332,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         Map<OperatorID, OperatorSnapshotFutures> snapshotFutures = new HashMap<>(operatorChain.getNumberOfOperators());
 
         try {
-            //  第5步, 把 operatorChain链中的 所有 快照逻辑 填充到 snapshotFutures中
+            //  第5步, 把 operatorChain链中的 所有 快照逻辑 填充到 snapshotFutures中   （核心）
             if (takeSnapshotSync(
                     snapshotFutures, metadata, metrics, options, operatorChain, isRunning)) {
 
@@ -654,6 +654,7 @@ class SubtaskCheckpointCoordinatorImpl implements SubtaskCheckpointCoordinator {
         try {
             //  做算子链 的  状态快照;  内部会填充 operatorSnapshotsInProgress   map集合
             //  这里还没有实际触发 快照的动作, 仅仅把快照操作封装成future对象 ,用operatorSnapshotsInProgress 暂存
+            //  核心
             operatorChain.snapshotState(
                     operatorSnapshotsInProgress,
                     checkpointMetaData,

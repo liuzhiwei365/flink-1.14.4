@@ -106,6 +106,7 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
             StreamTaskStateInitializer streamTaskStateInitializer) throws Exception {
         for (StreamOperatorWrapper<?, ?> operatorWrapper : getAllOperators(true)) {
             StreamOperator<?> operator = operatorWrapper.getStreamOperator();
+            // 一定得注意所有的算子 的 初始化状态的方法先调用, open方法 后调用
             operator.initializeState(streamTaskStateInitializer);
             operator.open();
         }
@@ -205,6 +206,7 @@ public class RegularOperatorChain<OUT, OP extends StreamOperator<OUT>>
             ChannelStateWriter.ChannelStateWriteResult channelStateWriteResult,
             CheckpointStreamFactory storage)
             throws Exception {
+
         // 调用栈前面 是对  整个算子链做 快照
         // 这里是针对  单个的算子快照逻辑 （还没有真正触发, 还只是准备future对象）
         // 不包括 inputChannel 和 ResultSubpartition的 状态

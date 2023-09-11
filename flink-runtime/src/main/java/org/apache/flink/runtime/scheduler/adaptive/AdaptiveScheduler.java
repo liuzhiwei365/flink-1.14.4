@@ -413,6 +413,8 @@ public class AdaptiveScheduler
     private void newResourcesAvailable(Collection<? extends PhysicalSlot> physicalSlots) {
         state.tryRun(
                 ResourceConsumer.class,
+                // 这里可能最终调用 Executing.notifyNewResourcesAvailable
+                // 也可能是  WaitingForResources.notifyNewResourcesAvailable
                 ResourceConsumer::notifyNewResourcesAvailable,
                 "newResourcesAvailable");
     }
@@ -425,6 +427,7 @@ public class AdaptiveScheduler
 
     /*
        *************************  本调度器的   "总入口"
+flink自适应调度器是一个有限状态机
 
        说明：
             AdaptiveScheduler 本身是一个有限状态机
@@ -437,14 +440,14 @@ public class AdaptiveScheduler
 
         Adaptive 的调度 和 状态机 切换的 流程全貌:
 
-        1 最开始成员变量 state 是 Created类型
+        1 最开始成员变量 state 是 Created状态, 开始调度
 
         Created.startScheduling
         AdaptiveScheduler.goToWaitingForResources
         AdaptiveScheduler.transitionToState（WaitingForResources.Factory）
-        WaitingForResources构造方法
-
-             1.1  如果用户配置的 jobmanager.adaptive-scheduler.resource-wait-timeout > 0, 则延迟调用
+        WaitingForResources.Factory.getState
+        WaitingForResources构造方法 会先走 1.1 , 再走 1.2
+             1.1  如果用户配置的 jobmanager.adaptive-scheduler.resource-wait-timeout > 0(默认5分钟), 则延迟调用
 
                   WaitingForResources.resourceTimeout
                   WaitingForResources.createExecutionGraphWithAvailableResources
@@ -453,6 +456,10 @@ public class AdaptiveScheduler
                   AdaptiveScheduler.goToCreatingExecutionGraph   （**）
 
                       1.1.1  先创建执行图
+                             AdaptiveScheduler.createExecutionGraphWithAvailableResourcesAsync
+                                  AdaptiveScheduler.createExecutionGraphAndRestoreState
+                                       DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+                                            DefaultExecutionGraphBuilder.buildGraph
                       1.1.2  再切换状态
                              AdaptiveScheduler.transitionToState（CreatingExecutionGraph.Factory）
                              CreatingExecutionGraph 构造方法
@@ -463,7 +470,7 @@ public class AdaptiveScheduler
                                            可以参见  Execution.deploy 方法
                                   1.1.2.2  再调用 AdaptiveScheduler.goToExecuting(ExecutionGraph)  执行作业
 
-             1.2  当有新资源增加时
+             1.2  第一次检查是否有新资源增加,如果有,通知 并走动态扩容的逻辑,重新创建执行图,并执行作业
                   WaitingForResources.notifyNewResourcesAvailable
                   WaitingForResources.checkDesiredOrSufficientResourcesAvailable
                       // 用新增加的资源重新 构建 执行图
@@ -471,10 +478,14 @@ public class AdaptiveScheduler
                       // 关键点来了,这一步会用槽位池中现有的槽位 来重新确定相关 的并行度, 以此达到动态扩容的目的
                       AdaptiveScheduler.goToCreatingExecutionGraph   （**）
 
-                  注意, 我们要又到了 AdaptiveScheduler.goToCreatingExecutionGraph 方法, 下面的流程和 1.1 的该方法完全一样
+                  注意, 我们要又到了 AdaptiveScheduler.goToCreatingExecutionGraph 方法, 下面的流程和 1.1 的该方法完全一样,会重走一遍1.1的流程
 
-             1.3  本类构造方法中注册给 槽位池的 监听器, 当有新的资源来时,
-                  也会触发调用 AdaptiveScheduler.newResourcesAvailable 方法
+
+              (注意：1.1 和 1.2 是主线,  1.3 是第二条逻辑线)
+             1.3  在本类AdaptiveScheduler在构造的时候,会给DeclarativeSlotPool成员 注册监听, 当有新的资源来时,
+                  也会触发调用监听的方法,这里也就是 AdaptiveScheduler.newResourcesAvailable 方法
+                         现在 调度器的状态可能是 Executing 也可能是  WaitingForResources, 它们分别会走 1.3.1 或者 1.3.2
+                         1.3.1
                              // 如果能扩容才重启，否则没必要
                              Executing.notifyNewResourcesAvailable
                              AdaptiveScheduler.goToRestarting
@@ -483,10 +494,9 @@ public class AdaptiveScheduler
                                   Restartin的父类StateWithExecutionGraph的构造方法
                                   Restarting.onGloballyTerminalState
                                   AdaptiveScheduler.goToWaitingForResources  于是 和 1 的 步骤一致了
-
-                       或者
+                         或者
+                         1.3.2
                             WaitingForResources.notifyNewResourcesAvailable  于是 和 1.2 的步骤一致了
-
 
      */
     @Override
@@ -1018,7 +1028,7 @@ public class AdaptiveScheduler
     public void goToCreatingExecutionGraph() {
         final CompletableFuture<CreatingExecutionGraph.ExecutionGraphWithVertexParallelism>
                 executionGraphWithAvailableResourcesFuture =
-                // 创建 执行图 和  VertexParallelism ,包装成 ExecutionGraphWithVertexParallelism
+                // 创建 执行图 和  VertexParallelism ,一起包装成 ExecutionGraphWithVertexParallelism
                         createExecutionGraphWithAvailableResourcesAsync();
 
         // 拿着槽位规划,实际分配槽位,然后执行
@@ -1071,6 +1081,9 @@ public class AdaptiveScheduler
         }
 
         //  利用adjustedParallelismStore 来创建执行图
+        //       AdaptiveScheduler.createExecutionGraphAndRestoreState
+        //           DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+        //               DefaultExecutionGraphBuilder.buildGraph
         //  用 执行图 和 vertexParallelism 封装成 ExecutionGraphWithVertexParallelism 返回
         return createExecutionGraphAndRestoreStateAsync(adjustedParallelismStore)
                 .thenApply(
@@ -1308,6 +1321,7 @@ public class AdaptiveScheduler
 
             // 状态A 切换成 状态B 时的  "状态A的 离开时的回调动作"
             state.onLeave(targetState.getStateClass());
+            //核心, 在得到构造 相关状态时,构造方法中会触发很多逻辑
             T targetStateInstance = targetState.getState();
             state = targetStateInstance;
             return targetStateInstance;

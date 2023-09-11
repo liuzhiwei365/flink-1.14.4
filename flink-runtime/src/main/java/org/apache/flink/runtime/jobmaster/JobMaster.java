@@ -346,7 +346,7 @@ public class JobMaster extends PermanentlyFencedRpcEndpoint<JobMasterId>
             JobManagerJobMetricGroup jobManagerJobMetricGroup,
             JobStatusListener jobStatusListener)
             throws Exception {
-        // 目前调度器只有两种实现： DefaultScheduler 和 DefaultScheduler
+        // 目前调度器只有两种实现： DefaultScheduler 和 AdptiveScheduler
         final SchedulerNG scheduler =
                 slotPoolServiceSchedulerFactory.createScheduler(
                         log,
