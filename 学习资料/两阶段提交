@@ -1,4 +1,8 @@
 
+
+
+
+
 flink 内部的两阶段提交依靠的是  TwoPhaseCommitSinkFunction 类
 
 
@@ -8,6 +12,7 @@ flink 内部的两阶段提交依靠的是  TwoPhaseCommitSinkFunction 类
 
 在 notifyCheckpointComplete 方法中 会执行commit 提交的方法
 
+"两阶段提交只是事务写入的其中一种方式"
 
 =======================================================
 目前只有kafka的实现
@@ -21,3 +26,5 @@ flink 内部的两阶段提交依靠的是  TwoPhaseCommitSinkFunction 类
    FlinkKafkaProducer.commit
    FlinkKafkaInternalProducer.commitTransaction
    KafkaProducer.commitTransaction
+
+

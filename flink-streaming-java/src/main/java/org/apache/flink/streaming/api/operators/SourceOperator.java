@@ -216,28 +216,28 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
                     public SourceReaderMetricGroup metricGroup() {
                         return sourceMetricGroup;
                     }
-
                     @Override
                     public Configuration getConfiguration() {
                         return configuration;
                     }
-
                     @Override
                     public String getLocalHostName() {
                         return localHostname;
                     }
-
                     @Override
                     public int getIndexOfSubtask() {
                         return subtaskIndex;
                     }
 
+                    //  SourceOperator 向 SourceCoordinator 发起分片请求
+                    //      为什么需要向协调者发起分片请求呢？ 因为分片信息需要协调者统一管理分配
                     @Override
                     public void sendSplitRequest() {
                         operatorEventGateway.sendEventToCoordinator(
                                 new RequestSplitEvent(getLocalHostName()));
                     }
 
+                    //  SourceOperator 向 SourceCoordinator 发送SourceEvent事件 （向上级汇报自己的状态）
                     @Override
                     public void sendSourceEventToCoordinator(SourceEvent event) {
                         operatorEventGateway.sendEventToCoordinator(new SourceEventWrapper(event));
@@ -273,6 +273,7 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
 
     @Override
     public void open() throws Exception {
+        //
         initReader();
 
         // in the future when we this one is migrated to the "eager initialization" operator

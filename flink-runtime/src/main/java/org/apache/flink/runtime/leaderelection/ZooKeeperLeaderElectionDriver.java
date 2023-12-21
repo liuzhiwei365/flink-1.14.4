@@ -88,6 +88,12 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
      * @param fatalErrorHandler Fatal error handler
      * @param leaderContenderDescription Leader contender description
      */
+    // 构造方法中的主要逻辑：
+    // 1 创建TreeCache,利用TreeCache将本地的Leader信息写入到 zk
+    // 2 创建LeaderLatch, 启动LeaderLatch 参与选举,当选举成功后,调用LeaderLatch中 listeners监听列表的所有监听器的isLeader方法
+    //   失败,则调用所有监听器的 notLeader方法 (核心)
+    //      本类ZooKeeperLeaderElectionDriver 会作为监听器注册给 LeaderLatch的 listers成员,所以选举成功后会调用本类的isLeader方法
+    // 3 CuratorFramework 客户端会注册本类的 listener成员(作为监听器),当与zk的连接状态发生变化,打印日志
     public ZooKeeperLeaderElectionDriver(
             CuratorFramework client,
             String path,
@@ -103,7 +109,7 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
         this.leaderContenderDescription = checkNotNull(leaderContenderDescription);
 
         leaderLatchPath = ZooKeeperUtils.generateLeaderLatchPath(path);
-        /* Curator有两种leader选举的recipe,分别是LeaderSelector和L eaderLatch
+        /* Curator有两种leader选举的模式,分别是 LeaderSelector和 LeaderLatch
            前者是所有存活的客户端不间断的轮流做Leader,大同社会。
            后者是一旦选举 出Leader,除非有客户端挂掉重新触发选举，否则不会交出领导权。某党?
         */
@@ -112,11 +118,15 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
                 ZooKeeperUtils.createTreeCache(
                         client,
                         connectionInformationPath,
-                        this::retrieveLeaderInformationFromZooKeeper); // 从zk 取回 leader 信息
+                        // 会用远程zk 的 "sessionId 和 地址" 与 DefaultLeaderElectionService 的本地成员 进行对比
+                        // 如果不一致,则将本地的重新写入zk
+                        this::retrieveLeaderInformationFromZooKeeper);
 
         running = true;
 
-        // this实现了 LeaderLatchListener 接口, LeaderLatchListener 有两个方法: isLeader() 和 notLeader() 方法
+        // ZooKeeperLeaderElectionDriver是一个LeaderLatchListener，选举成功会调用isLeader方法，
+        // 由leader变为非leader调用notLeader方法；并且还同时是NodeCacheListener，要通过NodeCache
+        // 方式添加了监控当前节点变化，当监听的节点发生变化时，则调用nodeChanged方法
         leaderLatch.addListener(this);
         leaderLatch.start();
 
@@ -173,6 +183,7 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
         leaderElectionEventHandler.onRevokeLeadership();
     }
 
+    // 从zk 读取本Leader 的 sessionId 和 地址
     private void retrieveLeaderInformationFromZooKeeper() throws Exception {
         if (leaderLatch.hasLeadership()) {
             ChildData childData = cache.getCurrentData(connectionInformationPath);
@@ -185,6 +196,8 @@ public class ZooKeeperLeaderElectionDriver implements LeaderElectionDriver, Lead
                     final String leaderAddress = ois.readUTF();
                     final UUID leaderSessionID = (UUID) ois.readObject();
 
+                    // 会用远程zk 的 "sessionId 和 地址" 与 DefaultLeaderElectionService 的本地成员 进行对比
+                    // 如果不一致,则将本地的重新写入zk
                     leaderElectionEventHandler.onLeaderInformationChange(
                             LeaderInformation.known(leaderSessionID, leaderAddress));
                     return;

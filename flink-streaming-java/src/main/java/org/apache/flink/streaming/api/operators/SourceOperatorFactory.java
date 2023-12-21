@@ -148,8 +148,7 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
     @SuppressWarnings("unchecked")
     private static <T, SplitT extends SourceSplit>
             SourceOperator<T, SplitT> instantiateSourceOperator(
-                    FunctionWithException<SourceReaderContext, SourceReader<T, ?>, Exception>
-                            readerFactory,
+                    FunctionWithException<SourceReaderContext, SourceReader<T, ?>, Exception> readerFactory,
                     OperatorEventGateway eventGateway,
                     SimpleVersionedSerializer<?> splitSerializer,
                     WatermarkStrategy<T> watermarkStrategy,

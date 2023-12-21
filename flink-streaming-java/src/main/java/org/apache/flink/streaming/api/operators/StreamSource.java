@@ -82,6 +82,7 @@ public class StreamSource<OUT, SRC extends SourceFunction<OUT>>
                         ? getExecutionConfig().getLatencyTrackingInterval()
                         : configuration.getLong(MetricOptions.LATENCY_INTERVAL);
 
+        //用于链路延迟统计 , 会往下游发送 LatencyMarker 事件
         LatencyMarkerEmitter<OUT> latencyEmitter = null;
         if (latencyTrackingInterval > 0) {
             latencyEmitter =

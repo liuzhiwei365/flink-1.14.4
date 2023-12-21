@@ -858,8 +858,13 @@ public class DataStream<T> {
 
 
     //  本类另外两个 分配水印的方法,也会调用到这里
+    //      另外两个方法分别是
+    //           DataStream.assignTimestampsAndWatermarks(AssignerWithPunctuatedWatermarks<T>)
+    //           DataStream.assignTimestampsAndWatermarks(AssignerWithPeriodicWatermarks<T>)
+    //
+    //
     //  一般来说, env.addSource 后会紧跟着 assignTimestampsAndWatermarks的分配水印的逻辑
-
+    //
     //  1 客户端 顺序执行DataStream api 代码时，会将 TimestampsAndWatermarksTransformation 对象
     //    添加到 相关 env类的 transformations 成员, 此时会没有构建 StreamGraph
     //  2 当 env 调用执行方法时,构建StreamdGraph 阶段, 会用 SimpleOperatorFactory.of 方法
@@ -867,7 +872,7 @@ public class DataStream<T> {
     //  3 在 用StreamGraph 构建 JobGraph 阶段, 会将 本算子于前一阶段的算子 合并链化起来, 即和 Source 合并
     //    它们的信息会被封装到 一个 JobVertex 中
     //    TimestampsAndWatermarksOperator  的 ChainingStrategy 是  ALWAYS, 总是和前面的算子链在一起
-
+    //
     //  4 要研究水印的 分配策略，只需要重点研究  TimestampsAndWatermarksOperator 即可
     public SingleOutputStreamOperator<T> assignTimestampsAndWatermarks(
             WatermarkStrategy<T> watermarkStrategy) {
@@ -897,6 +902,7 @@ public class DataStream<T> {
      *
      * @deprecated Please use {@link #assignTimestampsAndWatermarks(WatermarkStrategy)} instead.
      */
+    // 周期性生成watermark
     @Deprecated
     public SingleOutputStreamOperator<T> assignTimestampsAndWatermarks(
             AssignerWithPeriodicWatermarks<T> timestampAndWatermarkAssigner) {
@@ -920,6 +926,7 @@ public class DataStream<T> {
      *
      * @deprecated Please use {@link #assignTimestampsAndWatermarks(WatermarkStrategy)} instead.
      */
+    // 按照指定标记性事件生成watermark
     @Deprecated
     public SingleOutputStreamOperator<T> assignTimestampsAndWatermarks(
             AssignerWithPunctuatedWatermarks<T> timestampAndWatermarkAssigner) {
@@ -1209,6 +1216,15 @@ public class DataStream<T> {
         // read the output type of the input Transform to coax out errors about MissingTypeInfo
         transformation.getOutputType();
 
+        //  1 这里的 this.transformation 其实是代表上游算子的 transformation
+        //  2 用户在调用  env.fromSource 或者 env.addSource 的时候,不会直接把 source的 transformaton对象
+        //    添加到 StreamExecutionEnvironment.transformations 的成员
+        //  3 但是    source的 transformaton对象 会作为后续 算子的 Transformation 对象的 input 成员,这样间接
+        //    地被添加到了 StreamExecutionEnvironment.transformations 的成员中
+        //    除了 LegacySourceTransformation 和 SourceTransformation 中没有 input输入信息, 其他的
+        //    Transformation 的实现子类都存在 input输入信息
+        //  4 为什么强调 StreamExecutionEnvironment.transformations 的成员 , 应该在构建 StreamGraph的时候
+        //    是利用它 来构建的
         OneInputTransformation<T, R> resultTransform =
                 new OneInputTransformation<>(
                         this.transformation,

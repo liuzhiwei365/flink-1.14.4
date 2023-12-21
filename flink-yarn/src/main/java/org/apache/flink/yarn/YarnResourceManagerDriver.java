@@ -163,15 +163,39 @@ public class YarnResourceManagerDriver extends AbstractResourceManagerDriver<Yar
     protected void initializeInternal() throws Exception {
         final YarnContainerEventHandler yarnContainerEventHandler = new YarnContainerEventHandler();
         try {
+            //  创建、初始化、启动 AMRMClientAsync,用于与 Yarn ResourceManager 联系
+            //    AbstractService.start
+            //    AbstractService.serviceStart
+            //    AMRMClientAsyncImpl.serviceStart  启动后,内部会启动一个执行死循环逻辑的线程
+            //    AMRMClientAsyncImpl.CallbackHandlerThread 会从 responseQueue 队列中不断拿元素处理
+            //       根据元素的不同属性会有不同的回调逻辑,当 所有的 Container 分配完成后,会会回调
+            //         YarnContainerEventHandler.onContainersAllocated
+            //
+            //            会利用 GatewayMainThreadExecutor 异步地来执行下面的逻辑
+            //            YarnResourceManagerDriver.onContainersOfPriorityAllocated
+            //            会循环调用（启动所有的 TaskExecutor）
+            //              YarnResourceManagerDriver.startTaskExecutorInContainerAsync
+            //              NMClientAsyncImpl.startContainerAsync
+            //                  NMClientAsyncImpl.StatefulContainer 构造方法
+            //                     StateMachineFactory.make(StatefulContainer) 状态机的状态装换
+            //
+            //               最终调用  NMClientAsyncImpl.StatefulContainer.StartContainerTransition.transition 方法
+            //                     NMClientImpl.startContainer 来启动Container
             resourceManagerClient =
                     yarnResourceManagerClientFactory.createResourceManagerClient(
                             yarnHeartbeatIntervalMillis, yarnContainerEventHandler);
             resourceManagerClient.init(yarnConfig);
             resourceManagerClient.start();
 
+            // 注册 ApplicationMaster , 返回  响应信息
             final RegisterApplicationMasterResponse registerApplicationMasterResponse =
                     registerApplicationMaster();
+
+            // 1   从响应信息 中提取 Container 信息
+            // 2   将从yarn 申请的  Container 放入到  ActiveResourceManager的 workerNodeMap
+            //         和 previousAttemptUnregisteredWorkers 成员中维护
             getContainersFromPreviousAttempts(registerApplicationMasterResponse);
+
             taskExecutorProcessSpecContainerResourcePriorityAdapter =
                     new TaskExecutorProcessSpecContainerResourcePriorityAdapter(
                             registerApplicationMasterResponse.getMaximumResourceCapability(),
@@ -182,6 +206,7 @@ public class YarnResourceManagerDriver extends AbstractResourceManagerDriver<Yar
             throw new ResourceManagerException("Could not start resource manager client.", e);
         }
 
+        //  创建、初始化、启动  NMClientAsync,用于联系 NodeMananger 和 启动 TaskExecutor 进程
         nodeManagerClient =
                 yarnNodeManagerClientFactory.createNodeManagerClient(yarnContainerEventHandler);
         nodeManagerClient.init(yarnConfig);
@@ -337,6 +362,7 @@ public class YarnResourceManagerDriver extends AbstractResourceManagerDriver<Yar
                 requestResourceFutures.remove(taskExecutorProcessSpec);
             }
 
+            // 核心
             startTaskExecutorInContainerAsync(
                     container, taskExecutorProcessSpec, resourceId, requestResourceFuture);
             removeContainerRequest(pendingRequest);
@@ -390,6 +416,7 @@ public class YarnResourceManagerDriver extends AbstractResourceManagerDriver<Yar
                 containerLaunchContextFuture.handleAsync(
                         (context, exception) -> {
                             if (exception == null) {
+                                // 核心
                                 nodeManagerClient.startContainerAsync(container, context);
                                 requestResourceFuture.complete(
                                         new YarnWorkerNode(container, resourceId));
@@ -515,8 +542,8 @@ public class YarnResourceManagerDriver extends AbstractResourceManagerDriver<Yar
             recoveredWorkers.add(worker);
         }
 
-        // Should not invoke resource event handler on the main thread executor.
-        // We are in the initializing thread. The main thread executor is not yet ready.
+        // 将 从 yarn 申请的  Container 放入到  ActiveResourceManager的 workerNodeMap
+        //  和 previousAttemptUnregisteredWorkers 成员中维护
         getResourceEventHandler().onPreviousAttemptWorkersRecovered(recoveredWorkers);
     }
 

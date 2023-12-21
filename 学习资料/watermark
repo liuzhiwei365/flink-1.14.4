@@ -1,0 +1,53 @@
+
+====================================================================================================
+
+1 watermark 是 EventTime 语义下 的概念
+    其本质上就是一个时间戳，系统会认为在水位以下(事件时间小于watermark值)的数据已经全部到达
+
+2 引入 watermark 概念的目的 是为了解决窗口计算的 数据乱序和延迟问题
+    如果不使用窗口, 生成watermark 没有意义
+
+3 watermark 的生成：
+
+    在DataStream api 中分配水印的方法总共有三个, 但是本方法是最核心的, 因为另外两个分配水印的方法,最终也会调用到这里
+
+    DataStream.assignTimestampsAndWatermarks(WatermarkStrategy<T>)
+
+             //  另外两个方法分别是:
+             //           DataStream.assignTimestampsAndWatermarks(AssignerWithPunctuatedWatermarks<T>)
+             //                      按照指定标记性事件生成watermark
+             //           DataStream.assignTimestampsAndWatermarks(AssignerWithPeriodicWatermarks<T>)
+             //                      周期性生成watermark
+             //
+             //
+             //  一般来说, env.addSource 后会紧跟着 assignTimestampsAndWatermarks的分配水印的逻辑
+             //
+             //  1 客户端 顺序执行DataStream api 代码时，会将 TimestampsAndWatermarksTransformation 对象
+             //    添加到 相关 env类的 transformations 成员, 此时会没有构建 StreamGraph
+             //  2 当 env 调用执行方法时,构建StreamdGraph 阶段, 会用 SimpleOperatorFactory.of 方法
+             //    包装TimestampsAndWatermarksOperator 后, 赋给 StreamNode 的 成员
+             //  3 在 用StreamGraph 构建 JobGraph 阶段, 会将 本算子于前一阶段的算子 合并链化起来, 即和 Source 合并
+             //    它们的信息会被封装到 一个 JobVertex 中
+             //    TimestampsAndWatermarksOperator  的 ChainingStrategy 是  ALWAYS, 总是和前面的算子链在一起
+             //
+             //  4 要研究水印的 分配策略，只需要重点研究  TimestampsAndWatermarksOperator 即可
+
+    下面重点关注
+     TimestampsAndWatermarksOperator.open
+     TimestampsAndWatermarksOperator.processElement
+     TimestampsAndWatermarksOperator.onProcessingTime
+
+
+4 Watermark 会有一个对齐机制，这个对齐机制会取 上游所有  inputChannel 中最小的 Watermark
+
+     因为系统会认为在水位以下的数据已经全部到达, 这里只能认为 "最小的watermark以下" 的数据全部到达, 才不会有逻辑上的错误
+
+======================================================================================================
+
+    水位线可以用于平衡延迟和结果的完整性，它控制着执行某些计算需要等待的时间。这个时间是预估的，现实中不存在完美的水位线，
+因为总会存在延迟的记录。现实处理中，需要我们足够了解从数据生成到数据源的整个过程，来估算延迟的上线，才能更好的设置水位线。
+    如果水位线设置的过于宽松，好处是计算时能保证近可能多的数据被收集到，但由于此时的水位线远落后于处理记录的时间戳，导致
+ 产生的数据结果延迟较大。
+    如果设置的水位线过于紧迫，数据结果的时效性当然会更好，但由于水位线大于部分记录的时间戳，数据的完整性就会打折扣。
+    所以，水位线的设置需要更多的去了解数据，并在数据时效性和完整性上有一个权衡
+

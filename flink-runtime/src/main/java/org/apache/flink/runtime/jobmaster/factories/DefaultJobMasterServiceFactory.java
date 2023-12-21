@@ -126,6 +126,7 @@ public class DefaultJobMasterServiceFactory implements JobMasterServiceFactory {
                         DefaultExecutionDeploymentReconciler::new,
                         initializationTimestamp);
 
+        // JobMaster 是一个RpcEndpoint 子类,启动后都调用相关的 onStart方法
         jobMaster.start();
 
         return jobMaster;

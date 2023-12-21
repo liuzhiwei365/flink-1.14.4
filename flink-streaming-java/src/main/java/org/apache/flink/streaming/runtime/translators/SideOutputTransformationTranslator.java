@@ -54,6 +54,8 @@ public class SideOutputTransformationTranslator<OUT>
         return translateInternal(transformation, context);
     }
 
+    // 本类是专门针对 侧输出流的 的 TransformationTranslator 子类
+    // 会将 虚拟侧输出流节点 添加给 StreamGraph 的 virtualSideOutputNodes 成员
     private Collection<Integer> translateInternal(
             final SideOutputTransformation<OUT> transformation, final Context context) {
         checkNotNull(transformation);

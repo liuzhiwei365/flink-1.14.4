@@ -82,15 +82,14 @@ public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T
         this.chainingStrategy = ChainingStrategy.DEFAULT_CHAINING_STRATEGY;
     }
 
+    // watermarkStrategy 最开始是由用户调用 dataStream api 时传入的
+    // 用户传入后，会被封装到  TimestampsAndWatermarksTransformer 中
+    // 作业提交后，在构建StreamGraph 的时候 会从TimestampsAndWatermarksTransformer 取出
+    // 然后放入 TimestampsAndWatermarksOperator中 (也就是本算子中),
+    // 再用SimpleOperatorFactory 把 本算子包裹 赋值给 StreamNode
     @Override
     public void open() throws Exception {
         super.open();
-
-        // watermarkStrategy 最开始是由用户调用 dataStream api 时传入的
-        // 用户传入后，会被封装到  TimestampsAndWatermarksTransformer 中
-        // 作业提交后，在构建StreamGraph 的时候 会从TimestampsAndWatermarksTransformer 取出
-        // 然后放入 TimestampsAndWatermarksOperator中 (也就是本算子中),
-        // 再用SimpleOperatorFactory 把 本算子包裹 赋值给 StreamNode
 
         // 时间戳分配器 用于从用户数据中提取时间 , 这个时间后续会赋值给 StreamRecord
         timestampAssigner = watermarkStrategy.createTimestampAssigner(this::getMetricGroup);
@@ -123,32 +122,38 @@ public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T
     @Override
     public void processElement(final StreamRecord<T> element) throws Exception {
         final T event = element.getValue();
-        // StreamRecord 类中又一个 timestamp 成员
-        final long previousTimestamp =
-                element.hasTimestamp() ? element.getTimestamp() : Long.MIN_VALUE;
 
+        // StreamRecord 类中有一个 timestamp 成员
+        final long previousTimestamp = element.hasTimestamp() ? element.getTimestamp() : Long.MIN_VALUE;
+
+        // 根据先前的时间戳(如果存在) 和 事件 生成一个新的时间戳
         final long newTimestamp = timestampAssigner.extractTimestamp(event, previousTimestamp);
 
-        // 给用户数据 打上时间戳
+        // 给用户数据StreamRecord,  打上时间戳标记
         element.setTimestamp(newTimestamp);
-        // 并且发往下游
+
+        // 将打上时间戳标记的数据 发往下游
         output.collect(element);
 
-        //
+        // 水印生成器针对每条数据的回调逻辑
+        //      1水印生成器的接口只有 onEvent 和 onPeriodicEmit 两个方法
+        //      2一个对应每条数据来时的处理逻辑,一个对应定时器周期性触发时的逻辑
+        //      3 WatermarkGenerator的子类 BoundedOutOfOrdernessWatermarks的逻辑就是: " 更新 maxTimestamp 成员 "
         watermarkGenerator.onEvent(event, newTimestamp, wmOutput);
     }
 
-    // onProcessingTime 是定时触发调用的
-    // 而第一次定时是在本类算子 的初始化 open()方法
+    // 本方法 是定时器 触发调用的 , 而且本方法是由 ProcessingTimeCallback 接口提供的
     @Override
     public void onProcessingTime(long timestamp) throws Exception {
-        //  WatermarkGenerator的子类 BoundedOutOfOrdernessWatermarks的 生成Watermark 的逻辑就是:
-        //   用 maxTimestamp - outOfOrdernessMillis - 1 作为其构造参数
 
-        // 向下游发送watermark
+        // 调用 水印生成器针对定时器 周期性触发的 逻辑
+        //     WatermarkGenerator的子类 BoundedOutOfOrdernessWatermarks的逻辑就是:
+        //     用 maxTimestamp - outOfOrdernessMillis - 1 作为其构造参数 生成 Watermark,并发向下游
         watermarkGenerator.onPeriodicEmit(wmOutput);
 
         // 重新注册定时器
+        //      1 因为这个定时器是一次性的,为了实现周期性的逻辑,只能在触发后,再重新注册
+        //      2 而第一次定时是在本类算子 的初始化 open()方法
         final long now = getProcessingTimeService().getCurrentProcessingTime();
         getProcessingTimeService().registerTimer(now + watermarkInterval, this);
     }
@@ -172,6 +177,8 @@ public class TimestampsAndWatermarksOperator<T> extends AbstractStreamOperator<T
         super.finish();
         watermarkGenerator.onPeriodicEmit(wmOutput);
     }
+
+
 
     // ------------------------------------------------------------------------
 

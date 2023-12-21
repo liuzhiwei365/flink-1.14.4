@@ -1,0 +1,25 @@
+
+
+WatermarkGaugeExposingOutput 实现类：
+
+1）RecordWriterOutput：
+     用于输出OperatorChain中尾端算子处理完成的数据，借助RecordWriter组件将数据元素写入网络。
+
+2）ChainingOutput／CopyingChainingOutput：
+     适用于上下游算子连接在一起且上游算子属于单输出类型的情况。
+     如果系统开启了ObjectReuse功能，即对象复用，则创建Chaining-Output实现类，否则创建 CopyingChainingOutput。
+
+3）BroadcastingOutputCollector／CopyingBroadcastingOutputCollector：
+    上游算子是多输出类型但上下游算子之间的Selector为空时，创建广播类型的BroadcastingOutputCollector。如果开启
+    ObjectReuse，则创建BroadcastingOutputCollector，否则创建 CopyingBroadcasting-OutputCollector。
+
+
+WatermarkGaugeExposingOutput 实现了 Output 接口, Output 接口继承了 Collector 接口:
+
+    1 Collector接口提供了collect()方法，用于收集处理完的数据。
+    2 Output接口提供了emitWatermark（）、emitLatencyMarker（）等方法，用于对Collector接口进行拓展，
+      使得Output接口实现类可以输出Watermark和LatencyMarker等事件。
+    3 WatermarkGaugeExposingOutput 接口则提供了获取 WatermarkGauge的方法，用于监控最新的 Watermark.
+
+
+

@@ -1,0 +1,70 @@
+
+
+=======================================================================================
+
+Part1
+
+ LeaderContender 接口
+ 目前有4类实现：
+ DefaultDispatcherRunner
+ JobMasterServiceLeadershipRunner
+ ResourceManagerServiceImpl
+ WebMonitorEndpoint
+    DispatcherRestEndpoint
+    MiniDispatcherRestEndpoint
+
+ 每个实现类内部都有一个 LeaderElectionService 的成员,用于选举参与者  参与选择操作
+ 在每个组件启动的时候, 会调用 LeaderElectionService 的start启动方法
+
+=======================================================================================
+
+Part2 以 JobMasterServiceLeadershipRunner 作为例子,来解释高可用的原理和调用
+
+ JobMasterServiceLeadershipRunner 实现了 LeaderContender接口
+
+ JobMasterServiceLeadershipRunner.start
+ DefaultLeaderElectionService.start
+
+ 1 KubernetesLeaderElectionDriverFactory.createLeaderElectionDriver
+     KubernetesLeaderElectionDriver 构造方法
+         构造方法中的主要逻辑：
+            1 创建 KubernetesLeaderElector 选举器,并启动参与选举,如果选举成功,则调用 LeaderCallbackHandlerImpl.isLeader 方法
+              否则,调用 LeaderCallbackHandlerImpl.notLeader 方法
+            2 创建一个观察者,在leader的信息发生改变的时候将 leader信息重新写入 k8s 的 configMap
+                     ConfigMapCallbackHandlerImpl.onModified
+                     DefaultLeaderElectionService.onLeaderInformationChange
+                     KubernetesLeaderElectionDriver.writeLeaderInformation
+
+     由上面的说明可知,选举成功后此处调用
+          LeaderCallbackHandlerImpl.isLeader
+             DefaultLeaderElectionService.onGrantLeadership
+             JobMasterServiceLeadershipRunner.grantLeadership
+                ...
+
+ 2 ZooKeeperLeaderElectionDriverFactory.createLeaderElectionDriver
+      ZooKeeperLeaderElectionDriver 构造方法
+          构造方法中的主要逻辑：
+             1 创建TreeCache,利用TreeCache将本地的Leader信息写入到 zk
+             2 创建LeaderLatch, 启动LeaderLatch 参与选举,当选举成功后,调用LeaderLatch中 listeners监听列表的所有监听器的isLeader方法
+               失败,则调用所有监听器的 notLeader方法 (核心)
+                 本类ZooKeeperLeaderElectionDriver 会作为监听器注册给 LeaderLatch的 listers成员,所以选举成功后会调用本类的isLeader方法
+             3 CuratorFramework 客户端会注册本类的 listener成员(作为监听器),当与zk的连接状态发生变化,打印日志
+      由上面的说明可知,选举成功后此处调用
+          ZooKeeperLeaderElectionDriver.isLeader
+             DefaultLeaderElectionService.onGrantLeadership
+             JobMasterServiceLeadershipRunner.grantLeadership
+             ...
+
+
+========================================================================================
+
+Part3
+
+   根据 JobMasterServiceLeadershipRunner 的例子,可以知道
+
+   参与选举的flink组件 ,在启动后,一旦被选举成为leader, 就会调用 grantLeadership方法（这点在阅读源码的时候十分重要）
+
+
+========================================================================================
+
+

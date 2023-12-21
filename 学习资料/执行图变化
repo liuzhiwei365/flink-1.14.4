@@ -1,13 +1,18 @@
 
 
+总共包括三个阶段:
 
 
+1 用 transformations  构建 StreamGraph   （客户端）
+
+StreamGraphGenerator.generate
+   会循环处理 transformations 列表
+   StreamGraphGenerator.transform
+      会利用 不同的 TransformationTranslator 将 transformation 装换为 StreamNode
+      StreamGraphGenerator.translate
 
 
-
-
-
-2 StreamGraph -> JobGraph
+2 StreamGraph -> JobGraph  （客户端）
 
 PipelineExecutorUtils.getJobGraph
 FlinkPipelineTranslationUtil.getJobGraph
@@ -30,8 +35,23 @@ FlinkPipelineTranslationUtil.getJobGraph
              2.2.2.2 再将 优化后的 Plan 编译成 JobGraph
                 JobGraphGenerator.compileJobGraph(OptimizedPlan, JobID)
 
-3 JobGraph -> ExecutionGraph
+3 JobGraph -> ExecutionGraph  （服务端）
 
+ 说明：
+    当我们使用DefaultScheduler的时候,在JobMaster构造方法中 创建DefaultScheduler的时候就会去构建 ExecutionGraph
+    当我们使用AdaptiveScheduler调度器的时候,在JobMaster启动的时候,会启动调度器,这时才会去构建 ExecutionGraph;
+而且后续有资源变动还会反复地构建不同资源条件下的 ExecutionGraph
+
+3.1   使用DefaultScheduler, ExecutionGraph 的构建时机
+
+
+Dispatcher.runJob
+Dispatcher.createJobManagerRunner
+JobMasterServiceLeadershipRunner.start
+...
+JobMasterServiceLeadershipRunner.grantLeadership  (可以参见 flink 组件高可用)
+JobMasterServiceLeadershipRunner.startJobMasterServiceProcessAsync
+JobMasterServiceLeadershipRunner.verifyJobSchedulingStatusAndCreateJobMasterServiceProcess
 JobMasterServiceLeadershipRunner.createNewJobMasterServiceProcess
 DefaultJobMasterServiceProcessFactory.create
 DefaultJobMasterServiceProcess.DefaultJobMasterServiceProcess 构造方法
@@ -48,14 +68,18 @@ JobMaster.createScheduler
                      DefaultExecutionGraphBuilder.buildGraph
 
         或者
-        3.2 AdaptiveSchedulerFactory.createInstance
-            AdaptiveScheduler.createExecutionGraphAndRestoreState
 
-
-
-
-            DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
-            DefaultExecutionGraphBuilder.buildGraph
-
-
+3.2   使用AdaptiveScheduler, ExecutionGraph 的构建时机
+JobMaster 启动的时候会调用 onStart方法(因为它是一个RpcEndpoint 的子类)
+JobMaster.onStart
+    JobMaster.startJobExecution
+        JobMaster.startScheduling
+            AdaptiveScheduler.startScheduling
+            .... 省略了很多步骤,详情请参见 （flink 自适应调度器）文档
+            当调度器最开始执行作业,或者检查资源到资源变化,或者后续监听到资源变化重启作业后,经过各类状态装换,最终会走到走
+            AdaptiveScheduler.goToCreatingExecutionGraph
+               AdaptiveScheduler.createExecutionGraphWithAvailableResourcesAsync
+                  AdaptiveScheduler.createExecutionGraphAndRestoreState
+                      DefaultExecutionGraphFactory.createAndRestoreExecutionGraph
+                          DefaultExecutionGraphBuilder.buildGraph
 

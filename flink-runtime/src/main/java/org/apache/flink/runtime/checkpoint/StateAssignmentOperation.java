@@ -144,7 +144,7 @@ public class StateAssignmentOperation {
         for (TaskStateAssignment stateAssignment : vertexAssignments.values()) {
             if (stateAssignment.hasNonFinishedState) {
                 // 一个ExecutionJobVertex 对应 一个TaskStateAssignment
-                //  核心   ****
+                //  核心   **** ,状态重分布尝试
                 assignAttemptState(stateAssignment);
             }
         }
@@ -628,6 +628,7 @@ public class StateAssignmentOperation {
         for (int i = 0; i < parallelism; i++) { // 老的并行度
             if (operatorState.getState(i) != null) {
 
+                // 某个老的并行度下所有的 状态句柄 集合
                 Collection<KeyedStateHandle> keyedStateHandles =
                         operatorState.getState(i).getManagedKeyedState();
 

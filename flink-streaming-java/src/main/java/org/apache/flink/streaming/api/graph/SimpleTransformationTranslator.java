@@ -60,8 +60,12 @@ public abstract class SimpleTransformationTranslator<OUT, T extends Transformati
         checkNotNull(transformation);
         checkNotNull(context);
 
-        // translateForStreamingInternal 是个抽象方法, 有很多子类实现
-        // 如果是 TimestampsAndWatermarksTransformationTranslator 方法的话, 会创建 TimestampsAndWatermarksOperator
+        // translateForStreamingInternal 是个抽象方法, 有很多子类实现：
+        //
+        //  1 如果是 TimestampsAndWatermarksTransformationTranslator 实现类, 会创建 TimestampsAndWatermarksOperator
+        //  2 如果是 SideOutputTransformationTranslator 实现类,不会创建StreamNode,而会将 虚拟侧输出流节点 添加给 StreamGraph 的
+        // virtualSideOutputNodes 成员
+        //  。。。
         final Collection<Integer> transformedIds =
                 translateForStreamingInternal(transformation, context);
         configure(transformation, context);

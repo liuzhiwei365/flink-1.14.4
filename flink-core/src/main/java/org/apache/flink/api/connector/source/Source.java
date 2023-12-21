@@ -39,6 +39,7 @@ public interface Source<T, SplitT extends SourceSplit, EnumChkT> extends Seriali
      *
      * @return the boundedness of this source.
      */
+    // 获取有界性
     Boundedness getBoundedness();
 
     /**
@@ -50,6 +51,7 @@ public interface Source<T, SplitT extends SourceSplit, EnumChkT> extends Seriali
      * @throws Exception The implementor is free to forward all exceptions directly. Exceptions
      *     thrown from this method cause task failure/recovery.
      */
+    // 创建读取器, 用于读取目标系统的分片
     SourceReader<T, SplitT> createReader(SourceReaderContext readerContext) throws Exception;
 
     /**
@@ -60,6 +62,7 @@ public interface Source<T, SplitT extends SourceSplit, EnumChkT> extends Seriali
      * @throws Exception The implementor is free to forward all exceptions directly. * Exceptions
      *     thrown from this method cause JobManager failure/recovery.
      */
+    // 创建分片枚举器，用于管理要向目标系统读取的分片信息
     SplitEnumerator<SplitT, EnumChkT> createEnumerator(SplitEnumeratorContext<SplitT> enumContext)
             throws Exception;
 
@@ -73,6 +76,7 @@ public interface Source<T, SplitT extends SourceSplit, EnumChkT> extends Seriali
      * @throws Exception The implementor is free to forward all exceptions directly. * Exceptions
      *     thrown from this method cause JobManager failure/recovery.
      */
+    //  该方法用于从checkpoint 中恢复分片信息
     SplitEnumerator<SplitT, EnumChkT> restoreEnumerator(
             SplitEnumeratorContext<SplitT> enumContext, EnumChkT checkpoint) throws Exception;
 
@@ -86,6 +90,7 @@ public interface Source<T, SplitT extends SourceSplit, EnumChkT> extends Seriali
      *
      * @return The serializer for the split type.
      */
+    // 获取分片数据的 序列化器, 用于分片的序列化 （实际的数据的 读和写 都需要序列化）
     SimpleVersionedSerializer<SplitT> getSplitSerializer();
 
     /**
@@ -94,5 +99,6 @@ public interface Source<T, SplitT extends SourceSplit, EnumChkT> extends Seriali
      *
      * @return The serializer for the SplitEnumerator checkpoint.
      */
+    // 获取分片枚举器的序列化器  （分片枚举器是要作为状态 被 checkpoint的 ）
     SimpleVersionedSerializer<EnumChkT> getEnumeratorCheckpointSerializer();
 }

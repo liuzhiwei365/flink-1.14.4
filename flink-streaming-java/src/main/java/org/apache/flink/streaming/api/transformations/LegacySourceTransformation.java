@@ -40,7 +40,6 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * @param <T> The type of the elements that this source produces
  */
 
-// LegacySourceTransformation 没有 例如 kafka之类的外部source , 而 SourceTransformation 有
 @Internal
 public class LegacySourceTransformation<T> extends PhysicalTransformation<T>
         implements WithBoundedness {

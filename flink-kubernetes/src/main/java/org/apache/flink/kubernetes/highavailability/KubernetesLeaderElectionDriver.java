@@ -78,6 +78,13 @@ public class KubernetesLeaderElectionDriver implements LeaderElectionDriver {
 
     private final Watch kubernetesWatch;
 
+
+    // 1 创建 KubernetesLeaderElector 选举器,并启动参与选举,如果选举成功,则调用 LeaderCallbackHandlerImpl.isLeader 方法
+    //   否则,调用 LeaderCallbackHandlerImpl.notLeader 方法
+    // 2 创建一个观察者,在leader的信息发生改变的时候将 leader信息重新写入 k8s 的 configMap
+    //       ConfigMapCallbackHandlerImpl.onModified
+    //       DefaultLeaderElectionService.onLeaderInformationChange
+    //       KubernetesLeaderElectionDriver.writeLeaderInformation
     public KubernetesLeaderElectionDriver(
             FlinkKubeClient kubeClient,
             KubernetesConfigMapSharedWatcher configMapSharedWatcher,
@@ -216,6 +223,7 @@ public class KubernetesLeaderElectionDriver implements LeaderElectionDriver {
             final KubernetesConfigMap configMap = checkConfigMaps(configMaps, configMapName);
 
             if (KubernetesLeaderElector.hasLeadership(configMap, lockIdentity)) {
+                // 一定会走到这里
                 leaderElectionEventHandler.onLeaderInformationChange(
                         getLeaderInformationFromConfigMap(configMap));
             }

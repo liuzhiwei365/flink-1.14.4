@@ -440,6 +440,7 @@ flink自适应调度器是一个有限状态机
 
         Adaptive 的调度 和 状态机 切换的 流程全貌:
 
+        AdaptiveScheduler.startScheduling
         1 最开始成员变量 state 是 Created状态, 开始调度
 
         Created.startScheduling

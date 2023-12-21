@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
  * #getLeaderId(JobID)}. The future will only be completed with an exception in case the service
  * will be stopped.
  */
+// 维护所有作业的  "选举成为leader的" JobMasterId
 public class DefaultJobLeaderIdService implements JobLeaderIdService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultJobLeaderIdService.class);

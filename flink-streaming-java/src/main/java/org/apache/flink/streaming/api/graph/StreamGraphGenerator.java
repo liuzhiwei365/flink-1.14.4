@@ -143,6 +143,7 @@ public class StreamGraphGenerator {
 
     public static final String DEFAULT_SLOT_SHARING_GROUP = "default";
 
+    // flink 使用各类针对数据的操作,都会添加到这里,后续构建StreamGraph的时候会使用 transformations
     private final List<Transformation<?>> transformations;
 
     private final ExecutionConfig executionConfig;
@@ -315,8 +316,8 @@ public class StreamGraphGenerator {
 
         alreadyTransformed = new HashMap<>();
 
+        // 核心逻辑
         for (Transformation<?> transformation : transformations) {
-            // 核心逻辑
             transform(transformation);
         }
 
@@ -521,10 +522,13 @@ public class StreamGraphGenerator {
             }
         }
 
+        // 从 transform 中 提取槽位共享组信息;然后再从槽位共享组 提取资源设置,并且资源设置封装成ResourceProfile,放入到本类的
+        // slotSharingGroupResources 成员中
         transform
                 .getSlotSharingGroup()
                 .ifPresent(
                         slotSharingGroup -> {
+                            // 从 slotSharingGroup 提取 资源设置
                             final ResourceSpec resourceSpec =
                                     SlotSharingGroupUtils.extractResourceSpec(slotSharingGroup);
 
@@ -553,7 +557,7 @@ public class StreamGraphGenerator {
         // call at least once to trigger exceptions about MissingTypeInfo
         transform.getOutputType();
 
-        // 拿到 本 Transform 对应的 翻译器
+        // 拿到 本 Transform 对应的 翻译器 （ translatorMap 会在静态代码快执行的时候添加所有的transformation 和 translator之间的 kv对）
         @SuppressWarnings("unchecked")
         final TransformationTranslator<?, Transformation<?>> translator =
                 (TransformationTranslator<?, Transformation<?>>)
@@ -564,6 +568,7 @@ public class StreamGraphGenerator {
             transformedIds = translate(translator, transform);
         } else {
             // 如果没拿到翻译器, 也就是 translatorMap 中没有找到相关的 value值
+            // 这种情况,一定是 FeedbackTransformation 或者 CoFeedbackTransformation
             transformedIds = legacyTransform(transform);
         }
 
@@ -823,7 +828,7 @@ public class StreamGraphGenerator {
             return alreadyTransformed.get(transform);
         }
 
-        // 自己没有配置,就拿上游的 , 上游也没有 就用默认的
+        // 自己没有配置,就拿上游的 共享槽位名 , 上游也没有 就用默认的, 该槽位名后续会被封装进入 StreamNode
         final String slotSharingGroup =
                 determineSlotSharingGroup(
                         transform.getSlotSharingGroup().isPresent()
@@ -876,6 +881,7 @@ public class StreamGraphGenerator {
      * @param specifiedGroup The group specified by the user.
      * @param inputIds The IDs of the input operations.
      */
+    //  specifiedGroup 是槽位共享组的名字,  inputIds 是所有依赖的前置的 StreamNode 的编号
     private String determineSlotSharingGroup(String specifiedGroup, Collection<Integer> inputIds) {
         if (specifiedGroup != null) {
             return specifiedGroup;

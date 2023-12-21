@@ -50,6 +50,10 @@ public class LatencyStats {
         this.granularity = granularity;
     }
 
+    //
+    // 1 LatencyStats中的延迟最终会转化为直方图表示，通过直方图就可以统计出延时的最大值、最小值、均值、分位值（quantile）等指标
+    // 2 延迟是由当前时间戳减去LatencyMarker携带的时间戳得到的，所以在Sink端统计到的就是全链路延迟了
+    // 3
     public void reportLatency(LatencyMarker marker) {
         final String uniqueName =
                 granularity.createUniqueHistogramName(marker, operatorId, subtaskIndex);
@@ -69,6 +73,16 @@ public class LatencyStats {
         latencyHistogram.update(now - marker.getMarkedTime());
     }
 
+    /*
+
+    在创建LatencyStats之前，先要根据metrics.latency.granularity配置项来确定延迟监控的粒度，分为以下3档：
+        single：不区分源  不区分子任务
+        operator（默认值）： 区分源 不区分子任务
+        subtask： 区分源  区分子任务
+
+        一般情况下采用默认的operator粒度即可，这样在Sink端观察到的latency metric就是我们最想要的全链路（端到端）延迟，
+        以下也是以该粒度讲解。subtask粒度太细，会增大所有并行度的负担，不建议使用
+     */
     /** Granularity for latency metrics. */
     public enum Granularity {
         SINGLE {

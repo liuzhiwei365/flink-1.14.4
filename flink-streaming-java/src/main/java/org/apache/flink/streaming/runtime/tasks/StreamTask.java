@@ -720,6 +720,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         //       在恢复算子状态的时候会创建和初始化 OperatorStateBackend 和 KeyedStateBackend
         // 恢复 inputChannel状态
         // 建立好 inputGate中的所有的inputChannel 与上游 ResultPartition的链接
+        //
+        //   不要被 restoreGates 迷惑, 其实所有算子的状态恢复的逻辑都在里面
         CompletableFuture<Void> allGatesRecoveredFuture = actionExecutor.call(this::restoreGates);
 
         // Run mailbox until all gates will be recovered.

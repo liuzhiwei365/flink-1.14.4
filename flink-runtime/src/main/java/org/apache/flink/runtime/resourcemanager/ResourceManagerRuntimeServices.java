@@ -65,6 +65,7 @@ public class ResourceManagerRuntimeServices {
             ScheduledExecutor scheduledExecutor,
             SlotManagerMetricGroup slotManagerMetricGroup) {
 
+        // 会创建 FineGrainedSlotManager 或者 DeclarativeSlotManager
         final SlotManager slotManager =
                 createSlotManager(configuration, scheduledExecutor, slotManagerMetricGroup);
 

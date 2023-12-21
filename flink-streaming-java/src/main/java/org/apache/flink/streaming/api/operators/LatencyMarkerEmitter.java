@@ -36,6 +36,7 @@ class LatencyMarkerEmitter<OUT> {
             long latencyTrackingInterval,
             OperatorID operatorId,
             int subtaskIndex) {
+        // 会利用 processTimeService 去周期性（我们设置的metrics.latency.interval 时长）去向下游 发送 当前时间的LatencyMarker
         latencyMarkTimer =
                 processingTimeService.scheduleWithFixedDelay(
                         new ProcessingTimeCallback() {

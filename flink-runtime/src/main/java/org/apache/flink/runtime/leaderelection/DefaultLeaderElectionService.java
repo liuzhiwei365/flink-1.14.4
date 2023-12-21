@@ -294,6 +294,9 @@ public class DefaultLeaderElectionService
                                     "Writing leader information by {} since the external storage is empty.",
                                     leaderContender.getDescription());
                         }
+                        // 将本地的 leader信息 写入zk 或者 k8s
+                        //    KubernetesLeaderElectionDriver 实现类写入 k8s
+                        //    ZooKeeperLeaderElectionDriver 实现类写入 zk
                         leaderElectionDriver.writeLeaderInformation(confirmedLeaderInfo);
                     } else if (!leaderInformation.equals(confirmedLeaderInfo)) {
                         // the data field does not correspond to the expected leader information
@@ -302,6 +305,9 @@ public class DefaultLeaderElectionService
                                     "Correcting leader information by {}.",
                                     leaderContender.getDescription());
                         }
+                        // 将本地的 leader信息 重新写入zk 或者 k8s
+                        //    KubernetesLeaderElectionDriver 实现类写入 k8s
+                        //    ZooKeeperLeaderElectionDriver 实现类写入 zk
                         leaderElectionDriver.writeLeaderInformation(confirmedLeaderInfo);
                     }
                 }

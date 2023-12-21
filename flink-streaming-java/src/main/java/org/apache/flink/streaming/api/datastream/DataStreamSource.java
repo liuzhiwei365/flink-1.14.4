@@ -64,8 +64,8 @@ public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
             Boundedness boundedness) {
         super(
                 environment,
-                // LegacySourceTransformation 功能比 SourceTransformation少
-                // 入参 operator 就是一个SourceFunction
+                // 1 LegacySourceTransformation 功能比 SourceTransformation少
+                // 2 入参 operator 就是一个SourceFunction
                 new LegacySourceTransformation<>(
                         sourceName,
                         operator,
@@ -89,6 +89,9 @@ public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
     }
 
     /** Constructor for new Sources (FLIP-27). */
+
+    // 1 注意与上面构造的区别 ,上面传入的是 LegacySourceTransformation , 而下面传入的是 SourceTransformation
+    // 2 SourceTransformation 有 动态刷新数据源信息等更强大的功能
     public DataStreamSource(
             StreamExecutionEnvironment environment,
             Source<T, ?, ?> source,
@@ -107,6 +110,8 @@ public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
 
                 // 而在taskMananger 执行任务的时候, SourceOperatorFactory 工厂调用 createStreamOperator来 创建 SourceOperator对象
                 // 其内部也含有 各类水印的 组件
+
+                // 这里的 SourceTransformation 会赋值给 DataStream.transformation 成员
                 new SourceTransformation<>(
                         sourceName,
                         source,

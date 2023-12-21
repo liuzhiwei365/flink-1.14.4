@@ -111,11 +111,6 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
 
         started = true;
 
-        // there are two ways the coordinator can get created:
-        //  (1) Source.restoreEnumerator(), in which case the 'resetToCheckpoint()' method creates
-        // it
-        //  (2) Source.createEnumerator, in which case it has not been created, yet, and we create
-        // it here
         if (enumerator == null) {
             final ClassLoader userCodeClassLoader =
                     context.getCoordinatorContext().getUserCodeClassloader();
@@ -145,37 +140,34 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
     }
 
     // 算子通过 OperatorEventGateway 接口 调用 sendEventToCoordinator 方法
-    // 会被 OperatorCoordinator 接口 的  handleEventFromOperator 方法 相应
-    // 本方法 只是本子类 的 实现
+    // 会被 OperatorCoordinator 接口 的  handleEventFromOperator 方法 相应本方法 只是本子类 的 实现
     @Override
     public void handleEventFromOperator(int subtask, OperatorEvent event) {
         runInEventLoop(
                 () -> {
                     if (event instanceof RequestSplitEvent) {
-                        LOG.info(
-                                "Source {} received split request from parallel task {}",
-                                operatorName,
-                                subtask);
-                        enumerator.handleSplitRequest(
-                                subtask, ((RequestSplitEvent) event).hostName());
+
+                        LOG.info("Source {} received split request from parallel task {}", operatorName, subtask);
+
+                        // 如果是mysql-cdc 实现：
+                        //    MySqlSourceEnumerator#handleSplitRequest
+                        //         MySqlSourceEnumerator#assignSplits
+                        //
+                        enumerator.handleSplitRequest(subtask, ((RequestSplitEvent) event).hostName());
+
+
                     } else if (event instanceof SourceEventWrapper) {
-                        final SourceEvent sourceEvent =
-                                ((SourceEventWrapper) event).getSourceEvent();
-                        LOG.debug(
-                                "Source {} received custom event from parallel task {}: {}",
-                                operatorName,
-                                subtask,
-                                sourceEvent);
+
+                        final SourceEvent sourceEvent = ((SourceEventWrapper) event).getSourceEvent();
+                        LOG.debug("Source {} received custom event from parallel task {}: {}", operatorName, subtask, sourceEvent);
                         enumerator.handleSourceEvent(subtask, sourceEvent);
+
                     } else if (event instanceof ReaderRegistrationEvent) {
-                        final ReaderRegistrationEvent registrationEvent =
-                                (ReaderRegistrationEvent) event;
-                        LOG.info(
-                                "Source {} registering reader for parallel task {} @ {}",
-                                operatorName,
-                                subtask,
-                                registrationEvent.location());
+
+                        final ReaderRegistrationEvent registrationEvent = (ReaderRegistrationEvent) event;
+                        LOG.info("Source {} registering reader for parallel task {} @ {}", operatorName, subtask, registrationEvent.location());
                         handleReaderRegistrationEvent(registrationEvent);
+
                     } else {
                         throw new FlinkException("Unrecognized Operator Event: " + event);
                     }

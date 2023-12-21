@@ -1,0 +1,82 @@
+
+
+
+1 StreamSource
+   1.1 在StreamSource的run 方法中,会构造 LatencyMarkerEmitter 对象
+          会利用 processTimeService 去周期性（我们设置的metrics.latency.interval 时长）去向下游 发送 当前时间的LatencyMarker对象
+
+
+
+2 中间算子
+
+      AbstractStreamTaskNetworkInput.processElement
+      不妨以  OneInputStreamTask.StreamTaskNetworkOutput 为例：
+         OneInputStreamTask.StreamTaskNetworkOutput.emitLatencyMarker
+             AbstractStreamOperator.processLatencyMarker
+                2.1 先 计算延时并报告给 LatencyStats
+                2.2 然后 继续将LatencyMarker发射到下游
+                    以 RecordWriterOutput 实现为例
+                    RecordWriterOutput.emitLatencyMarker
+                       会随机发往 下游的一个通道中
+                       这样在度量算子级别延迟的基础上不会造成LatencyMarker泛滥，同时也不会受到并行度调整（重新分区）的影响
+                       RecordWriter.randomEmit
+
+
+
+   2.3 题外话: LatencyStats 对象的构造时机
+
+   2.3.1
+         在构造算子链的时候, 会在各处多次去创建单个算子
+         在OperatorChain 构造方法中 （有三个如下三个时机都会去创建算子）
+
+            2.3.1.1 OperatorChain.createOutputCollector
+            或者
+            2.3.1.2 单独创建 main operator
+            或者
+            2.3.1.3 OperatorChain.createChainedSources
+
+                最终都会调用如下的调用栈来创建单个的算子
+                    OperatorChain.createOperator
+                    StreamOperatorFactoryUtil.createOperator
+                    这个时候,会调用 算子工厂来创建算子
+                        StreamOperatorFactory.createStreamOperator
+
+                    我们知道算子工厂有很多实现,  以 SimpleOperatorFactory 为例子
+                        SimpleOperatorFactory.createStreamOperator
+                        AbstractStreamOperator.setup
+                        在 setup 方法中 就会
+                           创建 LatencyStats.Granularity对象 和 LatencyStats 对象
+
+
+3 StreamSink 的reportOrForwardLatencyMarker()方法不会再发送 LatencyMarker（因为已经处理完了），只会更新延迟
+
+   StreamSink.reportOrForwardLatencyMarker
+       LatencyStats.reportLatency
+
+==========================================================================================================
+
+延迟统计的粒度：
+
+    在创建LatencyStats之前，先要根据metrics.latency.granularity配置项来确定延迟监控的粒度，分为以下3档：
+        single：不区分源  不区分子任务
+        operator（默认值）： 区分源 不区分子任务
+        subtask： 区分源  区分子任务
+
+        一般情况下采用默认的operator粒度即可，这样在Sink端观察到的latency metric就是我们最想要的全链路（端到端）延迟，
+        以下也是以该粒度讲解。subtask粒度太细，会增大所有并行度的负担，不建议使用
+
+
+
+
+===========================================================================================================
+注意事项：
+    1  LatencyMarker是不会像Watermark一样参与到数据流的用户逻辑中的，而是直接被各算子转发并统计。这如何能
+得到真正的延时呢？如果由于网络不畅、数据流量太大等原因造成了反压（back pressure，之后再提），那么LatencyMarker
+的流转就会被阻碍，传递到下游的时间差就会增加，所以还是能够近似估算出整体的延时的。
+
+    2  为了让它尽量精确，有两点特别需要注意：
+      2.1 ProcessingTimeService产生时间戳最终是靠System.currentTimeMillis()方法，所以必须保证Flink集群内所有
+          节点的时区、时间是同步的，可以用ntp等工具来配置。
+      2.2 metrics.latency.interval的时间间隔宜大不宜小，在我们的实践中一般配置成30000（30秒）左右。一是因为延迟监控
+          的频率可以不用太频繁，二是因为LatencyMarker的处理也要消耗时间，只有在LatencyMarker的耗时远小于正常StreamRecord
+          的耗时时，metric反映出的数据才贴近实际情况，所以LatencyMarker的密度不能太大
